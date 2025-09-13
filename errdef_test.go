@@ -1,0 +1,251 @@
+package errdef_test
+
+import (
+	"errors"
+	"testing"
+
+	"github.com/shiwano/errdef"
+)
+
+func TestDefine(t *testing.T) {
+	t.Run("basic kind", func(t *testing.T) {
+		kind := errdef.Kind("test_error")
+		def := errdef.Define(kind)
+
+		if def.Kind() != kind {
+			t.Errorf("want kind %v, got %v", kind, def.Kind())
+		}
+
+		if def.Error() != string(kind) {
+			t.Errorf("want error string %q, got %q", string(kind), def.Error())
+		}
+	})
+
+	t.Run("empty kind", func(t *testing.T) {
+		def := errdef.Define("")
+
+		if def.Kind() != "" {
+			t.Errorf("want empty kind, got %v", def.Kind())
+		}
+
+		if def.Error() != "[unnamed]" {
+			t.Errorf("want error string %q, got %q", "[unnamed]", def.Error())
+		}
+	})
+}
+
+func TestDefineField(t *testing.T) {
+	t.Run("constructor and extractor", func(t *testing.T) {
+		constructor, extractor := errdef.DefineField[string]("test_field")
+
+		option := constructor("test_value")
+		err := errdef.New("test error", option)
+
+		value, found := extractor(err)
+		if !found {
+			t.Error("want field to be found")
+		}
+		if value != "test_value" {
+			t.Errorf("want value %q, got %q", "test_value", value)
+		}
+	})
+
+	t.Run("extractor with wrong value type", func(t *testing.T) {
+		type valueType string
+
+		constructor, _ := errdef.DefineField[string]("test_field")
+		_, extractor := errdef.DefineField[valueType]("test_field")
+
+		option := constructor("test_value")
+		err := errdef.New("test error", option)
+
+		_, found := extractor(err)
+		if found {
+			t.Error("want field not to be found with wrong type")
+		}
+	})
+
+	t.Run("extractor with wrong key type", func(t *testing.T) {
+		constructor, _ := errdef.DefineField[string]("test_field")
+		_, extractor := errdef.DefineField[string]("test_field")
+
+		option := constructor("test_value")
+		err := errdef.New("test error", option)
+
+		_, found := extractor(err)
+		if found {
+			t.Error("want field not to be found with wrong type")
+		}
+	})
+
+	t.Run("extractor on non-errdef error", func(t *testing.T) {
+		_, extractor := errdef.DefineField[string]("test_field")
+
+		err := errors.New("regular error")
+
+		_, found := extractor(err)
+		if found {
+			t.Error("want field not to be found on non-errdef error")
+		}
+	})
+
+	t.Run("default constructor", func(t *testing.T) {
+		constructor, extractor := errdef.DefineField[string]("test_field")
+		defaultConstructor := constructor.Default("default_value")
+
+		option := defaultConstructor()
+		err := errdef.New("test error", option)
+
+		value, found := extractor(err)
+		if !found {
+			t.Error("want field to be found")
+		}
+		if value != "default_value" {
+			t.Errorf("want value %q, got %q", "default_value", value)
+		}
+	})
+
+	t.Run("single return extractor", func(t *testing.T) {
+		constructor, extractor := errdef.DefineField[string]("test_field")
+		singleReturnExtractor := extractor.SingleReturn()
+
+		option := constructor("test_value")
+		err := errdef.New("test error", option)
+
+		value := singleReturnExtractor(err)
+		if value != "test_value" {
+			t.Errorf("want value %q, got %q", "test_value", value)
+		}
+
+		regularErr := errors.New("regular error")
+		zeroValue := singleReturnExtractor(regularErr)
+		if zeroValue != "" {
+			t.Errorf("want zero value for string, got %q", zeroValue)
+		}
+	})
+}
+
+func TestNew(t *testing.T) {
+	t.Run("basic error creation", func(t *testing.T) {
+		err := errdef.New("test message")
+
+		if err.Error() != "test message" {
+			t.Errorf("want message %q, got %q", "test message", err.Error())
+		}
+	})
+
+	t.Run("error creation with field option", func(t *testing.T) {
+		constructor, extractor := errdef.DefineField[string]("user_id")
+
+		err := errdef.New("test message", constructor("user123"))
+
+		value, found := extractor(err)
+		if !found {
+			t.Error("want field to be found")
+		}
+		if value != "user123" {
+			t.Errorf("want value %q, got %q", "user123", value)
+		}
+	})
+
+	t.Run("error creation with multiple options", func(t *testing.T) {
+		userIDConstructor, userIDExtractor := errdef.DefineField[string]("user_id")
+		countConstructor, countExtractor := errdef.DefineField[int]("count")
+
+		err := errdef.New("test message",
+			userIDConstructor("user123"),
+			countConstructor(42),
+		)
+
+		userID, found := userIDExtractor(err)
+		if !found {
+			t.Error("want user_id field to be found")
+		}
+		if userID != "user123" {
+			t.Errorf("want user_id %q, got %q", "user123", userID)
+		}
+
+		count, found := countExtractor(err)
+		if !found {
+			t.Error("want count field to be found")
+		}
+		if count != 42 {
+			t.Errorf("want count %d, got %d", 42, count)
+		}
+	})
+}
+
+func TestWrap(t *testing.T) {
+	t.Run("basic error wrapping", func(t *testing.T) {
+		original := errors.New("original error")
+		wrapped := errdef.Wrap(original)
+
+		if wrapped.Error() != "original error" {
+			t.Errorf("want message %q, got %q", "original error", wrapped.Error())
+		}
+
+		if !errors.Is(wrapped, original) {
+			t.Error("want wrapped error to be the original error")
+		}
+	})
+
+	t.Run("wrapping nil error", func(t *testing.T) {
+		wrapped := errdef.Wrap(nil)
+		if wrapped != nil {
+			t.Error("want nil when wrapping nil error")
+		}
+	})
+
+	t.Run("wrapping with field option", func(t *testing.T) {
+		constructor, extractor := errdef.DefineField[string]("context")
+		original := errors.New("original error")
+
+		wrapped := errdef.Wrap(original, constructor("test context"))
+
+		if wrapped.Error() != "original error" {
+			t.Errorf("want message %q, got %q", "original error", wrapped.Error())
+		}
+
+		value, found := extractor(wrapped)
+		if !found {
+			t.Error("want field to be found")
+		}
+		if value != "test context" {
+			t.Errorf("want context %q, got %q", "test context", value)
+		}
+
+		if !errors.Is(wrapped, original) {
+			t.Error("want wrapped error to be the original error")
+		}
+	})
+
+	t.Run("wrapping with multiple options", func(t *testing.T) {
+		userIDConstructor, userIDExtractor := errdef.DefineField[string]("user_id")
+		attemptConstructor, attemptExtractor := errdef.DefineField[int]("attempt")
+		original := errors.New("authentication failed")
+
+		wrapped := errdef.Wrap(original,
+			userIDConstructor("user456"),
+			attemptConstructor(3))
+
+		userID, found := userIDExtractor(wrapped)
+		if !found {
+			t.Error("want user_id field to be found")
+		}
+		if userID != "user456" {
+			t.Errorf("want user_id %q, got %q", "user456", userID)
+		}
+
+		attempt, found := attemptExtractor(wrapped)
+		if !found {
+			t.Error("want attempt field to be found")
+		}
+		if attempt != 3 {
+			t.Errorf("want attempt %d, got %d", 3, attempt)
+		}
+
+		if !errors.Is(wrapped, original) {
+			t.Error("want wrapped error to be the original error")
+		}
+	})
+}
