@@ -11,6 +11,8 @@ type (
 		StackTrace() []uintptr
 		// Frames returns the stack trace as structured frame information.
 		Frames() []Frame
+		// Len returns the number of frames in the stack trace.
+		Len() int
 	}
 
 	// Frame represents a single frame in a stack trace.
@@ -64,4 +66,8 @@ func (s stack) Frames() []Frame {
 		}
 	}
 	return frames
+}
+
+func (s stack) Len() int {
+	return len(s)
 }
