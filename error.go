@@ -141,12 +141,16 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 		case s.Flag('+'):
 			_, _ = fmt.Fprintf(s, "%s\n", e.Error())
 
-			_, _ = io.WriteString(s, "Kind:\n")
-			_, _ = fmt.Fprintf(s, "\t%v\n", e.def.kind)
+			if e.Kind() != "" {
+				_, _ = io.WriteString(s, "Kind:\n")
+				_, _ = fmt.Fprintf(s, "\t%v\n", e.Kind())
+			}
 
-			_, _ = io.WriteString(s, "Fields:\n")
-			for k, v := range e.def.fields.SortedSeq() {
-				_, _ = fmt.Fprintf(s, "\t%v: %+v\n", k, v)
+			if e.def.fields.Len() > 0 {
+				_, _ = io.WriteString(s, "Fields:\n")
+				for k, v := range e.def.fields.SortedSeq() {
+					_, _ = fmt.Fprintf(s, "\t%v: %+v\n", k, v)
+				}
 			}
 
 			_, _ = io.WriteString(s, "Stack:\n")
