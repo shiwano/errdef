@@ -226,6 +226,40 @@ func TestFields_SortedSeq(t *testing.T) {
 	})
 }
 
+func TestFields_Len(t *testing.T) {
+	t.Run("empty fields", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		err := def.New("test message")
+
+		fields := err.(errdef.Error).Fields()
+
+		if got := fields.Len(); got != 0 {
+			t.Errorf("want 0, got %d", got)
+		}
+	})
+
+	t.Run("multiple fields", func(t *testing.T) {
+		constructor1, _ := errdef.DefineField[string]("field1")
+		constructor2, _ := errdef.DefineField[int]("field2")
+		constructor3, _ := errdef.DefineField[bool]("same_name_field")
+		constructor4, _ := errdef.DefineField[float64]("same_name_field")
+
+		def := errdef.Define("test_error",
+			constructor1("value1"),
+			constructor2(123),
+			constructor3(true),
+			constructor4(3.14),
+		)
+		err := def.New("test message")
+
+		fields := err.(errdef.Error).Fields()
+
+		if got := fields.Len(); got != 4 {
+			t.Errorf("want 3, got %d", got)
+		}
+	})
+}
+
 func TestFields_MarshalJSON(t *testing.T) {
 	t.Run("marshal to JSON", func(t *testing.T) {
 		constructor1, _ := errdef.DefineField[string]("b_field")

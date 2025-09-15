@@ -21,6 +21,8 @@ type (
 		Seq() iter.Seq2[FieldKey, any]
 		// SortedSeq returns an iterator over all key-value pairs sorted by key string.
 		SortedSeq() iter.Seq2[FieldKey, any]
+		// Len returns the number of fields.
+		Len() int
 	}
 
 	// FieldKey represents a key for structured error fields.
@@ -87,6 +89,10 @@ func (f fields) SortedSeq() iter.Seq2[FieldKey, any] {
 			}
 		}
 	}
+}
+
+func (f fields) Len() int {
+	return len(f)
 }
 
 func (f fields) MarshalJSON() ([]byte, error) {
