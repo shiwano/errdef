@@ -153,10 +153,12 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 				}
 			}
 
-			_, _ = io.WriteString(s, "Stack:\n")
-			for _, f := range e.stack.Frames() {
-				if f.File != "" {
-					_, _ = fmt.Fprintf(s, "\t%s\n\t\t%s:%d\n", f.Func, f.File, f.Line)
+			if e.stack.Len() > 0 {
+				_, _ = io.WriteString(s, "Stack:\n")
+				for _, f := range e.stack.Frames() {
+					if f.File != "" {
+						_, _ = fmt.Fprintf(s, "\t%s\n\t\t%s:%d\n", f.Func, f.File, f.Line)
+					}
 				}
 			}
 
