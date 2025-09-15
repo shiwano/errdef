@@ -51,15 +51,15 @@ func StackSkip(skip int) Option {
 
 // Boundary marks this error as the end of an error chain, stopping Unwrap.
 func Boundary() Option {
-	return boundary{}
+	return &boundary{}
 }
 
 // Formatter overrides the fmt.Formatter behavior with a custom function.
 func Formatter(f ErrorFormatter) Option {
-	return formatter{formatter: f}
+	return &formatter{formatter: f}
 }
 
 // JSONMarshaler overrides the json.Marshaler behavior with a custom function.
 func JSONMarshaler(f ErrorJSONMarshaler) Option {
-	return jsonMarshaler{marshaler: f}
+	return &jsonMarshaler{marshaler: f}
 }

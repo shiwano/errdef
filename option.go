@@ -127,26 +127,26 @@ func applyOptionsTo(d *Definition, opts []Option) {
 	}
 }
 
-func (o field) ApplyOption(a OptionApplier) {
+func (o *field) ApplyOption(a OptionApplier) {
 	a.SetField(o.key, o.value)
 }
 
-func (o noTrace) ApplyOption(a OptionApplier) {
+func (o *noTrace) ApplyOption(a OptionApplier) {
 	a.DisableTrace()
 }
 
-func (o stackSkip) ApplyOption(a OptionApplier) {
+func (o *stackSkip) ApplyOption(a OptionApplier) {
 	a.AddStackSkip(o.skip)
 }
 
-func (o boundary) ApplyOption(a OptionApplier) {
+func (o *boundary) ApplyOption(a OptionApplier) {
 	a.SetBoundary()
 }
 
-func (o formatter) ApplyOption(a OptionApplier) {
+func (o *formatter) ApplyOption(a OptionApplier) {
 	a.SetFormatter(o.formatter)
 }
 
-func (o jsonMarshaler) ApplyOption(a OptionApplier) {
+func (o *jsonMarshaler) ApplyOption(a OptionApplier) {
 	a.SetJSONMarshaler(o.marshaler)
 }
