@@ -14,7 +14,9 @@ func ContextWithOptions(ctx context.Context, opts ...Option) context.Context {
 		return ctx
 	}
 	ctxOpts := optionsFromContext(ctx)
-	newOpts := append(ctxOpts, opts...)
+	newOpts := make([]Option, len(ctxOpts)+len(opts))
+	copy(newOpts, ctxOpts)
+	copy(newOpts[len(ctxOpts):], opts)
 	return context.WithValue(ctx, optionsFromContextKey, newOpts)
 }
 
