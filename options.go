@@ -6,6 +6,9 @@ import (
 )
 
 var (
+	public, publicFrom       = DefineField[bool]("public")
+	retryable, retryableFrom = DefineField[bool]("retryable")
+
 	// HTTPStatus sets the HTTP status code.
 	HTTPStatus, HTTPStatusFrom = DefineField[int]("http_status")
 
@@ -22,12 +25,10 @@ var (
 	UserHint, UserHintFrom = DefineField[string]("user_hint")
 
 	// Public marks the error as safe for external exposure (sets true).
-	public, publicFrom = DefineField[bool]("public")
-	Public, IsPublic   = public.Default(true), publicFrom.SingleReturn()
+	Public, IsPublic = public.Default(true), publicFrom.SingleReturn()
 
 	// Retryable marks the operation as retryable (sets true).
-	retryable, retryableFrom = DefineField[bool]("retryable")
-	Retryable, IsRetryable   = retryable.Default(true), retryableFrom.SingleReturn()
+	Retryable, IsRetryable = retryable.Default(true), retryableFrom.SingleReturn()
 
 	// RetryAfter sets the duration (time.Duration) to wait before retrying.
 	RetryAfter, RetryAfterFrom = DefineField[time.Duration]("retry_after")
