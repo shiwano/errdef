@@ -147,7 +147,6 @@ var ErrPaymentFailed = errdef.Define("payment_failed",
 ### Context Integration
 
 You can use `context.Context` to automatically attach request-scoped information to your errors.
-such as a request ID, to your errors.
 
 ```go
 func tracingMiddleware(next http.Handler) http.Handler {
