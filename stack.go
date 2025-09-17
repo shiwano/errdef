@@ -52,7 +52,7 @@ func (s stack) Frames() []Frame {
 	if len(s) == 0 {
 		return nil
 	}
-	fs := runtime.CallersFrames(s.StackTrace())
+	fs := runtime.CallersFrames(s)
 	frames := make([]Frame, 0, maxStackDepth)
 	for {
 		f, more := fs.Next()
