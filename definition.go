@@ -49,12 +49,12 @@ func (d *Definition) WithOptions(opts ...Option) *Definition {
 
 // New creates a new error with the given message using this definition.
 func (d *Definition) New(msg string) error {
-	return d.newError(nil, msg, callersSkip)
+	return d.newError(nil, msg, false, callersSkip)
 }
 
 // Errorf creates a new error with a formatted message using this definition.
 func (d *Definition) Errorf(format string, args ...any) error {
-	return d.newError(nil, fmt.Sprintf(format, args...), callersSkip)
+	return d.newError(nil, fmt.Sprintf(format, args...), false, callersSkip)
 }
 
 // Wrap wraps an existing error using this definition.
@@ -63,7 +63,7 @@ func (d *Definition) Wrap(cause error) error {
 	if cause == nil {
 		return nil
 	}
-	return d.newError(cause, cause.Error(), callersSkip)
+	return d.newError(cause, cause.Error(), false, callersSkip)
 }
 
 // Wrapf wraps an existing error with a formatted message using this definition.
@@ -72,7 +72,7 @@ func (d *Definition) Wrapf(cause error, format string, args ...any) error {
 	if cause == nil {
 		return nil
 	}
-	return d.newError(cause, fmt.Sprintf(format, args...), callersSkip)
+	return d.newError(cause, fmt.Sprintf(format, args...), false, callersSkip)
 }
 
 // Join creates a new error by joining multiple errors using this definition.
@@ -82,7 +82,7 @@ func (d *Definition) Join(causes ...error) error {
 	if cause == nil {
 		return nil
 	}
-	return d.newError(cause, cause.Error(), callersSkip)
+	return d.newError(cause, cause.Error(), true, callersSkip)
 }
 
 // Is reports whether this definition matches the given error.
@@ -102,17 +102,18 @@ func (d *Definition) clone() *Definition {
 	}
 }
 
-func (d *Definition) newError(cause error, msg string, stackSkip int) error {
+func (d *Definition) newError(cause error, msg string, joined bool, stackSkip int) error {
 	var stack stack
 	if !d.noTrace {
 		stack = newStack(d.stackSkip + stackSkip)
 	}
 
 	e := &definedError{
-		def:   d,
-		msg:   msg,
-		cause: cause,
-		stack: stack,
+		def:    d,
+		msg:    msg,
+		cause:  cause,
+		stack:  stack,
+		joined: joined,
 	}
 	return e
 }

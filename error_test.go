@@ -129,6 +129,40 @@ func TestError_Unwrap(t *testing.T) {
 		}
 	})
 
+	t.Run("with multiple errors", func(t *testing.T) {
+		err1 := errors.New("error 1")
+		err2 := errors.New("error 2")
+		def := errdef.Define("test_error")
+		joined := def.Join(err1, err2).(errdef.Error)
+
+		unwrapped := joined.Unwrap()
+		if len(unwrapped) != 2 {
+			t.Errorf("want 2 error, got %d", len(unwrapped))
+		}
+		if unwrapped[0] != err1 {
+			t.Error("want first unwrapped error to be error 1")
+		}
+		if unwrapped[1] != err2 {
+			t.Error("want second unwrapped error to be error 2")
+		}
+	})
+
+	t.Run("with joined error", func(t *testing.T) {
+		err1 := errors.New("error 1")
+		err2 := errors.New("error 2")
+		def := errdef.Define("test_error")
+		joined := def.Join(err1, err2)
+		nestedJoined := def.Wrap(joined).(errdef.Error)
+
+		unwrapped := nestedJoined.Unwrap()
+		if len(unwrapped) != 1 {
+			t.Errorf("want 1 error, got %d", len(unwrapped))
+		}
+		if unwrapped[0] != joined {
+			t.Error("want unwrapped error to be the joined error")
+		}
+	})
+
 	t.Run("boundary breaks chain", func(t *testing.T) {
 		original := errors.New("original error")
 		def := errdef.Define("boundary_error", errdef.Boundary())
@@ -137,24 +171,6 @@ func TestError_Unwrap(t *testing.T) {
 		unwrapped := wrapped.Unwrap()
 		if len(unwrapped) != 0 {
 			t.Errorf("want empty due to boundary, got %v", unwrapped)
-		}
-	})
-
-	t.Run("with multiple errors", func(t *testing.T) {
-		err1 := errors.New("error 1")
-		err2 := errors.New("error 2")
-		joined := errors.Join(err1, err2)
-		wrapped := errdef.Wrap(joined).(errdef.Error)
-
-		unwrapped := wrapped.Unwrap()
-		if len(unwrapped) != 2 {
-			t.Errorf("want 2 errors, got %d", len(unwrapped))
-		}
-		if unwrapped[0] != err1 {
-			t.Error("want first unwrapped error to be error 1")
-		}
-		if unwrapped[1] != err2 {
-			t.Error("want second unwrapped error to be error 2")
 		}
 	})
 }

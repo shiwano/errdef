@@ -50,10 +50,11 @@ type (
 	}
 
 	definedError struct {
-		def   *Definition
-		msg   string
-		cause error
-		stack stack
+		def    *Definition
+		msg    string
+		cause  error
+		stack  stack
+		joined bool
 	}
 )
 
@@ -89,8 +90,10 @@ func (e *definedError) Unwrap() []error {
 	if e.cause == nil {
 		return nil
 	}
-	if u, ok := e.cause.(interface{ Unwrap() []error }); ok {
-		return u.Unwrap()
+	if e.joined {
+		if u, ok := e.cause.(interface{ Unwrap() []error }); ok {
+			return u.Unwrap()
+		}
 	}
 	return []error{e.cause}
 }
@@ -185,10 +188,11 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 		case s.Flag('#'):
 			// Avoid infinite recursion in case someone does %#v on definedError.
 			type definedError struct {
-				def   *Definition
-				msg   string
-				cause error
-				stack stack
+				def    *Definition
+				msg    string
+				cause  error
+				stack  stack
+				joined bool
 			}
 			var tmp = definedError(*e)
 			_, _ = fmt.Fprintf(s, "%#v", &tmp)
