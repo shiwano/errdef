@@ -34,11 +34,11 @@ type (
 	// FieldOptionExtractor extracts a field value from an error.
 	FieldOptionExtractor[T any] func(err error) (T, bool)
 
-	// FieldOptionConstructorDefault creates an Option with a default value when called with no arguments.
-	FieldOptionConstructorDefault[T any] func() Option
+	// FieldOptionConstructorNoArgs creates an Option with a default value when called with no arguments.
+	FieldOptionConstructorNoArgs[T any] func() Option
 
-	// FieldOptionConstructorFromContext creates an Option with a value obtained from a context-aware function.
-	FieldOptionConstructorFromContext[T any] func(ctx context.Context) Option
+	// FieldOptionConstructorWithContext creates an Option with a value obtained from a context-aware function.
+	FieldOptionConstructorWithContext[T any] func(ctx context.Context) Option
 
 	// FieldOptionExtractorSingleReturn extracts a field value from an error, returning only the value.
 	FieldOptionExtractorSingleReturn[T any] func(err error) T
@@ -69,38 +69,38 @@ type (
 	}
 )
 
-// Default creates a field option constructor that sets a default value.
-func (f FieldOptionConstructor[T]) Default(value T) FieldOptionConstructorDefault[T] {
+// WithValue creates a field option constructor that sets a specific value.
+func (f FieldOptionConstructor[T]) WithValue(value T) FieldOptionConstructorNoArgs[T] {
 	return func() Option {
 		return f(value)
 	}
 }
 
-// DefaultFunc creates a field option constructor that sets a default value using a function.
-func (f FieldOptionConstructor[T]) DefaultFunc(fn func() T) FieldOptionConstructorDefault[T] {
+// WithValueFunc creates a field option constructor that sets a value using a function.
+func (f FieldOptionConstructor[T]) WithValueFunc(fn func() T) FieldOptionConstructorNoArgs[T] {
 	return func() Option {
 		return f(fn())
 	}
 }
 
-// FromContext creates a field option constructor that sets a value using a context-aware function.
-func (f FieldOptionConstructor[T]) FromContext(fn func(ctx context.Context) T) FieldOptionConstructorFromContext[T] {
+// WithContextFunc creates a field option constructor that sets a value using a context-aware function.
+func (f FieldOptionConstructor[T]) WithContextFunc(fn func(ctx context.Context) T) FieldOptionConstructorWithContext[T] {
 	return func(ctx context.Context) Option {
 		val := fn(ctx)
 		return f(val)
 	}
 }
 
-// SingleReturn creates a field extractor that returns only the value, ignoring the boolean.
-func (f FieldOptionExtractor[T]) SingleReturn() FieldOptionExtractorSingleReturn[T] {
+// OrZero creates a field extractor that returns only the value, ignoring the boolean.
+func (f FieldOptionExtractor[T]) OrZero() FieldOptionExtractorSingleReturn[T] {
 	return func(err error) T {
 		val, _ := f(err)
 		return val
 	}
 }
 
-// SingleReturnDefault creates a field extractor that returns a default value if the field is not found.
-func (f FieldOptionExtractor[T]) SingleReturnDefault(value T) FieldOptionExtractorSingleReturn[T] {
+// OrDefault creates a field extractor that returns a default value if the field is not found.
+func (f FieldOptionExtractor[T]) OrDefault(value T) FieldOptionExtractorSingleReturn[T] {
 	return func(err error) T {
 		if val, ok := f(err); ok {
 			return val
@@ -109,8 +109,8 @@ func (f FieldOptionExtractor[T]) SingleReturnDefault(value T) FieldOptionExtract
 	}
 }
 
-// SingleReturnDefaultFunc creates a field extractor that returns a default value from a function if the field is not found.
-func (f FieldOptionExtractor[T]) SingleReturnDefaultFunc(fn func(err error) T) FieldOptionExtractorSingleReturn[T] {
+// OrElse creates a field extractor that calls a function to obtain a value if the field is not found.
+func (f FieldOptionExtractor[T]) OrElse(fn func(err error) T) FieldOptionExtractorSingleReturn[T] {
 	return func(err error) T {
 		if val, ok := f(err); ok {
 			return val

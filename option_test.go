@@ -8,11 +8,11 @@ import (
 	"github.com/shiwano/errdef"
 )
 
-func TestFieldOptionConstructor_Default(t *testing.T) {
+func TestFieldOptionConstructor_WithValue(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
-	defaultConstructor := constructor.Default("default_value")
+	withValueConstructor := constructor.WithValue("default_value")
 
-	option := defaultConstructor()
+	option := withValueConstructor()
 	err := errdef.New("test error", option)
 
 	value, found := extractor(err)
@@ -24,13 +24,13 @@ func TestFieldOptionConstructor_Default(t *testing.T) {
 	}
 }
 
-func TestFieldOptionConstructor_DefaultFunc(t *testing.T) {
+func TestFieldOptionConstructor_WithValueFunc(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
-	defaultFuncConstructor := constructor.DefaultFunc(func() string {
+	withValueFuncConstructor := constructor.WithValueFunc(func() string {
 		return "default_value"
 	})
 
-	option := defaultFuncConstructor()
+	option := withValueFuncConstructor()
 	err := errdef.New("test error", option)
 
 	value, found := extractor(err)
@@ -42,17 +42,17 @@ func TestFieldOptionConstructor_DefaultFunc(t *testing.T) {
 	}
 }
 
-func TestFieldOptionConstructor_FromContext(t *testing.T) {
+func TestFieldOptionConstructor_WithContextFunc(t *testing.T) {
 	type contextKey struct{}
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, contextKey{}, "context_value")
 
 	constructor, extractor := errdef.DefineField[string]("test_field")
-	fromContextConstructor := constructor.FromContext(func(ctx context.Context) string {
+	withContextFuncConstructor := constructor.WithContextFunc(func(ctx context.Context) string {
 		return ctx.Value(contextKey{}).(string)
 	})
 
-	option := fromContextConstructor(ctx)
+	option := withContextFuncConstructor(ctx)
 	err := errdef.New("test error", option)
 
 	value, found := extractor(err)
@@ -64,60 +64,60 @@ func TestFieldOptionConstructor_FromContext(t *testing.T) {
 	}
 }
 
-func TestFieldOptionExtractor_SingleReturn(t *testing.T) {
+func TestFieldOptionExtractor_OrZero(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
-	singleReturnExtractor := extractor.SingleReturn()
+	orZeroExtractor := extractor.OrZero()
 
 	option := constructor("test_value")
 	err := errdef.New("test error", option)
 
-	value := singleReturnExtractor(err)
+	value := orZeroExtractor(err)
 	if value != "test_value" {
 		t.Errorf("want value %q, got %q", "test_value", value)
 	}
 
 	regularErr := errors.New("regular error")
-	zeroValue := singleReturnExtractor(regularErr)
+	zeroValue := orZeroExtractor(regularErr)
 	if zeroValue != "" {
 		t.Errorf("want zero value for string, got %q", zeroValue)
 	}
 }
 
-func TestFieldOptionExtractor_SingleReturnDefault(t *testing.T) {
+func TestFieldOptionExtractor_OrDefault(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
-	singleReturnDefaultExtractor := extractor.SingleReturnDefault("default")
+	orDefaultExtractor := extractor.OrDefault("default")
 
 	option := constructor("test_value")
 	err := errdef.New("test error", option)
 
-	value := singleReturnDefaultExtractor(err)
+	value := orDefaultExtractor(err)
 	if value != "test_value" {
 		t.Errorf("want value %q, got %q", "test_value", value)
 	}
 
 	regularErr := errors.New("regular error")
-	defaultValue := singleReturnDefaultExtractor(regularErr)
+	defaultValue := orDefaultExtractor(regularErr)
 	if defaultValue != "default" {
 		t.Errorf("want default value %q, got %q", "default", defaultValue)
 	}
 }
 
-func TestFieldOptionExtractor_SingleReturnDefaultFunc(t *testing.T) {
+func TestFieldOptionExtractor_OrElse(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
-	singleReturnDefaultFuncExtractor := extractor.SingleReturnDefaultFunc(func(err error) string {
+	orElseExtractor := extractor.OrElse(func(err error) string {
 		return err.Error() + " default"
 	})
 
 	option := constructor("test_value")
 	err := errdef.New("test error", option)
 
-	value := singleReturnDefaultFuncExtractor(err)
+	value := orElseExtractor(err)
 	if value != "test_value" {
 		t.Errorf("want value %q, got %q", "test_value", value)
 	}
 
 	regularErr := errors.New("regular error")
-	defaultValue := singleReturnDefaultFuncExtractor(regularErr)
+	defaultValue := orElseExtractor(regularErr)
 	if defaultValue != "regular error default" {
 		t.Errorf("want default value %q, got %q", "regular error default", defaultValue)
 	}

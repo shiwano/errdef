@@ -25,10 +25,10 @@ var (
 	UserHint, UserHintFrom = DefineField[string]("user_hint")
 
 	// Public marks the error as safe for external exposure (sets true).
-	Public, IsPublic = public.Default(true), publicFrom.SingleReturn()
+	Public, IsPublic = public.WithValue(true), publicFrom.OrZero()
 
 	// Retryable marks the operation as retryable (sets true).
-	Retryable, IsRetryable = retryable.Default(true), retryableFrom.SingleReturn()
+	Retryable, IsRetryable = retryable.WithValue(true), retryableFrom.OrZero()
 
 	// RetryAfter sets the duration (time.Duration) to wait before retrying.
 	RetryAfter, RetryAfterFrom = DefineField[time.Duration]("retry_after")
