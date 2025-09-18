@@ -26,6 +26,7 @@ type (
 
 	// ErrorFormatter is a function type for custom error formatting.
 	ErrorFormatter func(err Error, s fmt.State, verb rune)
+
 	// ErrorJSONMarshaler is a function type for custom JSON marshaling of errors.
 	ErrorJSONMarshaler func(err Error) ([]byte, error)
 
@@ -66,6 +67,20 @@ var (
 	_ stackTracer    = (*definedError)(nil)
 	_ causer         = (*definedError)(nil)
 )
+
+func newError(d *Definition, cause error, msg string, joined bool, stackSkip int) error {
+	var stack stack
+	if !d.noTrace {
+		stack = newStack(d.stackSkip + stackSkip)
+	}
+	return &definedError{
+		def:    d,
+		msg:    msg,
+		cause:  cause,
+		stack:  stack,
+		joined: joined,
+	}
+}
 
 func (e *definedError) Error() string {
 	return e.msg
@@ -202,27 +217,25 @@ func (e *definedError) MarshalJSON() ([]byte, error) {
 		return e.def.jsonMarshaler(e)
 	}
 
-	fields, err := e.def.fields.MarshalJSON()
+	fields, err := e.Fields().MarshalJSON()
 	if err != nil {
 		return nil, err
 	}
 
 	var causes []json.RawMessage
-	if e.cause != nil {
-		for _, c := range e.Unwrap() {
-			if marshaler, ok := c.(json.Marshaler); ok {
-				b, err := marshaler.MarshalJSON()
-				if err != nil {
-					return nil, err
-				}
-				causes = append(causes, b)
-			} else {
-				b, err := json.Marshal(c.Error())
-				if err != nil {
-					return nil, err
-				}
-				causes = append(causes, b)
+	for _, c := range e.Unwrap() {
+		if marshaler, ok := c.(json.Marshaler); ok {
+			b, err := marshaler.MarshalJSON()
+			if err != nil {
+				return nil, err
 			}
+			causes = append(causes, b)
+		} else {
+			b, err := json.Marshal(c.Error())
+			if err != nil {
+				return nil, err
+			}
+			causes = append(causes, b)
 		}
 	}
 
