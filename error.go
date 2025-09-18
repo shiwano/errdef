@@ -142,47 +142,38 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 	case 'v':
 		switch {
 		case s.Flag('+'):
-			_, _ = fmt.Fprintf(s, "%s\n", e.Error())
+			_, _ = fmt.Fprintf(s, "%s\n\n", e.Error())
 
 			if e.Kind() != "" {
 				_, _ = io.WriteString(s, "Kind:\n")
 				_, _ = fmt.Fprintf(s, "\t%v\n", e.Kind())
 			}
 
-			if e.def.fields.Len() > 0 {
+			if e.Fields().Len() > 0 {
 				_, _ = io.WriteString(s, "Fields:\n")
-				for k, v := range e.def.fields.SortedSeq() {
+				for k, v := range e.Fields().SortedSeq() {
 					_, _ = fmt.Fprintf(s, "\t%v: %+v\n", k, v)
 				}
 			}
 
-			if e.stack.Len() > 0 {
+			if e.Stack().Len() > 0 {
 				_, _ = io.WriteString(s, "Stack:\n")
-				for _, f := range e.stack.Frames() {
+				for _, f := range e.Stack().Frames() {
 					if f.File != "" {
 						_, _ = fmt.Fprintf(s, "\t%s\n\t\t%s:%d\n", f.Func, f.File, f.Line)
 					}
 				}
 			}
 
-			if e.cause != nil {
-				_, _ = io.WriteString(s, "\nCauses:\n")
+			for i, cause := range e.Unwrap() {
+				if i == 0 {
+					_, _ = io.WriteString(s, "Causes:\n")
+				}
 
-				for i, cause := range e.Unwrap() {
-					if i > 0 {
-						_, _ = io.WriteString(s, "\n\n")
-					}
-					causeStr := fmt.Sprintf("%+v", cause)
-					causeStr = strings.Trim(causeStr, "\n")
+				causeStr := strings.Trim(fmt.Sprintf("%+v", cause), "\n")
 
-					j := 0
-					for line := range strings.SplitSeq(causeStr, "\n") {
-						if j > 0 {
-							_, _ = io.WriteString(s, "\n")
-						}
-						_, _ = fmt.Fprintf(s, "\t%s", line)
-						j++
-					}
+				for line := range strings.SplitSeq(causeStr, "\n") {
+					_, _ = fmt.Fprintf(s, "\t%s\n", line)
 				}
 			}
 		case s.Flag('#'):

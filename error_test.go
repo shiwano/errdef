@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -321,42 +322,77 @@ func TestFormatter_Format(t *testing.T) {
 		err := def.New("test message")
 
 		result := fmt.Sprintf("%+v", err)
-		if !strings.Contains(result, "test message") {
-			t.Error("want verbose format to contain message")
-		}
-		if !strings.Contains(result, "Kind:") {
-			t.Error("want verbose format to contain kind section")
-		}
-		if !strings.Contains(result, "Fields:") {
-			t.Error("want verbose format to contain fields section")
-		}
-		if !strings.Contains(result, "Stack:") {
-			t.Error("want verbose format to contain stack section")
-		}
-		if !strings.Contains(result, "user_id: user123") {
-			t.Error("want verbose format to contain field values")
+		if matched, _ := regexp.MatchString(
+			`test message\n`+
+				`\n`+
+				`Kind:\n`+
+				`\ttest_error\n`+
+				`Fields:\n`+
+				`\tuser_id: user123\n`+
+				`Stack:\n`+
+				`[\s\S]*`,
+			result,
+		); !matched {
+			t.Errorf("want format to match pattern, got: %q", result)
 		}
 	})
 
 	t.Run("verbose format with cause", func(t *testing.T) {
+		constructor, _ := errdef.DefineField[string]("user_id")
 		original := errors.New("original error")
-		wrapped := errdef.Wrap(original)
+		def := errdef.Define("test_error", errdef.NoTrace(), constructor("user123"))
+		wrapped := def.Wrap(original)
 
 		result := fmt.Sprintf("%+v", wrapped)
-		if !strings.Contains(result, "Causes:") {
-			t.Error("want verbose format to contain causes section")
+		want := "original error\n" +
+			"\n" +
+			"Kind:\n" +
+			"\ttest_error\n" +
+			"Fields:\n" +
+			"\tuser_id: user123\n" +
+			"Causes:\n" +
+			"\toriginal error\n"
+		if want != result {
+			t.Errorf("want format to equal, got: %q", result)
 		}
-		if !strings.Contains(result, "original error") {
-			t.Error("want verbose format to contain original error")
+	})
+
+	t.Run("verbose format with causes", func(t *testing.T) {
+		err1 := errors.New("error 1")
+		err2 := errors.New("error 2")
+		def := errdef.Define("test_error", errdef.NoTrace())
+		joined := def.Join(err1, err2)
+
+		result := fmt.Sprintf("%+v", joined)
+
+		want := "error 1\n" +
+			"error 2\n" +
+			"\n" +
+			"Kind:\n" +
+			"\ttest_error\n" +
+			"Causes:\n" +
+			"\terror 1\n" +
+			"\terror 2\n"
+		if want != result {
+			t.Errorf("want format to equal, got: %q", result)
 		}
 	})
 
 	t.Run("go format", func(t *testing.T) {
-		err := errdef.New("test message")
+		err := errdef.New("test message", errdef.NoTrace())
 
 		result := fmt.Sprintf("%#v", err)
-		if !strings.Contains(result, "definedError") {
-			t.Error("want go format to contain struct name")
+		if matched, _ := regexp.MatchString(
+			`&errdef\.definedError\{`+
+				`def:\(\*errdef\.Definition\)\(0x[0-9a-f]+\), `+
+				`msg:"test message", `+
+				`cause:error\(nil\), `+
+				`stack:errdef\.stack\(nil\), `+
+				`joined:false`+
+				`\}`,
+			result,
+		); !matched {
+			t.Errorf("want format to match pattern, got: %q", result)
 		}
 	})
 

@@ -106,6 +106,7 @@ fmt.Printf("%+v\n", err)
 
 ```
 user user-123 not found: record not found
+
 Kind:
 	not_found
 Fields:
