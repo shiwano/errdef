@@ -34,7 +34,13 @@ func (d *Definition) Error() string {
 // With creates a new Definition with options from the context and additional options applied.
 func (d *Definition) With(ctx context.Context, opts ...Option) *Definition {
 	ctxOpts := optionsFromContext(ctx)
-	return d.WithOptions(append(ctxOpts, opts...)...)
+	if len(ctxOpts) == 0 && len(opts) == 0 {
+		return d
+	}
+	def := d.clone()
+	applyOptionsTo(def, ctxOpts)
+	applyOptionsTo(def, opts)
+	return def
 }
 
 // WithOptions creates a new Definition with the given options applied.
