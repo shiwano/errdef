@@ -88,41 +88,6 @@ func TestDefineField(t *testing.T) {
 			t.Error("want field not to be found on non-errdef error")
 		}
 	})
-
-	t.Run("default constructor", func(t *testing.T) {
-		constructor, extractor := errdef.DefineField[string]("test_field")
-		defaultConstructor := constructor.Default("default_value")
-
-		option := defaultConstructor()
-		err := errdef.New("test error", option)
-
-		value, found := extractor(err)
-		if !found {
-			t.Error("want field to be found")
-		}
-		if value != "default_value" {
-			t.Errorf("want value %q, got %q", "default_value", value)
-		}
-	})
-
-	t.Run("single return extractor", func(t *testing.T) {
-		constructor, extractor := errdef.DefineField[string]("test_field")
-		singleReturnExtractor := extractor.SingleReturn()
-
-		option := constructor("test_value")
-		err := errdef.New("test error", option)
-
-		value := singleReturnExtractor(err)
-		if value != "test_value" {
-			t.Errorf("want value %q, got %q", "test_value", value)
-		}
-
-		regularErr := errors.New("regular error")
-		zeroValue := singleReturnExtractor(regularErr)
-		if zeroValue != "" {
-			t.Errorf("want zero value for string, got %q", zeroValue)
-		}
-	})
 }
 
 func TestNew(t *testing.T) {

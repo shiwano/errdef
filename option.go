@@ -1,6 +1,9 @@
 package errdef
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 type (
 	// Option represents a configuration option that can be applied to error definitions.
@@ -27,11 +30,16 @@ type (
 
 	// FieldOptionConstructor creates an Option that sets a field value.
 	FieldOptionConstructor[T any] func(value T) Option
+
 	// FieldOptionExtractor extracts a field value from an error.
 	FieldOptionExtractor[T any] func(err error) (T, bool)
 
 	// FieldOptionConstructorDefault creates an Option with a default value when called with no arguments.
 	FieldOptionConstructorDefault[T any] func() Option
+
+	// FieldOptionConstructorFromContext creates an Option with a value obtained from a context-aware function.
+	FieldOptionConstructorFromContext[T any] func(ctx context.Context) Option
+
 	// FieldOptionExtractorSingleReturn extracts a field value from an error, returning only the value.
 	FieldOptionExtractorSingleReturn[T any] func(err error) T
 
@@ -68,11 +76,46 @@ func (f FieldOptionConstructor[T]) Default(value T) FieldOptionConstructorDefaul
 	}
 }
 
+// DefaultFunc creates a field option constructor that sets a default value using a function.
+func (f FieldOptionConstructor[T]) DefaultFunc(fn func() T) FieldOptionConstructorDefault[T] {
+	return func() Option {
+		return f(fn())
+	}
+}
+
+// FromContext creates a field option constructor that sets a value using a context-aware function.
+func (f FieldOptionConstructor[T]) FromContext(fn func(ctx context.Context) T) FieldOptionConstructorFromContext[T] {
+	return func(ctx context.Context) Option {
+		val := fn(ctx)
+		return f(val)
+	}
+}
+
 // SingleReturn creates a field extractor that returns only the value, ignoring the boolean.
 func (f FieldOptionExtractor[T]) SingleReturn() FieldOptionExtractorSingleReturn[T] {
 	return func(err error) T {
 		val, _ := f(err)
 		return val
+	}
+}
+
+// SingleReturnDefault creates a field extractor that returns a default value if the field is not found.
+func (f FieldOptionExtractor[T]) SingleReturnDefault(value T) FieldOptionExtractorSingleReturn[T] {
+	return func(err error) T {
+		if val, ok := f(err); ok {
+			return val
+		}
+		return value
+	}
+}
+
+// SingleReturnDefaultFunc creates a field extractor that returns a default value from a function if the field is not found.
+func (f FieldOptionExtractor[T]) SingleReturnDefaultFunc(fn func(err error) T) FieldOptionExtractorSingleReturn[T] {
+	return func(err error) T {
+		if val, ok := f(err); ok {
+			return val
+		}
+		return fn(err)
 	}
 }
 
