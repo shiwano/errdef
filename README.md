@@ -6,16 +6,15 @@
 
 `errdef` is a Go library for more structured, type-safe, and flexible error handling.
 
-By clearly separating an error's **definition** from its runtime **instance**, `errdef` enables consistent error handling throughout your application.
-It allows you to attach rich metadata to errors, simplifying debugging, logging, and API response generation.
+By clearly separating an error's **definition** from its runtime **instance**, `errdef` enables consistent error handling across your application.
+It allows you to attach rich metadata to errors, simplifying debugging, structured logging, and API response generation.
 
 ## Features
 
-- **✨ Intuitive & Reusable Definitions**: Separates an error's **definition** from its **instance** to enable consistent error handling across your application.
-- **📦 Type-Safe Metadata**: Leverage generics to **type-safely** attach extra data like HTTP statuses, preventing runtime mistakes with IDE autocompletion.
-- **🔧 Flexible Customization**: Easily add dynamic data, such as a trace ID, to errors using the option pattern and `context` integration.
-- **🤝 Seamless Go Integration**: Fully compatible with the standard **`errors.Is` / `As`**. Implements `fmt.Formatter` (`%+v`) and `json.Marshaler` to simplify debugging and structured logging.
-- **🚀 Rich, Built-in Options**: Comes with many practical, ready-to-use options like `HTTPStatus`, `LogLevel`, `Retryable`, and more.
+- **✨ Consistent by Design**: Achieve consistent error handling application-wide by separating error **definitions** from **instances**.
+- **🔧 Structured Metadata**: Attach type-safe metadata as options or automatically from context. Generics ensure compile-time safety.
+- **🤝 Works with Go Standard**: Integrates seamlessly with standard interfaces like `errors.Is`, `fmt.Formatter`, and `json.Marshaler`.
+- **🚀 Rich, Built-in Options**: Provides a rich set of ready-to-use options for common use cases like web services and CLIs (e.g., `HTTPStatus`).
 
 ## Installation
 
@@ -36,7 +35,9 @@ package myapp
 import "github.com/shiwano/errdef"
 
 var (
-    ErrNotFound = errdef.Define("not_found")
+    ErrNotFound = errdef.Define("not_found",
+        errdef.HTTPStatus(404),
+    )
 
     ErrInvalidArgument = errdef.Define("invalid_argument",
         errdef.HTTPStatus(400),
@@ -47,22 +48,20 @@ var (
 
 ### 2. Create Error Instances
 
-Next, create error instances from a `Definition` using methods like `New` or `Wrapf`.
+Next, create error instances from a `Definition` using methods like `New`, `Wrap` or `Wrapf`.
 
 ```go
-func findUser(ctx context.Context, id string) (*User, error) {
-    user, err := db.Find(ctx, id)
+func findUser(id int64) (*User, error) {
+    user, err := db.Find(id)
     if err != nil {
-        return nil, ErrNotFound.Wrapf(err, "user %s not found", id)
+        return nil, ErrNotFound.Wrapf(err, "user %d not found", id)
     }
     return user, nil
 }
 
-func updateUser(ctx context.Context, userID string, params UpdateParams) error {
+func updateUser(userID string, params UpdateParams) error {
     if err := params.Validate(); err != nil {
-        return ErrInvalidArgument.With(ctx,
-            errdef.Domain("user_service"), // Attach additional metadata
-        ).New("validation failed")
+        return ErrInvalidArgument.New("validation failed")
     }
     // ...
 }
@@ -75,37 +74,36 @@ You can also safely extract attached metadata using extractor functions (e.g., `
 
 ```go
 func handler(w http.ResponseWriter, r *http.Request) {
-    _, err := findUser(r.Context(), "user-123")
+    _, err := findUser(123)
     if err != nil {
-        if errors.Is(err, ErrNotFound) { // Or ErrNotFound.Is(err)
+        if errors.Is(err, ErrNotFound) { // You can use ErrNotFound.Is(err) as well
+            slog.Warn("User not found", "error", err)
             http.Error(w, "User not found", http.StatusNotFound)
             return
         }
 
-        if status, ok := errdef.HTTPStatusFrom(err); ok {
-            slog.Error("error with http status", "status", status, "err", err)
-            http.Error(w, err.Error(), status)
-            return
-        }
+        slog.Error("Unhandled error", "error", fmt.Sprintf("%+v", err))
 
-        http.Error(w, "Internal server error", http.StatusInternalServerError)
+        status := errdef.HTTPStatusFrom.OrDefault(err, http.StatusInternalServerError)
+        message := errdef.UserHintFrom.OrDefault(err, "An error occurred")
+        http.Error(w, message, status)
     }
 }
 ```
 
 ### 4. Detailed Error Formatting
 
-Using the `%+v` format specifier will print the error message, fields, stack trace, and any wrapped errors.
+Using the `%+v` format specifier will print the error message, kind, fields, stack trace, and any wrapped errors.
 
 ```go
-err := findUser(ctx, "user-123")
+err := findUser(ctx, 123)
 fmt.Printf("%+v\n", err)
 ```
 
 **Example Output:**
 
 ```
-user user-123 not found: record not found
+user 123 not found: record not found
 
 Kind:
 	not_found
@@ -153,9 +151,9 @@ You can use `context.Context` to automatically attach request-scoped information
 func tracingMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         reqID := r.Header.Get("X-Request-ID")
-        // Add the TraceID option to the context
+        // Attach the TraceID option to the context
         ctx := errdef.ContextWithOptions(r.Context(), errdef.TraceID(reqID))
-        next.ServeHTTP(w, r.With(ctx))
+        next.ServeHTTP(w, r.WithContext(ctx))
     })
 }
 
@@ -166,25 +164,26 @@ func someHandler(ctx context.Context) error {
 }
 ```
 
-### Standard Options
+### Built-in Options
 
-| Option                 | Description                                                         | Extractor        |
-|:-----------------------|:--------------------------------------------------------------------|:-----------------|
-| `HTTPStatus(int)`      | Sets the HTTP status code.                                          | `HTTPStatusFrom` |
-| `LogLevel(slog.Level)` | Sets the log level of type `slog.Level`.                            | `LogLevelFrom`   |
-| `TraceID(string)`      | Sets a trace ID or request ID.                                      | `TraceIDFrom`    |
-| `Domain(string)`       | Sets the service domain or subsystem name where the error occurred. | `DomainFrom`     |
-| `UserHint(string)`     | Sets a hint message to be displayed to the user.                    | `UserHintFrom`   |
-| `Public()`             | Marks the error as safe for external exposure (sets `true`).        | `IsPublic`       |
-| `Retryable()`          | Marks the operation as retryable (sets `true`).                     | `IsRetryable`    |
-| `RetryAfter(d)`        | Sets the duration (`time.Duration`) to wait before retrying.        | `RetryAfterFrom` |
-| `ExitCode(int)`        | Sets the exit code for a CLI application.                           | `ExitCodeFrom`   |
-| `HelpURL(string)`      | Sets a URL to documentation or troubleshooting guides.              | `HelpURLFrom`    |
-| `NoTrace()`            | Disables stack trace collection.                                    | -                |
-| `StackSkip(int)`       | Adds to the number of frames to skip during stack trace collection. | -                |
-| `Boundary()`           | Marks this error as the end of an error chain, stopping `Unwrap`.   | -                |
-| `Formatter(f)`         | Overrides the `fmt.Formatter` behavior with a custom function.      | -                |
-| `JSONMarshaler(f)`     | Overrides the `json.Marshaler` behavior with a custom function.     | -                |
+| Option                 | Description                                                                     | Extractor        |
+|:-----------------------|:--------------------------------------------------------------------------------|:-----------------|
+| `HTTPStatus(int)`      | Sets the HTTP status code.                                                      | `HTTPStatusFrom` |
+| `LogLevel(slog.Level)` | Sets the log level of type `slog.Level`.                                        | `LogLevelFrom`   |
+| `TraceID(string)`      | Sets a trace ID or request ID.                                                  | `TraceIDFrom`    |
+| `Domain(string)`       | Sets the service domain or subsystem name where the error occurred.             | `DomainFrom`     |
+| `UserHint(string)`     | Sets a hint message to be displayed to the user.                                | `UserHintFrom`   |
+| `Public()`             | Marks the error as safe for external exposure (default `false`).                | `IsPublic`       |
+| `Retryable()`          | Marks the operation as retryable (default `false`).                             | `IsRetryable`    |
+| `RetryAfter(d)`        | Sets the duration (`time.Duration`) to wait before retrying.                    | `RetryAfterFrom` |
+| `NotReportable()`      | Marks the error as not reportable to an error tracking system (default `true`). | `IsReportable`   |
+| `ExitCode(int)`        | Sets the exit code for a CLI application.                                       | `ExitCodeFrom`   |
+| `HelpURL(string)`      | Sets a URL to documentation or troubleshooting guides.                          | `HelpURLFrom`    |
+| `NoTrace()`            | Disables stack trace collection.                                                | -                |
+| `StackSkip(int)`       | Adds to the number of frames to skip during stack trace collection.             | -                |
+| `Boundary()`           | Marks this error as the end of an error chain, stopping `errors.Unwrap`.        | -                |
+| `Formatter(f)`         | Overrides the `fmt.Formatter` behavior with a custom function.                  | -                |
+| `JSONMarshaler(f)`     | Overrides the `json.Marshaler` behavior with a custom function.                 | -                |
 
 ## Contributing
 
