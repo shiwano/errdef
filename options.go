@@ -6,8 +6,9 @@ import (
 )
 
 var (
-	public, publicFrom       = DefineField[bool]("public")
-	retryable, retryableFrom = DefineField[bool]("retryable")
+	public, publicFrom         = DefineField[bool]("public")
+	retryable, retryableFrom   = DefineField[bool]("retryable")
+	reportable, reportableFrom = DefineField[bool]("reportable")
 
 	// HTTPStatus sets the HTTP status code.
 	HTTPStatus, HTTPStatusFrom = DefineField[int]("http_status")
@@ -24,14 +25,17 @@ var (
 	// UserHint sets a hint message to be displayed to the user.
 	UserHint, UserHintFrom = DefineField[string]("user_hint")
 
-	// Public marks the error as safe for external exposure (sets true).
-	Public, IsPublic = public.WithValue(true), publicFrom.OrZero()
+	// Public marks the error as safe for external exposure (default: false).
+	Public, IsPublic = public.WithValue(true), publicFrom.WithZero()
 
-	// Retryable marks the operation as retryable (sets true).
-	Retryable, IsRetryable = retryable.WithValue(true), retryableFrom.OrZero()
+	// Retryable marks the operation as retryable (default: false).
+	Retryable, IsRetryable = retryable.WithValue(true), retryableFrom.WithZero()
 
 	// RetryAfter sets the duration (time.Duration) to wait before retrying.
 	RetryAfter, RetryAfterFrom = DefineField[time.Duration]("retry_after")
+
+	// NotReportable marks the error as not reportable to an error tracking system (default: true).
+	NotReportable, IsReportable = reportable.WithValue(false), reportableFrom.WithDefault(true)
 
 	// ExitCode sets the exit code for a CLI application.
 	ExitCode, ExitCodeFrom = DefineField[int]("exit_code")

@@ -2,7 +2,6 @@ package errdef
 
 import (
 	"context"
-	"errors"
 )
 
 type (
@@ -36,9 +35,6 @@ type (
 
 	// FieldOptionConstructorNoArgs creates an Option with a default value when called with no arguments.
 	FieldOptionConstructorNoArgs[T any] func() Option
-
-	// FieldOptionConstructorWithContext creates an Option with a value obtained from a context-aware function.
-	FieldOptionConstructorWithContext[T any] func(ctx context.Context) Option
 
 	// FieldOptionExtractorSingleReturn extracts a field value from an error, returning only the value.
 	FieldOptionExtractorSingleReturn[T any] func(err error) T
@@ -83,24 +79,24 @@ func (f FieldOptionConstructor[T]) WithValueFunc(fn func() T) FieldOptionConstru
 	}
 }
 
-// WithContextFunc creates a field option constructor that sets a value using a context-aware function.
-func (f FieldOptionConstructor[T]) WithContextFunc(fn func(ctx context.Context) T) FieldOptionConstructorWithContext[T] {
+// WithContext creates a field option constructor that sets a value using a context-aware function.
+func (f FieldOptionConstructor[T]) WithContext(fn func(ctx context.Context) T) FieldOptionConstructor[context.Context] {
 	return func(ctx context.Context) Option {
 		val := fn(ctx)
 		return f(val)
 	}
 }
 
-// OrZero creates a field extractor that returns only the value, ignoring the boolean.
-func (f FieldOptionExtractor[T]) OrZero() FieldOptionExtractorSingleReturn[T] {
+// WithZero creates a field extractor that returns only the value, ignoring the boolean.
+func (f FieldOptionExtractor[T]) WithZero() FieldOptionExtractorSingleReturn[T] {
 	return func(err error) T {
 		val, _ := f(err)
 		return val
 	}
 }
 
-// OrDefault creates a field extractor that returns a default value if the field is not found.
-func (f FieldOptionExtractor[T]) OrDefault(value T) FieldOptionExtractorSingleReturn[T] {
+// WithDefault creates a field extractor that returns a default value if the field is not found.
+func (f FieldOptionExtractor[T]) WithDefault(value T) FieldOptionExtractorSingleReturn[T] {
 	return func(err error) T {
 		if val, ok := f(err); ok {
 			return val
@@ -109,8 +105,8 @@ func (f FieldOptionExtractor[T]) OrDefault(value T) FieldOptionExtractorSingleRe
 	}
 }
 
-// OrElse creates a field extractor that calls a function to obtain a value if the field is not found.
-func (f FieldOptionExtractor[T]) OrElse(fn func(err error) T) FieldOptionExtractorSingleReturn[T] {
+// WithFallback creates a field extractor that calls a function to obtain a value if the field is not found.
+func (f FieldOptionExtractor[T]) WithFallback(fn func(err error) T) FieldOptionExtractorSingleReturn[T] {
 	return func(err error) T {
 		if val, ok := f(err); ok {
 			return val
@@ -119,17 +115,19 @@ func (f FieldOptionExtractor[T]) OrElse(fn func(err error) T) FieldOptionExtract
 	}
 }
 
-func fieldValueFrom[T any](err error, key FieldKey) (T, bool) {
-	var e *definedError
-	if errors.As(err, &e) {
-		if v, found := e.def.fields.Get(key); found {
-			if tv, ok := v.(T); ok {
-				return tv, true
-			}
-		}
-	}
-	var zero T
-	return zero, false
+// OrZero extracts the field value from the error, returning the zero value if not found.
+func (f FieldOptionExtractor[T]) OrZero(err error) T {
+	return f.WithZero()(err)
+}
+
+// OrDefault extracts the field value from the error, returning a default value if not found.
+func (f FieldOptionExtractor[T]) OrDefault(err error, value T) T {
+	return f.WithDefault(value)(err)
+}
+
+// OrFallback extracts the field value from the error, calling a function to obtain a value if not found.
+func (f FieldOptionExtractor[T]) OrFallback(err error, fn func(err error) T) T {
+	return f.WithFallback(fn)(err)
 }
 
 func (a *optionApplier) SetField(key FieldKey, value any) {

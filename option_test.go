@@ -42,13 +42,13 @@ func TestFieldOptionConstructor_WithValueFunc(t *testing.T) {
 	}
 }
 
-func TestFieldOptionConstructor_WithContextFunc(t *testing.T) {
+func TestFieldOptionConstructor_WithContext(t *testing.T) {
 	type contextKey struct{}
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, contextKey{}, "context_value")
 
 	constructor, extractor := errdef.DefineField[string]("test_field")
-	withContextFuncConstructor := constructor.WithContextFunc(func(ctx context.Context) string {
+	withContextFuncConstructor := constructor.WithContext(func(ctx context.Context) string {
 		return ctx.Value(contextKey{}).(string)
 	})
 
@@ -64,20 +64,78 @@ func TestFieldOptionConstructor_WithContextFunc(t *testing.T) {
 	}
 }
 
-func TestFieldOptionExtractor_OrZero(t *testing.T) {
+func TestFieldOptionExtractor_WithZero(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
-	orZeroExtractor := extractor.OrZero()
+	zeroExtractor := extractor.WithZero()
 
 	option := constructor("test_value")
 	err := errdef.New("test error", option)
 
-	value := orZeroExtractor(err)
+	value := zeroExtractor(err)
 	if value != "test_value" {
 		t.Errorf("want value %q, got %q", "test_value", value)
 	}
 
-	regularErr := errors.New("regular error")
-	zeroValue := orZeroExtractor(regularErr)
+	stdErr := errors.New("standard error")
+	zeroValue := zeroExtractor(stdErr)
+	if zeroValue != "" {
+		t.Errorf("want zero value for string, got %q", zeroValue)
+	}
+}
+
+func TestFieldOptionExtractor_WithDefault(t *testing.T) {
+	constructor, extractor := errdef.DefineField[string]("test_field")
+	defaultExtractor := extractor.WithDefault("default")
+
+	option := constructor("test_value")
+	err := errdef.New("test error", option)
+
+	value := defaultExtractor(err)
+	if value != "test_value" {
+		t.Errorf("want value %q, got %q", "test_value", value)
+	}
+
+	stdErr := errors.New("standard error")
+	defaultValue := defaultExtractor(stdErr)
+	if defaultValue != "default" {
+		t.Errorf("want default value %q, got %q", "default", defaultValue)
+	}
+}
+
+func TestFieldOptionExtractor_WithFallback(t *testing.T) {
+	constructor, extractor := errdef.DefineField[string]("test_field")
+	fallbackExtractor := extractor.WithFallback(func(err error) string {
+		return err.Error() + " fallback"
+	})
+
+	option := constructor("test_value")
+	err := errdef.New("test error", option)
+
+	value := fallbackExtractor(err)
+	if value != "test_value" {
+		t.Errorf("want value %q, got %q", "test_value", value)
+	}
+
+	stdErr := errors.New("standard error")
+	defaultValue := fallbackExtractor(stdErr)
+	if defaultValue != "standard error fallback" {
+		t.Errorf("want default value %q, got %q", "standard error default", defaultValue)
+	}
+}
+
+func TestFieldOptionExtractor_OrZero(t *testing.T) {
+	constructor, extractor := errdef.DefineField[string]("test_field")
+
+	option := constructor("test_value")
+	err := errdef.New("test error", option)
+
+	value := extractor.OrZero(err)
+	if value != "test_value" {
+		t.Errorf("want value %q, got %q", "test_value", value)
+	}
+
+	stdErr := errors.New("standard error")
+	zeroValue := extractor.OrZero(stdErr)
 	if zeroValue != "" {
 		t.Errorf("want zero value for string, got %q", zeroValue)
 	}
@@ -85,40 +143,40 @@ func TestFieldOptionExtractor_OrZero(t *testing.T) {
 
 func TestFieldOptionExtractor_OrDefault(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
-	orDefaultExtractor := extractor.OrDefault("default")
 
 	option := constructor("test_value")
 	err := errdef.New("test error", option)
 
-	value := orDefaultExtractor(err)
+	value := extractor.OrDefault(err, "default")
 	if value != "test_value" {
 		t.Errorf("want value %q, got %q", "test_value", value)
 	}
 
-	regularErr := errors.New("regular error")
-	defaultValue := orDefaultExtractor(regularErr)
+	stdErr := errors.New("standard error")
+	defaultValue := extractor.OrDefault(stdErr, "default")
 	if defaultValue != "default" {
 		t.Errorf("want default value %q, got %q", "default", defaultValue)
 	}
 }
 
-func TestFieldOptionExtractor_OrElse(t *testing.T) {
+func TestFieldOptionExtractor_OrFallback(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
-	orElseExtractor := extractor.OrElse(func(err error) string {
-		return err.Error() + " default"
-	})
 
 	option := constructor("test_value")
 	err := errdef.New("test error", option)
 
-	value := orElseExtractor(err)
+	value := extractor.OrFallback(err, func(err error) string {
+		return err.Error() + " default"
+	})
 	if value != "test_value" {
 		t.Errorf("want value %q, got %q", "test_value", value)
 	}
 
-	regularErr := errors.New("regular error")
-	defaultValue := orElseExtractor(regularErr)
-	if defaultValue != "regular error default" {
-		t.Errorf("want default value %q, got %q", "regular error default", defaultValue)
+	stdErr := errors.New("standard error")
+	defaultValue := extractor.OrFallback(stdErr, func(err error) string {
+		return err.Error() + " fallback"
+	})
+	if defaultValue != "standard error fallback" {
+		t.Errorf("want default value %q, got %q", "standard error default", defaultValue)
 	}
 }

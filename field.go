@@ -3,6 +3,7 @@ package errdef
 import (
 	"cmp"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"iter"
 	"maps"
@@ -117,4 +118,17 @@ func (f fields) clone() fields {
 
 func (k fieldKey) String() string {
 	return k.name
+}
+
+func fieldValueFrom[T any](err error, key FieldKey) (T, bool) {
+	var e *definedError
+	if errors.As(err, &e) {
+		if v, found := e.def.fields.Get(key); found {
+			if tv, ok := v.(T); ok {
+				return tv, true
+			}
+		}
+	}
+	var zero T
+	return zero, false
 }
