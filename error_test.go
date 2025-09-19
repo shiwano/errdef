@@ -428,7 +428,7 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 		if result["message"] != "test message" {
 			t.Errorf("want message %q, got %q", "test message", result["message"])
 		}
-		if result["kind"] != "" {
+		if result["kind"] != nil {
 			t.Errorf("want empty kind, got %q", result["kind"])
 		}
 	})

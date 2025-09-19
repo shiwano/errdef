@@ -241,13 +241,13 @@ func (e *definedError) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(struct {
 		Message string            `json:"message"`
-		Kind    Kind              `json:"kind"`
+		Kind    string            `json:"kind,omitempty"`
 		Fields  json.RawMessage   `json:"fields,omitempty"`
 		Stack   []Frame           `json:"stack,omitempty"`
 		Causes  []json.RawMessage `json:"causes,omitempty"`
 	}{
 		Message: e.Error(),
-		Kind:    e.Kind(),
+		Kind:    string(e.Kind()),
 		Fields:  fields,
 		Stack:   e.stack.Frames(),
 		Causes:  causes,
