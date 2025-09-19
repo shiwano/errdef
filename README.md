@@ -11,7 +11,7 @@ It allows you to attach rich metadata to errors, simplifying debugging, structur
 
 ## Features
 
-- **✨ Consistent by Design**: Achieve consistent error handling application-wide by separating error **definitions** from **instances**.
+- **✨ Consistent by Design**: Achieve consistent error handling application-wide by separating error definitions from instances.
 - **🔧 Structured Metadata**: Attach type-safe metadata as options or automatically from context. Generics ensure compile-time safety.
 - **🤝 Works with Go Standard**: Integrates seamlessly with standard interfaces like `errors.Is`, `fmt.Formatter`, and `json.Marshaler`.
 - **🚀 Rich, Built-in Options**: Provides a rich set of ready-to-use options for common use cases like web services and CLIs (e.g., `HTTPStatus`).
@@ -48,7 +48,7 @@ var (
 
 ### 2. Create Error Instances
 
-Next, create error instances from a `Definition` using methods like `New`, `Wrap` or `Wrapf`.
+Next, create error instances from a `Definition` using methods like `New`, `Errorf`, `Wrap` or `Wrapf`.
 
 ```go
 func findUser(id int64) (*User, error) {
@@ -103,7 +103,7 @@ fmt.Printf("%+v\n", err)
 **Example Output:**
 
 ```
-user 123 not found: record not found
+user 123 not found
 
 Kind:
 	not_found
@@ -128,19 +128,66 @@ Causes:
 
 ### Defining Custom Fields
 
-You can easily define project-specific, type-safe fields using `errdef.DefineField`.
+You can easily define project-specific, type-safe fields using errdef.DefineField.
+This function returns two variables: a **constructor** to attach the field as an option, and an **extractor** to retrieve the value from an error.
 
 ```go
 package myapp
 
 import "github.com/shiwano/errdef"
 
-var ErrorCode, ErrorCodeFrom = errdef.DefineField[int]("error_code")
+var (
+    // ErrorCode is the constructor, ErrorCodeFrom is the extractor
+    ErrorCode, ErrorCodeFrom = errdef.DefineField[int]("error_code")
 
-var ErrPaymentFailed = errdef.Define("payment_failed",
-    errdef.HTTPStatus(500),
-    ErrorCode(2001), // Attach a custom error code
+    ErrPaymentFailed = errdef.Define("payment_failed",
+        ErrorCode(2001),
+    )
 )
+```
+
+#### Creating Reusable Options
+
+The constructor can be chained with methods like `WithValue` or `WithValueFunc` to create new, simplified option constructors. This is useful for creating options with predefined or dynamically generated values.
+
+```go
+var (
+    ErrorCodeAmountTooLarge = ErrorCode.WithValue(2002)
+
+    errorID, _ = errdef.DefineField[string]("operation_id")
+    ErrorID = errorID.WithValueFunc(func() string {
+        return generateRandomID()
+    })
+)
+
+err := ErrPaymentFailed.With(
+    ErrorCodeAmountTooLarge(),
+    ErrorID(),
+).New("amount too large")
+```
+
+#### Extracting Field Values
+
+The extractor provides several convenient, chainable methods for safely retrieving values from an error instance, especially for handling cases where a field might not exist.
+
+```go
+errWithCode := ErrPaymentFailed.New("payment failed")
+errWithoutCode := errdef.New("another error")
+
+code, ok := ErrorCodeFrom(errWithCode)
+// code: 2001, ok: true
+
+defaultCode := ErrorCodeFrom.OrDefault(errWithoutCode, 9999)
+// defaultCode: 9999
+
+fallbackCode := ErrorCodeFrom.OrFallback(errWithoutCode, func(err error) int {
+    return 10000
+})
+// fallbackCode: 10000
+
+codeWithDefault := ErrorCodeFrom.WithDefault(9999)
+// codeWithDefault(errWithCode) -> 2001
+// codeWithDefault(errWithoutCode) -> 9999
 ```
 
 ### Context Integration
@@ -161,6 +208,39 @@ var ErrRateLimited = errdef.Define("rate_limited", errdef.HTTPStatus(429))
 
 func someHandler(ctx context.Context) error {
     return ErrRateLimited.With(ctx).New("too many requests")
+}
+```
+
+### Panic Handling
+
+`errdef` provides a convenient way to convert panics into structured errors, ensuring that even unexpected failures are handled consistently.
+
+The `CapturePanic` method on a `Definition` is designed to be used in a `defer` block.
+It captures the panic value and stack trace, and wraps them in a structured `errdef.Error`.
+The resulting error has `errdef.PanicError` as cause, allowing you to access the original panic value.
+
+```go
+var ErrPanic = errdef.Define("panic", errdef.HTTPStatus(500))
+
+func processRequest(w http.ResponseWriter, r *http.Request) (err error) {
+    defer func() {
+        ErrPanic.CapturePanic(&err, recover())
+    }()
+    maybePanic()
+    return nil
+}
+
+func main() {
+    if err := processRequest(w, r); err != nil {
+        var pe errdef.PanicError
+        if errors.As(err, &pe) {
+            slog.Error("recovered from panic", 
+                "panic_value", pe.PanicValue(),
+                "error", fmt.Sprintf("%+v", err),
+            )
+        }
+        // ...
+    }
 }
 ```
 
