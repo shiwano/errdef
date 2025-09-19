@@ -28,13 +28,13 @@ func DefineField[T any](name string) (FieldOptionConstructor[T], FieldOptionExtr
 
 // New creates a new error with the given message and options.
 func New(msg string, opts ...Option) error {
-	opts = append(opts, &stackSkip{skip: 1})
+	opts = append(opts, StackSkip(1))
 	return Define("", opts...).New(msg)
 }
 
 // Wrap wraps an existing error with additional options.
 // Returns nil if cause is nil.
 func Wrap(cause error, opts ...Option) error {
-	opts = append(opts, &stackSkip{skip: 1})
+	opts = append(opts, StackSkip(1))
 	return Define("", opts...).Wrap(cause)
 }
