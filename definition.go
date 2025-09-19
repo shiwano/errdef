@@ -38,8 +38,8 @@ func (d *Definition) With(ctx context.Context, opts ...Option) *Definition {
 		return d
 	}
 	def := d.clone()
-	applyOptionsTo(def, ctxOpts)
-	applyOptionsTo(def, opts)
+	def.applyOptions(ctxOpts)
+	def.applyOptions(opts)
 	return def
 }
 
@@ -49,7 +49,7 @@ func (d *Definition) WithOptions(opts ...Option) *Definition {
 		return d
 	}
 	def := d.clone()
-	applyOptionsTo(def, opts)
+	def.applyOptions(opts)
 	return def
 }
 
@@ -105,5 +105,19 @@ func (d *Definition) clone() *Definition {
 		boundary:      d.boundary,
 		formatter:     d.formatter,
 		jsonMarshaler: d.jsonMarshaler,
+	}
+}
+
+func (d *Definition) applyOptions(opts []Option) {
+	if len(opts) == 0 {
+		return
+	}
+
+	if d.fields == nil {
+		d.fields = newFields()
+	}
+	a := &optionApplier{def: d}
+	for _, opt := range opts {
+		opt.ApplyOption(a)
 	}
 }

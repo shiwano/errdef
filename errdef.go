@@ -8,7 +8,7 @@ func Define(kind Kind, opts ...Option) *Definition {
 	def := &Definition{
 		kind: kind,
 	}
-	applyOptionsTo(def, opts)
+	def.applyOptions(opts)
 	return def
 }
 

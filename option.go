@@ -156,20 +156,6 @@ func (a *optionApplier) SetJSONMarshaler(marshaler ErrorJSONMarshaler) {
 	a.def.jsonMarshaler = marshaler
 }
 
-func applyOptionsTo(d *Definition, opts []Option) {
-	if len(opts) == 0 {
-		return
-	}
-
-	if d.fields == nil {
-		d.fields = newFields()
-	}
-	a := &optionApplier{def: d}
-	for _, opt := range opts {
-		opt.ApplyOption(a)
-	}
-}
-
 func (o *field) ApplyOption(a OptionApplier) {
 	a.SetField(o.key, o.value)
 }
