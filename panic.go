@@ -1,6 +1,9 @@
 package errdef
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
 type (
 	PanicError interface {
@@ -17,7 +20,10 @@ type (
 	}
 )
 
-var _ PanicError = (*panicError)(nil)
+var (
+	_ PanicError    = (*panicError)(nil)
+	_ fmt.Formatter = (*panicError)(nil)
+)
 
 func newPanicError(panicValue any) *panicError {
 	return &panicError{
@@ -39,4 +45,27 @@ func (e *panicError) Unwrap() error {
 		return uw
 	}
 	return nil
+}
+
+func (e *panicError) Format(s fmt.State, verb rune) {
+	if f, ok := e.panicValue.(fmt.Formatter); ok {
+		f.Format(s, verb)
+		return
+	}
+
+	switch verb {
+	case 'v':
+		switch {
+		case s.Flag('+'):
+			_, _ = fmt.Fprintf(s, "%+v", e.panicValue)
+		case s.Flag('#'):
+			_, _ = fmt.Fprintf(s, "%#v", e.panicValue)
+		default:
+			_, _ = io.WriteString(s, e.Error())
+		}
+	case 's':
+		_, _ = io.WriteString(s, e.Error())
+	case 'q':
+		_, _ = fmt.Fprintf(s, "%q", e.Error())
+	}
 }
