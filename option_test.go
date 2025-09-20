@@ -3,6 +3,7 @@ package errdef_test
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 
 	"github.com/shiwano/errdef"
@@ -61,6 +62,27 @@ func TestFieldOptionConstructor_WithContext(t *testing.T) {
 	}
 	if value != "context_value" {
 		t.Errorf("want value %q, got %q", "context_value", value)
+	}
+}
+
+func TestFieldOptionConstructor_WithHTTPRequest(t *testing.T) {
+	req, _ := http.NewRequest("GET", "/test/path", nil)
+	req.Header.Set("X-Request-ID", "request-123")
+
+	constructor, extractor := errdef.DefineField[string]("test_field")
+	withHTTPRequestConstructor := constructor.WithHTTPRequest(func(r *http.Request) string {
+		return r.Header.Get("X-Request-ID")
+	})
+
+	option := withHTTPRequestConstructor(req)
+	err := errdef.New("test error", option)
+
+	value, found := extractor(err)
+	if !found {
+		t.Error("want field to be found")
+	}
+	if value != "request-123" {
+		t.Errorf("want value %q, got %q", "request-123", value)
 	}
 }
 
