@@ -118,6 +118,7 @@ Stack:
 		/usr/local/go/src/runtime/proc.go:250
 Causes:
 	record not found
+
 	Stack:
 		database.Find
 			/path/to/your/project/db.go:12

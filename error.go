@@ -159,36 +159,48 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 		case s.Flag('+'):
 			_, _ = fmt.Fprintf(s, "%s", e.Error())
 
-			if e.Kind() != "" || e.Fields().Len() > 0 || e.Stack().Len() > 0 || len(e.Unwrap()) > 0 {
-				_, _ = io.WriteString(s, "\n\n")
+			causes := e.Unwrap()
+
+			if e.Kind() != "" || e.Fields().Len() > 0 || e.Stack().Len() > 0 || len(causes) > 0 {
+				_, _ = io.WriteString(s, "\n")
 			}
 
 			if e.Kind() != "" {
-				_, _ = io.WriteString(s, "Kind:\n")
-				_, _ = fmt.Fprintf(s, "\t%v\n", e.Kind())
+				_, _ = io.WriteString(s, "\nKind:\n")
+				_, _ = fmt.Fprintf(s, "\t%v", e.Kind())
 			}
 
 			if e.Fields().Len() > 0 {
-				_, _ = io.WriteString(s, "Fields:\n")
+				_, _ = io.WriteString(s, "\nFields:\n")
+				i := 0
 				for k, v := range e.Fields().SortedSeq() {
-					_, _ = fmt.Fprintf(s, "\t%v: %+v\n", k, v)
+					if i > 0 {
+						_, _ = io.WriteString(s, "\n")
+					}
+					_, _ = fmt.Fprintf(s, "\t%v: %+v", k, v)
+					i++
 				}
 			}
 
 			if e.Stack().Len() > 0 {
-				_, _ = io.WriteString(s, "Stack:\n")
+				_, _ = io.WriteString(s, "\nStack:\n")
+				i := 0
 				for _, f := range e.Stack().Frames() {
 					if f.File != "" {
-						_, _ = fmt.Fprintf(s, "\t%s\n\t\t%s:%d\n", f.Func, f.File, f.Line)
+						if i > 0 {
+							_, _ = io.WriteString(s, "\n")
+						}
+						_, _ = fmt.Fprintf(s, "\t%s\n\t\t%s:%d", f.Func, f.File, f.Line)
+						i++
 					}
 				}
 			}
 
-			for i, cause := range e.Unwrap() {
+			for i, cause := range causes {
 				if i == 0 {
-					_, _ = io.WriteString(s, "Causes:\n")
+					_, _ = io.WriteString(s, "\nCauses:\n")
 				} else {
-					_, _ = io.WriteString(s, "\n")
+					_, _ = io.WriteString(s, "\n\t---\n")
 				}
 
 				causeStr := strings.Trim(fmt.Sprintf("%+v", cause), "\n")

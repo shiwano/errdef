@@ -372,6 +372,7 @@ func TestFormatter_Format(t *testing.T) {
 			"\ttest_error\n" +
 			"Causes:\n" +
 			"\terror 1\n" +
+			"\t---\n" +
 			"\terror 2"
 		if want != result {
 			t.Errorf("want format to equal, got: %q", result)
