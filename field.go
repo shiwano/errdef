@@ -20,7 +20,7 @@ type (
 		FindKeys(name string) []FieldKey
 		// Seq returns an iterator over all key-value pairs.
 		Seq() iter.Seq2[FieldKey, any]
-		// SortedSeq returns an iterator over all key-value pairs sorted by key string.
+		// SortedSeq returns an iterator over all key-value pairs sorted by key.
 		SortedSeq() iter.Seq2[FieldKey, any]
 		// Len returns the number of fields.
 		Len() int
