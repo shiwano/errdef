@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	public, publicFrom         = DefineField[bool]("public")
-	retryable, retryableFrom   = DefineField[bool]("retryable")
-	reportable, reportableFrom = DefineField[bool]("reportable")
+	public, publicFrom             = DefineField[bool]("public")
+	retryable, retryableFrom       = DefineField[bool]("retryable")
+	unreportable, unreportableFrom = DefineField[bool]("unreportable")
 
 	// HTTPStatus sets the HTTP status code.
 	HTTPStatus, HTTPStatusFrom = DefineField[int]("http_status")
@@ -35,7 +35,7 @@ var (
 	RetryAfter, RetryAfterFrom = DefineField[time.Duration]("retry_after")
 
 	// Unreportable marks the error as not reportable to an error tracking system (default: false).
-	Unreportable, IsUnreportable = reportable.WithValue(true), reportableFrom.WithZero()
+	Unreportable, IsUnreportable = unreportable.WithValue(true), unreportableFrom.WithZero()
 
 	// ExitCode sets the exit code for a CLI application.
 	ExitCode, ExitCodeFrom = DefineField[int]("exit_code")
