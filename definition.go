@@ -8,6 +8,7 @@ import (
 
 // Definition represents an error definition with customizable options.
 type Definition struct {
+	root          *Definition
 	kind          Kind
 	fields        fields
 	noTrace       bool
@@ -109,6 +110,7 @@ func (d *Definition) Is(err error) bool {
 
 func (d *Definition) clone() *Definition {
 	return &Definition{
+		root:          d.root,
 		kind:          d.kind,
 		fields:        d.fields.clone(),
 		noTrace:       d.noTrace,

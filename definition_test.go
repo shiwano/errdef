@@ -556,4 +556,51 @@ func TestDefinition_Is(t *testing.T) {
 			t.Error("want definition to match wrapped error containing its error")
 		}
 	})
+
+	t.Run("different definitions with same kind", func(t *testing.T) {
+		def1 := errdef.Define("same_kind")
+		def2 := errdef.Define("same_kind")
+		err := def1.New("test message")
+
+		if def2.Is(err) {
+			t.Error("want different definitions with same kind not to match")
+		}
+
+		if !def1.Is(err) {
+			t.Error("want original definition to match its own error")
+		}
+	})
+
+	t.Run("WithOptions preserves identity", func(t *testing.T) {
+		original := errdef.Define("test_error")
+		constructor, _ := errdef.DefineField[string]("test_field")
+
+		withOptions := original.WithOptions(constructor("test_value"))
+		err := withOptions.New("test message")
+
+		if !original.Is(err) {
+			t.Error("want original definition to match error from WithOptions definition")
+		}
+
+		if !withOptions.Is(err) {
+			t.Error("want WithOptions definition to match its own error")
+		}
+	})
+
+	t.Run("With preserves identity", func(t *testing.T) {
+		original := errdef.Define("test_error")
+		constructor, _ := errdef.DefineField[string]("test_field")
+
+		ctx := context.Background()
+		withCtx := original.With(ctx, constructor("test_value"))
+		err := withCtx.New("test message")
+
+		if !original.Is(err) {
+			t.Error("want original definition to match error from With definition")
+		}
+
+		if !withCtx.Is(err) {
+			t.Error("want With definition to match its own error")
+		}
+	})
 }
