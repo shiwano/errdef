@@ -15,10 +15,6 @@ func TestDefine(t *testing.T) {
 		if def.Kind() != kind {
 			t.Errorf("want kind %v, got %v", kind, def.Kind())
 		}
-
-		if def.Error() != string(kind) {
-			t.Errorf("want error string %q, got %q", string(kind), def.Error())
-		}
 	})
 
 	t.Run("empty kind", func(t *testing.T) {
@@ -26,10 +22,6 @@ func TestDefine(t *testing.T) {
 
 		if def.Kind() != "" {
 			t.Errorf("want empty kind, got %v", def.Kind())
-		}
-
-		if def.Error() != "[unnamed]" {
-			t.Errorf("want error string %q, got %q", "[unnamed]", def.Error())
 		}
 	})
 }
