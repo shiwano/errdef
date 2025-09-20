@@ -214,3 +214,125 @@ func TestWrap(t *testing.T) {
 		}
 	})
 }
+
+func TestCapturePanic(t *testing.T) {
+	t.Run("basic panic capture", func(t *testing.T) {
+		var err error
+		errdef.CapturePanic(&err, "test panic")
+
+		if err == nil {
+			t.Fatal("want error to be set")
+		}
+
+		if err.Error() != "panic: test panic" {
+			t.Errorf("want error message %q, got %q", "panic: test panic", err.Error())
+		}
+
+		var panicErr errdef.PanicError
+		if !errors.As(err, &panicErr) {
+			t.Fatal("want error to be a PanicError")
+		}
+
+		if panicErr.PanicValue() != "test panic" {
+			t.Errorf("want panic value %q, got %v", "test panic", panicErr.PanicValue())
+		}
+	})
+
+	t.Run("capture with options", func(t *testing.T) {
+		constructor, extractor := errdef.DefineField[string]("operation")
+		var err error
+		errdef.CapturePanic(&err, "service panic", constructor("database_query"))
+
+		if err == nil {
+			t.Fatal("want error to be set")
+		}
+
+		value, found := extractor(err)
+		if !found {
+			t.Error("want field to be found")
+		}
+		if value != "database_query" {
+			t.Errorf("want field value %q, got %q", "database_query", value)
+		}
+
+		var panicErr errdef.PanicError
+		if !errors.As(err, &panicErr) {
+			t.Fatal("want error to be a PanicError")
+		}
+
+		if panicErr.PanicValue() != "service panic" {
+			t.Errorf("want panic value %q, got %v", "service panic", panicErr.PanicValue())
+		}
+	})
+
+	t.Run("capture with multiple options", func(t *testing.T) {
+		userIDConstructor, userIDExtractor := errdef.DefineField[string]("user_id")
+		serviceConstructor, serviceExtractor := errdef.DefineField[string]("service")
+		var err error
+
+		errdef.CapturePanic(&err, "handler panic",
+			userIDConstructor("user789"),
+			serviceConstructor("auth_service"))
+
+		if err == nil {
+			t.Fatal("want error to be set")
+		}
+
+		userID, found := userIDExtractor(err)
+		if !found {
+			t.Error("want user_id field to be found")
+		}
+		if userID != "user789" {
+			t.Errorf("want user_id %q, got %q", "user789", userID)
+		}
+
+		service, found := serviceExtractor(err)
+		if !found {
+			t.Error("want service field to be found")
+		}
+		if service != "auth_service" {
+			t.Errorf("want service %q, got %q", "auth_service", service)
+		}
+	})
+
+	t.Run("nil panic value", func(t *testing.T) {
+		var err error
+		errdef.CapturePanic(&err, nil)
+
+		if err != nil {
+			t.Errorf("want no error for nil panic value, got %v", err)
+		}
+	})
+
+	t.Run("nil error pointer", func(t *testing.T) {
+		errdef.CapturePanic(nil, "panic value")
+	})
+
+	t.Run("real panic scenario", func(t *testing.T) {
+		var err error
+
+		func() {
+			defer func() {
+				errdef.CapturePanic(&err, recover())
+			}()
+			panic("critical error")
+		}()
+
+		if err == nil {
+			t.Fatal("want error to be set")
+		}
+
+		if err.Error() != "panic: critical error" {
+			t.Errorf("want error message %q, got %q", "panic: critical error", err.Error())
+		}
+
+		var panicErr errdef.PanicError
+		if !errors.As(err, &panicErr) {
+			t.Fatal("want error to be a PanicError")
+		}
+
+		if panicErr.PanicValue() != "critical error" {
+			t.Errorf("want panic value %q, got %v", "critical error", panicErr.PanicValue())
+		}
+	})
+}

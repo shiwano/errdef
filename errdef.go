@@ -35,6 +35,20 @@ func New(msg string, opts ...Option) error {
 // Wrap wraps an existing error with additional options.
 // Returns nil if cause is nil.
 func Wrap(cause error, opts ...Option) error {
+	if cause == nil {
+		return nil
+	}
 	opts = append(opts, StackSkip(1))
 	return Define("", opts...).Wrap(cause)
+}
+
+// CapturePanic captures a panic value and converts it to an error with the given options.
+// If errPtr is nil or panicValue is nil, this function does nothing.
+// The resulting error implements PanicError interface to preserve the original panic value.
+func CapturePanic(errPtr *error, panicValue any, opts ...Option) {
+	if panicValue == nil || errPtr == nil {
+		return
+	}
+	opts = append(opts, StackSkip(1))
+	Define("", opts...).CapturePanic(errPtr, panicValue)
 }
