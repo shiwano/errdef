@@ -31,7 +31,7 @@ const (
 	maxStackDepth = 32
 
 	// callersSkip is the number of skip frames when using the Definition methods.
-	// 4 frames: runtime.Callers, newStack, newErr, and the Definition methods.
+	// 4 frames: runtime.Callers, newStack, newError, and the Definition methods.
 	callersSkip = 4
 )
 
