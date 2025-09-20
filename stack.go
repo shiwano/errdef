@@ -28,15 +28,15 @@ type (
 var _ Stack = (*stack)(nil)
 
 const (
-	maxStackDepth = 32
+	callersDepth = 32
 
 	// callersSkip is the number of skip frames when using the Definition methods.
 	// 4 frames: runtime.Callers, newStack, newError, and the Definition methods.
 	callersSkip = 4
 )
 
-func newStack(skip int) stack {
-	var pcs [maxStackDepth]uintptr
+func newStack(depth int, skip int) stack {
+	pcs := make([]uintptr, depth)
 	n := runtime.Callers(skip, pcs[:])
 	return pcs[:n]
 }
@@ -53,7 +53,7 @@ func (s stack) Frames() []Frame {
 		return nil
 	}
 	fs := runtime.CallersFrames(s)
-	frames := make([]Frame, 0, maxStackDepth)
+	frames := make([]Frame, 0, len(s))
 	for {
 		f, more := fs.Next()
 		frames = append(frames, Frame{

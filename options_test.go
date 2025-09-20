@@ -137,6 +137,16 @@ func TestHelpURL(t *testing.T) {
 	}
 }
 
+func TestNoTrace(t *testing.T) {
+	def := errdef.Define("test", errdef.NoTrace())
+	err := def.New("test error")
+
+	frames := err.(errdef.Error).Stack().Frames()
+	if len(frames) != 0 {
+		t.Errorf("want no stack frames, got %d", len(frames))
+	}
+}
+
 func TestStackSkip(t *testing.T) {
 	t.Run("stack skip with positive value", func(t *testing.T) {
 		def := errdef.Define("test", errdef.StackSkip(1))
@@ -179,14 +189,36 @@ func TestStackSkip(t *testing.T) {
 	})
 }
 
-func TestNoTrace(t *testing.T) {
-	def := errdef.Define("test", errdef.NoTrace())
-	err := def.New("test error")
+func TestStackDepth(t *testing.T) {
+	t.Run("stack depth with zero value", func(t *testing.T) {
+		def := errdef.Define("test", errdef.StackDepth(0))
+		err := def.New("test error")
 
-	frames := err.(errdef.Error).Stack().Frames()
-	if len(frames) != 0 {
-		t.Errorf("want no stack frames, got %d", len(frames))
-	}
+		frames := err.(errdef.Error).Stack().Frames()
+		if len(frames) != 3 {
+			t.Errorf("want 3 stack frames, got %d", len(frames))
+		}
+	})
+
+	t.Run("stack depth with negative value", func(t *testing.T) {
+		def := errdef.Define("test", errdef.StackDepth(-31))
+		err := def.New("test error")
+
+		frames := err.(errdef.Error).Stack().Frames()
+		if len(frames) != 1 {
+			t.Errorf("want 1 stack frames, got %d", len(frames))
+		}
+	})
+
+	t.Run("stack depth with positive value", func(t *testing.T) {
+		def := errdef.Define("test", errdef.StackDepth(-31), errdef.StackDepth(1))
+		err := def.New("test error")
+
+		frames := err.(errdef.Error).Stack().Frames()
+		if len(frames) != 2 {
+			t.Errorf("want 2 stack frames, got %d", len(frames))
+		}
+	})
 }
 
 func TestBoundary(t *testing.T) {

@@ -20,6 +20,8 @@ type (
 		DisableTrace()
 		// AddStackSkip adds frames to skip during stack trace collection.
 		AddStackSkip(skip int)
+		// AddStackDepth adds depth to the stack trace collection.
+		AddStackDepth(depth int)
 		// SetBoundary marks this error as a boundary in the error chain.
 		SetBoundary()
 		// SetFormatter sets a custom error formatter.
@@ -53,6 +55,10 @@ type (
 
 	stackSkip struct {
 		skip int
+	}
+
+	stackDepth struct {
+		depth int
 	}
 
 	boundary struct{}
@@ -151,6 +157,10 @@ func (a *optionApplier) AddStackSkip(skip int) {
 	a.def.stackSkip += skip
 }
 
+func (a *optionApplier) AddStackDepth(depth int) {
+	a.def.stackDepth += depth
+}
+
 func (a *optionApplier) SetBoundary() {
 	a.def.boundary = true
 }
@@ -173,6 +183,10 @@ func (o *noTrace) ApplyOption(a OptionApplier) {
 
 func (o *stackSkip) ApplyOption(a OptionApplier) {
 	a.AddStackSkip(o.skip)
+}
+
+func (o *stackDepth) ApplyOption(a OptionApplier) {
+	a.AddStackDepth(o.depth)
 }
 
 func (o *boundary) ApplyOption(a OptionApplier) {

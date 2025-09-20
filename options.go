@@ -49,9 +49,14 @@ func NoTrace() Option {
 	return &noTrace{}
 }
 
-// StackSkip adds to the number of frames to skip during stack trace collection.
+// StackSkip adds the number of frames to skip during stack trace collection.
 func StackSkip(skip int) Option {
 	return &stackSkip{skip: skip}
+}
+
+// StackDepth adds the depth for the stack trace collection, limiting the number of frames.
+func StackDepth(depth int) Option {
+	return &stackDepth{depth: depth}
 }
 
 // Boundary marks this error as the end of an error chain, stopping Unwrap.

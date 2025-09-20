@@ -13,6 +13,7 @@ type Definition struct {
 	fields        fields
 	noTrace       bool
 	stackSkip     int
+	stackDepth    int
 	boundary      bool
 	formatter     ErrorFormatter
 	jsonMarshaler ErrorJSONMarshaler
@@ -115,6 +116,7 @@ func (d *Definition) clone() *Definition {
 		fields:        d.fields.clone(),
 		noTrace:       d.noTrace,
 		stackSkip:     d.stackSkip,
+		stackDepth:    d.stackDepth,
 		boundary:      d.boundary,
 		formatter:     d.formatter,
 		jsonMarshaler: d.jsonMarshaler,
