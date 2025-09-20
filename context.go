@@ -21,9 +21,13 @@ func ContextWithOptions(ctx context.Context, opts ...Option) context.Context {
 }
 
 func optionsFromContext(ctx context.Context) []Option {
-	opts := ctx.Value(optionsFromContextKey)
-	if opts == nil {
+	rawOts := ctx.Value(optionsFromContextKey)
+	if rawOts == nil {
 		return nil
 	}
-	return opts.([]Option)
+	opts, ok := rawOts.([]Option)
+	if !ok {
+		return nil
+	}
+	return opts
 }

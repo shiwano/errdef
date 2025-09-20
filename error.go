@@ -205,13 +205,13 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 
 				causeStr := strings.Trim(fmt.Sprintf("%+v", cause), "\n")
 
-				i := 0
+				j := 0
 				for line := range strings.SplitSeq(causeStr, "\n") {
-					if i > 0 {
+					if j > 0 {
 						_, _ = io.WriteString(s, "\n")
 					}
 					_, _ = fmt.Fprintf(s, "\t%s", line)
-					i++
+					j++
 				}
 			}
 		case s.Flag('#'):
