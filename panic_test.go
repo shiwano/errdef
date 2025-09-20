@@ -131,7 +131,7 @@ func TestPanicError_Format(t *testing.T) {
 			t.Errorf("%%s: want %q, got %q", "panic error", got)
 		}
 
-		if got := fmt.Sprintf("%+v", panicErr); got != "panic error\n\nFields:\n\thttp_status: 400\n" {
+		if got := fmt.Sprintf("%+v", panicErr); got != "panic error\n\nFields:\n\thttp_status: 400" {
 			t.Errorf("%%+v: want %q, got %q", "panic error", got)
 		}
 	})
