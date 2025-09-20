@@ -246,24 +246,24 @@ func main() {
 
 ### Built-in Options
 
-| Option                 | Description                                                                     | Extractor        |
-|:-----------------------|:--------------------------------------------------------------------------------|:-----------------|
-| `HTTPStatus(int)`      | Sets the HTTP status code.                                                      | `HTTPStatusFrom` |
-| `LogLevel(slog.Level)` | Sets the log level of type `slog.Level`.                                        | `LogLevelFrom`   |
-| `TraceID(string)`      | Sets a trace ID or request ID.                                                  | `TraceIDFrom`    |
-| `Domain(string)`       | Sets the service domain or subsystem name where the error occurred.             | `DomainFrom`     |
-| `UserHint(string)`     | Sets a hint message to be displayed to the user.                                | `UserHintFrom`   |
-| `Public()`             | Marks the error as safe for external exposure (default `false`).                | `IsPublic`       |
-| `Retryable()`          | Marks the operation as retryable (default `false`).                             | `IsRetryable`    |
-| `RetryAfter(d)`        | Sets the duration (`time.Duration`) to wait before retrying.                    | `RetryAfterFrom` |
-| `NotReportable()`      | Marks the error as not reportable to an error tracking system (default `true`). | `IsReportable`   |
-| `ExitCode(int)`        | Sets the exit code for a CLI application.                                       | `ExitCodeFrom`   |
-| `HelpURL(string)`      | Sets a URL to documentation or troubleshooting guides.                          | `HelpURLFrom`    |
-| `NoTrace()`            | Disables stack trace collection.                                                | -                |
-| `StackSkip(int)`       | Adds to the number of frames to skip during stack trace collection.             | -                |
-| `Boundary()`           | Marks this error as the end of an error chain, stopping `errors.Unwrap`.        | -                |
-| `Formatter(f)`         | Overrides the `fmt.Formatter` behavior with a custom function.                  | -                |
-| `JSONMarshaler(f)`     | Overrides the `json.Marshaler` behavior with a custom function.                 | -                |
+| Option                 | Description                                                                      | Extractor        |
+|:-----------------------|:---------------------------------------------------------------------------------|:-----------------|
+| `HTTPStatus(int)`      | Sets the HTTP status code.                                                       | `HTTPStatusFrom` |
+| `LogLevel(slog.Level)` | Sets the log level of type `slog.Level`.                                         | `LogLevelFrom`   |
+| `TraceID(string)`      | Sets a trace ID or request ID.                                                   | `TraceIDFrom`    |
+| `Domain(string)`       | Sets the service domain or subsystem name where the error occurred.              | `DomainFrom`     |
+| `UserHint(string)`     | Sets a hint message to be displayed to the user.                                 | `UserHintFrom`   |
+| `Public()`             | Marks the error as safe for external exposure (default `false`).                 | `IsPublic`       |
+| `Retryable()`          | Marks the operation as retryable (default `false`).                              | `IsRetryable`    |
+| `RetryAfter(d)`        | Sets the duration (`time.Duration`) to wait before retrying.                     | `RetryAfterFrom` |
+| `Unreportable()`       | Marks the error as not reportable to an error tracking system (default `false`). | `IsUnreportable` |
+| `ExitCode(int)`        | Sets the exit code for a CLI application.                                        | `ExitCodeFrom`   |
+| `HelpURL(string)`      | Sets a URL to documentation or troubleshooting guides.                           | `HelpURLFrom`    |
+| `NoTrace()`            | Disables stack trace collection.                                                 | -                |
+| `StackSkip(int)`       | Adds to the number of frames to skip during stack trace collection.              | -                |
+| `Boundary()`           | Marks this error as the end of an error chain, stopping `errors.Unwrap`.         | -                |
+| `Formatter(f)`         | Overrides the `fmt.Formatter` behavior with a custom function.                   | -                |
+| `JSONMarshaler(f)`     | Overrides the `json.Marshaler` behavior with a custom function.                  | -                |
 
 ## Contributing
 

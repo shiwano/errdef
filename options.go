@@ -34,8 +34,8 @@ var (
 	// RetryAfter sets the duration (time.Duration) to wait before retrying.
 	RetryAfter, RetryAfterFrom = DefineField[time.Duration]("retry_after")
 
-	// NotReportable marks the error as not reportable to an error tracking system (default: true).
-	NotReportable, IsReportable = reportable.WithValue(false), reportableFrom.WithDefault(true)
+	// Unreportable marks the error as not reportable to an error tracking system (default: false).
+	Unreportable, IsUnreportable = reportable.WithValue(true), reportableFrom.WithZero()
 
 	// ExitCode sets the exit code for a CLI application.
 	ExitCode, ExitCodeFrom = DefineField[int]("exit_code")

@@ -103,6 +103,14 @@ func TestRetryAfter(t *testing.T) {
 	}
 }
 
+func TestUnreportable(t *testing.T) {
+	err := errdef.New("test error", errdef.Unreportable())
+
+	if !errdef.IsUnreportable(err) {
+		t.Error("want error to be retryable")
+	}
+}
+
 func TestExitCode(t *testing.T) {
 	code := 42
 	err := errdef.New("test error", errdef.ExitCode(code))
