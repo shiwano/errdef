@@ -351,7 +351,7 @@ func TestFormatter_Format(t *testing.T) {
 			"Fields:\n" +
 			"\tuser_id: user123\n" +
 			"Causes:\n" +
-			"\toriginal error\n"
+			"\toriginal error"
 		if want != result {
 			t.Errorf("want format to equal, got: %q", result)
 		}
@@ -372,7 +372,7 @@ func TestFormatter_Format(t *testing.T) {
 			"\ttest_error\n" +
 			"Causes:\n" +
 			"\terror 1\n" +
-			"\terror 2\n"
+			"\terror 2"
 		if want != result {
 			t.Errorf("want format to equal, got: %q", result)
 		}

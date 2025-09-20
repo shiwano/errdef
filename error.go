@@ -157,7 +157,11 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 	case 'v':
 		switch {
 		case s.Flag('+'):
-			_, _ = fmt.Fprintf(s, "%s\n\n", e.Error())
+			_, _ = fmt.Fprintf(s, "%s", e.Error())
+
+			if e.Kind() != "" || e.Fields().Len() > 0 || e.Stack().Len() > 0 || len(e.Unwrap()) > 0 {
+				_, _ = io.WriteString(s, "\n\n")
+			}
 
 			if e.Kind() != "" {
 				_, _ = io.WriteString(s, "Kind:\n")
@@ -183,12 +187,19 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 			for i, cause := range e.Unwrap() {
 				if i == 0 {
 					_, _ = io.WriteString(s, "Causes:\n")
+				} else {
+					_, _ = io.WriteString(s, "\n")
 				}
 
 				causeStr := strings.Trim(fmt.Sprintf("%+v", cause), "\n")
 
+				i := 0
 				for line := range strings.SplitSeq(causeStr, "\n") {
-					_, _ = fmt.Fprintf(s, "\t%s\n", line)
+					if i > 0 {
+						_, _ = io.WriteString(s, "\n")
+					}
+					_, _ = fmt.Fprintf(s, "\t%s", line)
+					i++
 				}
 			}
 		case s.Flag('#'):
