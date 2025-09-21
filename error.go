@@ -259,7 +259,10 @@ func (e *definedError) MarshalJSON() ([]byte, error) {
 			}
 			causes = append(causes, b)
 		} else {
-			b, err := json.Marshal(c.Error())
+			type cause struct {
+				Message string `json:"message"`
+			}
+			b, err := json.Marshal(&cause{Message: c.Error()})
 			if err != nil {
 				return nil, err
 			}

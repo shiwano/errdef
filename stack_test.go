@@ -102,10 +102,6 @@ func TestStack_LogValue(t *testing.T) {
 		err := def.New("test error")
 		stack := err.(errdef.Error).Stack()
 
-		if stack == nil {
-			t.Skip("stack is nil when trace is disabled")
-		}
-
 		logValuer := stack.(slog.LogValuer)
 		value := logValuer.LogValue()
 		frames := value.Any().([]errdef.Frame)

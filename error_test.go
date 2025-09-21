@@ -471,17 +471,24 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 		original := errors.New("original error")
 		wrapped := errdef.Wrap(original)
 
-		// This test currently fails due to a bug in error.go:216
-		// where c.Error() is converted to []byte without proper JSON quoting
-		_, jsonErr := json.Marshal(wrapped)
-		if jsonErr == nil {
-			t.Skip("This test is expected to fail due to JSON marshaling bug in causes")
+		data, jsonErr := json.Marshal(wrapped)
+		if jsonErr != nil {
+			t.Fatalf("want no error, got %v", jsonErr)
 		}
 
-		// The error should contain information about invalid JSON
-		expectedErrMsg := "invalid character 'o' looking for beginning of value"
-		if !strings.Contains(jsonErr.Error(), expectedErrMsg) {
-			t.Errorf("want error containing %q, got %q", expectedErrMsg, jsonErr.Error())
+		var result map[string]any
+		if err := json.Unmarshal(data, &result); err != nil {
+			t.Fatalf("want valid JSON, got %v", err)
+		}
+
+		causes := result["causes"].([]any)
+		if len(causes) != 1 {
+			t.Fatalf("want 1 cause, got %d", len(causes))
+		}
+
+		cause := causes[0].(map[string]any)
+		if cause["message"] != "original error" {
+			t.Errorf("want cause message %q, got %q", "original error", cause["message"])
 		}
 	})
 
