@@ -21,6 +21,9 @@ func ContextWithOptions(ctx context.Context, opts ...Option) context.Context {
 }
 
 func optionsFromContext(ctx context.Context) []Option {
+	if ctx == nil {
+		return nil
+	}
 	rawOts := ctx.Value(optionsFromContextKey)
 	if rawOts == nil {
 		return nil
