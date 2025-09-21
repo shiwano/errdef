@@ -33,7 +33,8 @@ func (d *Definition) Error() string {
 	return fmt.Sprintf("errdef: %s", d.kind)
 }
 
-// With creates a new Definition with options from the context and additional options applied.
+// With creates a new Definition and applies options from context first (if any),
+// then the given opts. Later options override earlier ones.
 func (d *Definition) With(ctx context.Context, opts ...Option) *Definition {
 	ctxOpts := optionsFromContext(ctx)
 	if len(ctxOpts) == 0 && len(opts) == 0 {
@@ -46,6 +47,7 @@ func (d *Definition) With(ctx context.Context, opts ...Option) *Definition {
 }
 
 // WithOptions creates a new Definition with the given options applied.
+// Later options override earlier ones.
 func (d *Definition) WithOptions(opts ...Option) *Definition {
 	if len(opts) == 0 {
 		return d
