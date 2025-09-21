@@ -5,7 +5,7 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/shiwano/errdef/test.yml?branch=main)](https://github.com/shiwano/errdef/actions)
 
 `errdef` splits error handling in Go into **Definitions** and **Error instances**, so you can keep errors typed, structured, and uniform.
-It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`, `fmt.Formatter`, and `json.Marshaler` — while adding **fields**, **stack traces**, and **Join / Boundary** semantics.
+It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`, `fmt.Formatter`, `json.Marshaler`, and `slog.LogValuer` — while adding fields, stack traces, and Join / Boundary semantics.
 
 > **Status:** The core API is stable, but minor breaking changes may occur before v1.0.0.
 
@@ -15,8 +15,8 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
 
 - **✨ Consistent by Design**: Achieve consistent error handling application-wide by separating error definitions from instances.
 - **🔧 Structured Metadata**: Attach type-safe metadata as options or automatically from context.
-- **🤝 Works with Go Standard**: Integrates seamlessly with standard interfaces like `errors.Is`, `fmt.Formatter`, and `json.Marshaler`.
-- **🚀 Rich, Built-in Options**: Provides a rich set of ready-to-use options for common use cases like web services and CLIs (e.g., `HTTPStatus`).
+- **🤝 Works with Go Standard**: Integrates seamlessly with standard interfaces like `errors.Is` / `errors.As`, `fmt.Formatter`, `json.Marshaler`, and `slog.LogValuer`.
+- **🚀 Rich, Built-in Options**: Provides a rich set of ready-to-use options for common use cases like web services and CLIs (e.g., `NoTrace`, `HTTPStatus`, and `LogLevel`).
 
 ## Installation
 
@@ -183,20 +183,38 @@ slog.Error("failed to find user", "error", err)
 
 For more advanced control, you can:
 
-```go
-// The Fields type also implements slog.LogValuer, allowing you to log just the fields from an error.
-fields := err.(errdef.Error).Fields()
-slog.Warn("...", "fields", fields)
+- **Log only the structured fields**: The `Fields` type also implements `slog.LogValuer`, allowing you to log just the custom fields from an error.
 
-// The Stack type also implements slog.LogValuer, allowing you to log just the stack from an error.
-stack := err.(errdef.Error).Stack()
-slog.Error("...", "stack", stack)
+  ```go
+  fields := err.(errdef.Error).Fields()
+  slog.Warn("Request rejected due to invalid argument", "details", fields)
+  ```
 
-// Use the `errdef.LogValuer(...)` option, allowing you to customize the structured logging output.
-var customFormat = errdef.LogValuer(func(err errdef.Error) slog.Value { ... })
-var ErrCustom = errdef.Define("...", customFormat)
-slog.Error("...", "error", ErrCustom.New("error"))
-```
+  **Output:**
+
+  ```json
+  {
+    "level": "WARN",
+    "msg": "Request rejected due to invalid argument",
+    "details": {
+      "http_status": 400,
+      "invalid_param": "email"
+    }
+  }
+  ```
+
+- **Log the full stack trace**: The `Stack` type also implements `slog.LogValuer`.
+
+  ```go
+  slog.Error("...", "error", err, slog.Any("stack", err.(errdef.Error).Stack()))
+  ```
+
+- **Completely override the format**: Use the `errdef.LogValuer(...)` option.
+
+  ```go
+  var customFormat = errdef.LogValuer(func(err errdef.Error) slog.Value { ... })
+  var ErrCustom = errdef.Define("...", customFormat)
+  ```
 
 ### Simplified Field Constructors
 
@@ -293,10 +311,6 @@ causes := err.(errdef.Error).Unwrap()
 ### Panic Handling
 
 `errdef` provides a convenient way to convert panics into structured errors, ensuring that even unexpected failures are handled consistently.
-
-The `CapturePanic` method on a `Definition` is designed to be used in a `defer` block.
-It captures the panic value and stack trace, and wraps them in a structured `errdef.Error`.
-The resulting error has `errdef.PanicError` as cause, allowing you to access the original panic value.
 
 ```go
 var ErrPanic = errdef.Define("panic", errdef.HTTPStatus(500))
