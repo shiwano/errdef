@@ -181,7 +181,7 @@ slog.Error("failed to find user", "error", err)
 
 For more advanced control, you can:
 
-- **Log only the structured fields**: The `Fields` type also implements `slog.LogValuer`, allowing you to log just the custom fields from an error.
+- **Log only the structured fields**: The `Fields` type also implements `slog.LogValuer`.
 
   ```go
   fields := err.(errdef.Error).Fields()
