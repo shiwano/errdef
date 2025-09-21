@@ -141,7 +141,7 @@ The causes are structured for `errdef.Error`, and best-effort for others (string
     { "function":"runtime.main","file":"/usr/local/go/src/runtime/proc.go","line":250 }
   ],
   "causes": [
-    { "message": "record not found", "stack":[...] }
+    { "message": "record not found", "stack":[] }
   ]
 }
 ```
