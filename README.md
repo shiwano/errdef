@@ -185,7 +185,7 @@ For more advanced control, you can:
 
   ```go
   fields := err.(errdef.Error).Fields()
-  slog.Warn("Request rejected due to invalid argument", "fields", fields)
+  slog.Warn("invalid argument", "fields", fields)
   ```
 
   **Output:**
@@ -193,7 +193,7 @@ For more advanced control, you can:
   ```json
   {
     "level": "WARN",
-    "msg": "Request rejected due to invalid argument",
+    "msg": "invalid argument",
     "fields": {
       "http_status": 400,
       "invalid_param": "email"
