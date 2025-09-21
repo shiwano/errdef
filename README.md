@@ -290,7 +290,7 @@ func someHandler(ctx context.Context) error {
 
 ### Joining Errors
 
-You can join multiple errors into one using `errdef.Join` or the `Join` method on a `Definition`.
+You can join multiple errors into one using the `Join` method on a `Definition`.
 
 ```go
 var (
