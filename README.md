@@ -5,7 +5,7 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/shiwano/errdef/test.yml?branch=main)](https://github.com/shiwano/errdef/actions)
 
 `errdef` splits error handling in Go into **Definitions** and **Error instances**, so you can keep errors typed, structured, and uniform.
-It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`, `fmt.Formatter`, `json.Marshaler`, and `slog.LogValuer` — while adding fields, stack traces, and Join / Boundary semantics.
+It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`, `fmt.Formatter`, `json.Marshaler`, and `slog.LogValuer` — while adding fields, stack traces, and flexible error composition.
 
 > **Status:** The core API is stable, but minor breaking changes may occur before v1.0.0.
 
@@ -29,7 +29,7 @@ go get github.com/shiwano/errdef
 ### 1. Define Your Errors
 
 First, define the error kinds used in your application with `errdef.Define`.
-You can also define structured data fields to attach to errors using `errdef.DefineField`.
+You can also define fields to attach structured data to errors using `errdef.DefineField`.
 This is typically done once at the package's global scope.
 
 ```go
@@ -56,7 +56,6 @@ The `With` method allows you to attach information from a `context` or apply add
 func findUser(ctx context.Context, userID string) (*User, error) {
     user, err := db.Find(ctx, userID)
     if err != nil {
-        // Wrap the causal error and add a field using Wrapf
         return nil, ErrNotFound.With(ctx, UserID(userID)).Wrapf(err, "user not found")
     }
     return user, nil
@@ -72,7 +71,6 @@ You can also safely extract field values using the extractor function (e.g., `Us
 func handler(w http.ResponseWriter, r *http.Request) {
     _, err := findUser(r.Context(), "u-123")
     if err != nil {
-        // Check the error kind
         // You can use ErrNotFound.Is(err) as well
         if errors.Is(err, ErrNotFound) {
             userID := UserIDFrom.OrZero(err)
@@ -267,7 +265,6 @@ codeWithDefault := ErrorCodeFrom.WithDefault(9999)
 
 Extractors follow the same rules as `errors.As`.
 They search the error chain and extract the value from the **first matching `errdef.Error`**, then stop searching.
-This ensures intuitive and testable behavior.
 
 ### Context Integration
 
@@ -294,7 +291,6 @@ func someHandler(ctx context.Context) error {
 ### Joining Errors
 
 You can join multiple errors into one using `errdef.Join` or the `Join` method on a `Definition`.
-This is useful for aggregating errors from multiple operations.
 
 ```go
 var (
@@ -341,26 +337,26 @@ func main() {
 
 ### Built-in Options
 
-| Option                                     | Description                                              | Extractor        |
-|:-------------------------------------------|:---------------------------------------------------------|:-----------------|
-| `HTTPStatus(int)`                          | Attaches an HTTP status code.                            | `HTTPStatusFrom` |
-| `LogLevel(slog.Level)`                     | Attaches a log level of type `slog.Level`.               | `LogLevelFrom`   |
-| `TraceID(string)`                          | Attaches a trace or request ID.                          | `TraceIDFrom`    |
-| `Domain(string)`                           | Labels the error with a service or subsystem name.       | `DomainFrom`     |
-| `UserHint(string)`                         | Provides a safe, user-facing hint message.               | `UserHintFrom`   |
-| `Public()`                                 | Marks the error as safe to expose externally.            | `IsPublic`       |
-| `Retryable()`                              | Marks the operation as retryable.                        | `IsRetryable`    |
-| `RetryAfter(time.Duration)`                | Recommends a delay to wait before retrying.              | `RetryAfterFrom` |
-| `Unreportable()`                           | Prevents the error from being sent to error tracking.    | `IsUnreportable` |
-| `ExitCode(int)`                            | Sets the exit code for a CLI application.                | `ExitCodeFrom`   |
-| `HelpURL(string)`                          | Provides a URL for documentation or help guides.         | `HelpURLFrom`    |
-| `NoTrace()`                                | Disables stack trace collection for the error.           | -                |
-| `StackSkip(int)`                           | Skips a specified number of frames during stack capture. | -                |
-| `StackDepth(int)`                          | Limits the depth of the stack trace capture.             | -                |
-| `Boundary()`                               | Stops the error unwrapping chain at this point.          | -                |
-| `Formatter(errdef.ErrorFormatter)`         | Overrides the default `fmt.Formatter` behavior.          | -                |
-| `JSONMarshaler(errdef.ErrorJSONMarshaler)` | Overrides the default `json.Marshaler` behavior.         | -                |
-| `LogValuer(errdef.ErrorLogValuer)`         | Overrides the default `slog.LogValuer` behavior.         | -                |
+| Option                      | Description                                              | Extractor        |
+|:----------------------------|:---------------------------------------------------------|:-----------------|
+| `HTTPStatus(int)`           | Attaches an HTTP status code.                            | `HTTPStatusFrom` |
+| `LogLevel(slog.Level)`      | Attaches a log level of type `slog.Level`.               | `LogLevelFrom`   |
+| `TraceID(string)`           | Attaches a trace or request ID.                          | `TraceIDFrom`    |
+| `Domain(string)`            | Labels the error with a service or subsystem name.       | `DomainFrom`     |
+| `UserHint(string)`          | Provides a safe, user-facing hint message.               | `UserHintFrom`   |
+| `Public()`                  | Marks the error as safe to expose externally.            | `IsPublic`       |
+| `Retryable()`               | Marks the operation as retryable.                        | `IsRetryable`    |
+| `RetryAfter(time.Duration)` | Recommends a delay to wait before retrying.              | `RetryAfterFrom` |
+| `Unreportable()`            | Prevents the error from being sent to error tracking.    | `IsUnreportable` |
+| `ExitCode(int)`             | Sets the exit code for a CLI application.                | `ExitCodeFrom`   |
+| `HelpURL(string)`           | Provides a URL for documentation or help guides.         | `HelpURLFrom`    |
+| `NoTrace()`                 | Disables stack trace collection for the error.           | -                |
+| `StackSkip(int)`            | Skips a specified number of frames during stack capture. | -                |
+| `StackDepth(int)`           | Limits the depth of the stack trace capture.             | -                |
+| `Boundary()`                | Stops the error unwrapping chain at this point.          | -                |
+| `Formatter(f)`              | Overrides the default `fmt.Formatter` behavior.          | -                |
+| `JSONMarshaler(f)`          | Overrides the default `json.Marshaler` behavior.         | -                |
+| `LogValuer(f)`              | Overrides the default `slog.LogValuer` behavior.         | -                |
 
 #### Performance Knobs
 
