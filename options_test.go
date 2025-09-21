@@ -252,3 +252,95 @@ func TestFormatter(t *testing.T) {
 		t.Errorf("want custom formatted output, got %q", formatted)
 	}
 }
+
+func TestLogValuer(t *testing.T) {
+	t.Run("custom log valuer", func(t *testing.T) {
+		customLogValuer := func(err errdef.Error) slog.Value {
+			return slog.GroupValue(
+				slog.String("custom_message", err.Error()),
+				slog.String("custom_kind", string(err.Kind())),
+				slog.String("custom_field", "custom_value"),
+			)
+		}
+
+		def := errdef.Define("test_error", errdef.LogValuer(customLogValuer))
+		err := def.New("test message")
+
+		logValuer := err.(slog.LogValuer)
+		value := logValuer.LogValue()
+		attrs := value.Group()
+
+		attrMap := make(map[string]slog.Value)
+		for _, attr := range attrs {
+			attrMap[attr.Key] = attr.Value
+		}
+
+		if customMessage := attrMap["custom_message"]; customMessage.String() != "test message" {
+			t.Errorf("want custom_message %q, got %q", "test message", customMessage.String())
+		}
+
+		if customKind := attrMap["custom_kind"]; customKind.String() != "test_error" {
+			t.Errorf("want custom_kind %q, got %q", "test_error", customKind.String())
+		}
+
+		if customField := attrMap["custom_field"]; customField.String() != "custom_value" {
+			t.Errorf("want custom_field %q, got %q", "custom_value", customField.String())
+		}
+
+		if msg := attrMap["message"]; msg.Any() != nil {
+			t.Error("want no default message when custom log valuer is used")
+		}
+	})
+
+	t.Run("nil log valuer uses default", func(t *testing.T) {
+		def := errdef.Define("test_error", errdef.LogValuer(nil))
+		err := def.New("test message")
+
+		logValuer := err.(slog.LogValuer)
+		value := logValuer.LogValue()
+		attrs := value.Group()
+
+		attrMap := make(map[string]slog.Value)
+		for _, attr := range attrs {
+			attrMap[attr.Key] = attr.Value
+		}
+
+		if msg := attrMap["message"]; msg.String() != "test message" {
+			t.Errorf("want message %q, got %q", "test message", msg.String())
+		}
+
+		if kind := attrMap["kind"]; kind.String() != "test_error" {
+			t.Errorf("want kind %q, got %q", "test_error", kind.String())
+		}
+	})
+
+	t.Run("overriding log valuer", func(t *testing.T) {
+		firstLogValuer := func(err errdef.Error) slog.Value {
+			return slog.GroupValue(slog.String("first", "value"))
+		}
+
+		secondLogValuer := func(err errdef.Error) slog.Value {
+			return slog.GroupValue(slog.String("second", "value"))
+		}
+
+		def := errdef.Define("test_error", errdef.LogValuer(firstLogValuer), errdef.LogValuer(secondLogValuer))
+		err := def.New("test message")
+
+		logValuer := err.(slog.LogValuer)
+		value := logValuer.LogValue()
+		attrs := value.Group()
+
+		attrMap := make(map[string]slog.Value)
+		for _, attr := range attrs {
+			attrMap[attr.Key] = attr.Value
+		}
+
+		if second := attrMap["second"]; second.String() != "value" {
+			t.Errorf("want second log valuer to override first, got %v", second.Any())
+		}
+
+		if first := attrMap["first"]; first.Any() != nil {
+			t.Error("want first log valuer to be overridden")
+		}
+	})
+}

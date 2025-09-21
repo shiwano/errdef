@@ -17,6 +17,7 @@ type Definition struct {
 	boundary      bool
 	formatter     ErrorFormatter
 	jsonMarshaler ErrorJSONMarshaler
+	logValuer     ErrorLogValuer
 }
 
 // Kind returns the kind of this error definition.
@@ -122,6 +123,7 @@ func (d *Definition) clone() *Definition {
 		boundary:      d.boundary,
 		formatter:     d.formatter,
 		jsonMarshaler: d.jsonMarshaler,
+		logValuer:     d.logValuer,
 	}
 }
 

@@ -1,6 +1,7 @@
 package errdef
 
 import (
+	"log/slog"
 	"runtime"
 )
 
@@ -25,7 +26,10 @@ type (
 	stack []uintptr
 )
 
-var _ Stack = (*stack)(nil)
+var (
+	_ Stack          = (*stack)(nil)
+	_ slog.LogValuer = (*stack)(nil)
+)
 
 const (
 	callersDepth = 32
@@ -70,4 +74,8 @@ func (s stack) Frames() []Frame {
 
 func (s stack) Len() int {
 	return len(s)
+}
+
+func (s stack) LogValue() slog.Value {
+	return slog.AnyValue(s.Frames())
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"maps"
 	"regexp"
 	"strings"
@@ -525,6 +526,182 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 
 		if result["custom_message"] != "test message" {
 			t.Errorf("want custom_message %q, got %q", "test message", result["custom_message"])
+		}
+	})
+}
+
+func TestError_LogValue(t *testing.T) {
+	t.Run("basic log value", func(t *testing.T) {
+		err := errdef.New("test message")
+
+		logValuer, ok := err.(slog.LogValuer)
+		if !ok {
+			t.Fatal("want error to implement slog.LogValuer")
+		}
+
+		value := logValuer.LogValue()
+		attrs := value.Group()
+
+		attrMap := make(map[string]slog.Value)
+		for _, attr := range attrs {
+			attrMap[attr.Key] = attr.Value
+		}
+
+		if msg := attrMap["message"]; msg.String() != "test message" {
+			t.Errorf("want message %q, got %q", "test message", msg.String())
+		}
+
+		if kind := attrMap["kind"]; kind.Any() != nil {
+			t.Errorf("want empty kind for default error, got %v", kind.Any())
+		}
+	})
+
+	t.Run("with kind and fields", func(t *testing.T) {
+		constructor, _ := errdef.DefineField[string]("user_id")
+		def := errdef.Define("test_error", constructor("user123"))
+		err := def.New("test message")
+
+		logValuer := err.(slog.LogValuer)
+		value := logValuer.LogValue()
+		attrs := value.Group()
+
+		attrMap := make(map[string]slog.Value)
+		for _, attr := range attrs {
+			attrMap[attr.Key] = attr.Value
+		}
+
+		if msg := attrMap["message"]; msg.String() != "test message" {
+			t.Errorf("want message %q, got %q", "test message", msg.String())
+		}
+
+		if kind := attrMap["kind"]; kind.String() != "test_error" {
+			t.Errorf("want kind %q, got %q", "test_error", kind.String())
+		}
+
+		if fields := attrMap["fields"]; fields.Kind() != slog.KindGroup {
+			t.Error("want fields to be a group")
+		} else {
+			fieldAttrs := fields.Group()
+			foundUserID := false
+			for _, fieldAttr := range fieldAttrs {
+				if fieldAttr.Key == "user_id" && fieldAttr.Value.String() == "user123" {
+					foundUserID = true
+					break
+				}
+			}
+			if !foundUserID {
+				t.Error("want user_id field with value user123")
+			}
+		}
+	})
+
+	t.Run("with stack", func(t *testing.T) {
+		err := errdef.New("test message")
+
+		logValuer := err.(slog.LogValuer)
+		value := logValuer.LogValue()
+		attrs := value.Group()
+
+		attrMap := make(map[string]slog.Value)
+		for _, attr := range attrs {
+			attrMap[attr.Key] = attr.Value
+		}
+
+		if origin := attrMap["origin"]; origin.Kind() != slog.KindGroup {
+			t.Error("want origin to be a group")
+		} else {
+			originAttrs := origin.Group()
+			originMap := make(map[string]slog.Value)
+			for _, attr := range originAttrs {
+				originMap[attr.Key] = attr.Value
+			}
+
+			if file := originMap["file"]; !strings.Contains(file.String(), "error_test.go") {
+				t.Errorf("want file to contain error_test.go, got %q", file.String())
+			}
+			if line := originMap["line"]; line.Int64() <= 0 {
+				t.Errorf("want positive line number, got %d", line.Int64())
+			}
+			if funcName := originMap["func"]; !strings.Contains(funcName.String(), "TestError_LogValue") {
+				t.Errorf("want function name to contain TestError_LogValue, got %q", funcName.String())
+			}
+		}
+	})
+
+	t.Run("with causes", func(t *testing.T) {
+		original := errors.New("original error")
+		wrapped := errdef.Wrap(original)
+
+		logValuer := wrapped.(slog.LogValuer)
+		value := logValuer.LogValue()
+		attrs := value.Group()
+
+		attrMap := make(map[string]slog.Value)
+		for _, attr := range attrs {
+			attrMap[attr.Key] = attr.Value
+		}
+
+		if causes := attrMap["causes"]; causes.Kind() != slog.KindAny {
+			t.Error("want causes to be any type")
+		} else {
+			causeMessages := causes.Any().([]string)
+			if len(causeMessages) != 1 {
+				t.Errorf("want 1 cause, got %d", len(causeMessages))
+			}
+			if causeMessages[0] != "original error" {
+				t.Errorf("want cause message %q, got %q", "original error", causeMessages[0])
+			}
+		}
+	})
+
+	t.Run("no trace when disabled", func(t *testing.T) {
+		def := errdef.Define("test_error", errdef.NoTrace())
+		err := def.New("test message")
+
+		logValuer := err.(slog.LogValuer)
+		value := logValuer.LogValue()
+		attrs := value.Group()
+
+		attrMap := make(map[string]slog.Value)
+		for _, attr := range attrs {
+			attrMap[attr.Key] = attr.Value
+		}
+
+		if origin := attrMap["origin"]; origin.Any() != nil {
+			t.Error("want no origin when trace is disabled")
+		}
+	})
+
+	t.Run("custom log valuer", func(t *testing.T) {
+		customLogValuer := func(err errdef.Error) slog.Value {
+			return slog.GroupValue(
+				slog.String("custom_message", err.Error()),
+				slog.String("custom_kind", string(err.Kind())),
+			)
+		}
+
+		def := errdef.Define("test_error", errdef.LogValuer(customLogValuer))
+		err := def.New("test message")
+
+		logValuer := err.(slog.LogValuer)
+		value := logValuer.LogValue()
+		attrs := value.Group()
+
+		attrMap := make(map[string]slog.Value)
+		for _, attr := range attrs {
+			attrMap[attr.Key] = attr.Value
+		}
+
+		if customMessage := attrMap["custom_message"]; customMessage.String() != "test message" {
+			t.Errorf("want custom_message %q, got %q", "test message", customMessage.String())
+		}
+
+		if customKind := attrMap["custom_kind"]; customKind.String() != "test_error" {
+			t.Errorf("want custom_kind %q, got %q", "test_error", customKind.String())
+		}
+
+		if msg := attrMap["message"]; msg.Any() != nil {
+			t.Error("want no default message when custom log valuer is used")
 		}
 	})
 }

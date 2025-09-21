@@ -28,6 +28,8 @@ type (
 		SetFormatter(formatter ErrorFormatter)
 		// SetJSONMarshaler sets a custom JSON marshaler.
 		SetJSONMarshaler(marshaler ErrorJSONMarshaler)
+		// SetLogValuer sets a custom slog.Value converter.
+		SetLogValuer(valuer ErrorLogValuer)
 	}
 
 	// FieldOptionConstructor creates an Option that sets a field value.
@@ -69,6 +71,10 @@ type (
 
 	jsonMarshaler struct {
 		marshaler ErrorJSONMarshaler
+	}
+
+	logValuer struct {
+		valuer ErrorLogValuer
 	}
 )
 
@@ -173,6 +179,10 @@ func (a *optionApplier) SetJSONMarshaler(marshaler ErrorJSONMarshaler) {
 	a.def.jsonMarshaler = marshaler
 }
 
+func (a *optionApplier) SetLogValuer(valuer ErrorLogValuer) {
+	a.def.logValuer = valuer
+}
+
 func (o *field) ApplyOption(a OptionApplier) {
 	a.SetField(o.key, o.value)
 }
@@ -199,4 +209,8 @@ func (o *formatter) ApplyOption(a OptionApplier) {
 
 func (o *jsonMarshaler) ApplyOption(a OptionApplier) {
 	a.SetJSONMarshaler(o.marshaler)
+}
+
+func (o *logValuer) ApplyOption(a OptionApplier) {
+	a.SetLogValuer(o.valuer)
 }

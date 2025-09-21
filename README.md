@@ -146,6 +146,58 @@ The causes are structured for `errdef.Error`, and best-effort for others (string
 }
 ```
 
+### Structured Logging (`slog`)
+
+`errdef.Error` implements `slog.LogValuer` out-of-the-box to provide structured logging with zero configuration.
+
+When you pass an `errdef.Error` to `slog`, it automatically formats into a structured group containing the message, kind, custom fields, error origin, and causal chain.
+
+```go
+slog.Error("failed to find user", "error", err)
+```
+
+**Example Output:**
+
+```json
+{
+  "level": "ERROR",
+  "msg": "failed to find user",
+  "error": {
+    "message": "user not found",
+    "kind": "not_found",
+    "fields": {
+      "http_status": 404,
+      "user_id": "u-123"
+    },
+    "origin": {
+      "file": "/path/to/your/project/main.go",
+      "line": 23,
+      "func": "main.findUser"
+    },
+    "causes": [
+      "record not found"
+    ]
+  }
+}
+```
+
+For more advanced control, you can:
+
+```go
+// The Fields type also implements slog.LogValuer, allowing you to log just the fields from an error.
+fields := err.(errdef.Error).Fields()
+slog.Warn("...", "fields", fields)
+
+// The Stack type also implements slog.LogValuer, allowing you to log just the stack from an error.
+stack := err.(errdef.Error).Stack()
+slog.Error("...", "stack", stack)
+
+// Use the `errdef.LogValuer(...)` option, allowing you to customize the structured logging output.
+var customFormat = errdef.LogValuer(func(err errdef.Error) slog.Value { ... })
+var ErrCustom = errdef.Define("...", customFormat)
+slog.Error("...", "error", ErrCustom.New("error"))
+```
+
 ### Simplified Field Constructors
 
 The field constructor can be chained with methods like `WithValue` or `WithValueFunc` to create new, simplified constructors.

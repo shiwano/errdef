@@ -2,6 +2,7 @@ package errdef_test
 
 import (
 	"encoding/json"
+	"log/slog"
 	"maps"
 	"reflect"
 	"testing"
@@ -320,6 +321,72 @@ func TestFields_MarshalJSON(t *testing.T) {
 		}
 		if len(result) != 0 {
 			t.Errorf("want 0 fields, got %d", len(result))
+		}
+	})
+}
+
+func TestFields_LogValue(t *testing.T) {
+	t.Run("with fields", func(t *testing.T) {
+		constructor1, _ := errdef.DefineField[string]("user_id")
+		constructor2, _ := errdef.DefineField[int]("status_code")
+		def := errdef.Define("test_error", constructor1("user123"), constructor2(404))
+		err := def.New("test message")
+
+		fields := err.(errdef.Error).Fields()
+		logValuer, ok := fields.(slog.LogValuer)
+		if !ok {
+			t.Fatal("want fields to implement slog.LogValuer")
+		}
+
+		value := logValuer.LogValue()
+		attrs := value.Group()
+
+		attrMap := make(map[string]slog.Value)
+		for _, attr := range attrs {
+			attrMap[attr.Key] = attr.Value
+		}
+
+		if userID := attrMap["user_id"]; userID.String() != "user123" {
+			t.Errorf("want user_id %q, got %q", "user123", userID.String())
+		}
+
+		if statusCode := attrMap["status_code"]; statusCode.Int64() != 404 {
+			t.Errorf("want status_code %d, got %d", 404, statusCode.Int64())
+		}
+	})
+
+	t.Run("empty fields", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		err := def.New("test message")
+
+		fields := err.(errdef.Error).Fields()
+		logValuer := fields.(slog.LogValuer)
+		value := logValuer.LogValue()
+		attrs := value.Group()
+
+		if len(attrs) != 0 {
+			t.Errorf("want 0 attributes for empty fields, got %d", len(attrs))
+		}
+	})
+
+	t.Run("custom field key", func(t *testing.T) {
+		customKey := customFieldKey("custom_field")
+		customOpt := customField{key: customKey, value: "custom_value"}
+		def := errdef.Define("test_error", customOpt)
+		err := def.New("test message")
+
+		fields := err.(errdef.Error).Fields()
+		logValuer := fields.(slog.LogValuer)
+		value := logValuer.LogValue()
+		attrs := value.Group()
+
+		attrMap := make(map[string]slog.Value)
+		for _, attr := range attrs {
+			attrMap[attr.Key] = attr.Value
+		}
+
+		if customValue := attrMap["custom_field"]; customValue.String() != "custom_value" {
+			t.Errorf("want custom_field %q, got %q", "custom_value", customValue.String())
 		}
 	})
 }

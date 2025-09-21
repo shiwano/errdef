@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"runtime"
 	"strings"
 )
@@ -29,6 +30,9 @@ type (
 
 	// ErrorJSONMarshaler is a function type for custom JSON marshaling of errors.
 	ErrorJSONMarshaler func(err Error) ([]byte, error)
+
+	// ErrorLogValuer is a function type for custom slog.Value conversion of errors.
+	ErrorLogValuer func(err Error) slog.Value
 
 	// DebugStacker returns a string that resembles the output of debug.Stack().
 	// This is useful for integrating with Google Cloud Observability.
@@ -64,6 +68,7 @@ var (
 	_ DebugStacker   = (*definedError)(nil)
 	_ fmt.Formatter  = (*definedError)(nil)
 	_ json.Marshaler = (*definedError)(nil)
+	_ slog.LogValuer = (*definedError)(nil) // この行を追加
 	_ stackTracer    = (*definedError)(nil)
 	_ causer         = (*definedError)(nil)
 )
@@ -275,4 +280,51 @@ func (e *definedError) MarshalJSON() ([]byte, error) {
 		Stack:   e.stack.Frames(),
 		Causes:  causes,
 	})
+}
+
+func (e *definedError) LogValue() slog.Value {
+	if e.def.logValuer != nil {
+		return e.def.logValuer(e)
+	}
+
+	attrs := make([]slog.Attr, 0, 5)
+
+	attrs = append(attrs, slog.String("message", e.msg))
+
+	if e.Kind() != "" {
+		attrs = append(attrs, slog.String("kind", string(e.Kind())))
+	}
+
+	if e.Fields().Len() > 0 {
+		fieldAttrs := make([]any, 0, e.Fields().Len())
+		for k, v := range e.Fields().Seq() {
+			fieldAttrs = append(fieldAttrs, slog.Any(k.String(), v))
+		}
+		attrs = append(attrs, slog.Group("fields", fieldAttrs...))
+	}
+
+	if e.Stack().Len() > 0 {
+		frames := e.Stack().Frames()
+		if len(frames) > 0 {
+			origin := frames[0]
+			attrs = append(attrs,
+				slog.Group("origin",
+					slog.String("file", origin.File),
+					slog.Int("line", origin.Line),
+					slog.String("func", origin.Func),
+				),
+			)
+		}
+	}
+
+	causes := e.Unwrap()
+	if len(causes) > 0 {
+		causeMessages := make([]string, len(causes))
+		for i, c := range causes {
+			causeMessages[i] = c.Error()
+		}
+		attrs = append(attrs, slog.Any("causes", causeMessages))
+	}
+
+	return slog.GroupValue(attrs...)
 }

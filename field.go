@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"log/slog"
 	"maps"
 	"slices"
 )
@@ -38,7 +39,10 @@ type (
 	}
 )
 
-var _ Fields = fields{}
+var (
+	_ Fields         = fields{}
+	_ slog.LogValuer = (*fields)(nil)
+)
 
 func newFields() fields {
 	return make(fields)
@@ -106,6 +110,14 @@ func (f fields) MarshalJSON() ([]byte, error) {
 		fields = append(fields, field{Key: k.String(), Value: v})
 	}
 	return json.Marshal(fields)
+}
+
+func (f fields) LogValue() slog.Value {
+	attrs := make([]slog.Attr, 0, f.Len())
+	for k, v := range f.Seq() {
+		attrs = append(attrs, slog.Any(k.String(), v))
+	}
+	return slog.GroupValue(attrs...)
 }
 
 func (f fields) set(key FieldKey, value any) {

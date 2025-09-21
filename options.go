@@ -73,3 +73,8 @@ func Formatter(f ErrorFormatter) Option {
 func JSONMarshaler(f ErrorJSONMarshaler) Option {
 	return &jsonMarshaler{marshaler: f}
 }
+
+// LogValuer overrides the default `slog.LogValuer` behavior.
+func LogValuer(f ErrorLogValuer) Option {
+	return &logValuer{valuer: f}
+}

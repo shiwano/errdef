@@ -1,6 +1,7 @@
 package errdef_test
 
 import (
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -65,4 +66,52 @@ func TestStack_Len(t *testing.T) {
 	if length != len(frames) {
 		t.Errorf("want Len() == len(Frames()), got Len()=%d, len(Frames())=%d", length, len(frames))
 	}
+}
+
+func TestStack_LogValue(t *testing.T) {
+	t.Run("with stack", func(t *testing.T) {
+		err := errdef.New("test error")
+		stack := err.(errdef.Error).Stack()
+
+		logValuer, ok := stack.(slog.LogValuer)
+		if !ok {
+			t.Fatal("want stack to implement slog.LogValuer")
+		}
+
+		value := logValuer.LogValue()
+		frames := value.Any().([]errdef.Frame)
+
+		if len(frames) == 0 {
+			t.Error("want non-empty frames in log value")
+		}
+
+		firstFrame := frames[0]
+		if !strings.Contains(firstFrame.Func, "TestStack_LogValue") {
+			t.Errorf("want function name to contain TestStack_LogValue, got %q", firstFrame.Func)
+		}
+		if !strings.Contains(firstFrame.File, "stack_test.go") {
+			t.Errorf("want file to contain stack_test.go, got %q", firstFrame.File)
+		}
+		if firstFrame.Line <= 0 {
+			t.Errorf("want positive line number, got %d", firstFrame.Line)
+		}
+	})
+
+	t.Run("empty stack", func(t *testing.T) {
+		def := errdef.Define("test_error", errdef.NoTrace())
+		err := def.New("test error")
+		stack := err.(errdef.Error).Stack()
+
+		if stack == nil {
+			t.Skip("stack is nil when trace is disabled")
+		}
+
+		logValuer := stack.(slog.LogValuer)
+		value := logValuer.LogValue()
+		frames := value.Any().([]errdef.Frame)
+
+		if len(frames) != 0 {
+			t.Errorf("want empty frames when trace is disabled, got %d frames", len(frames))
+		}
+	})
 }
