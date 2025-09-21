@@ -187,7 +187,7 @@ For more advanced control, you can:
 
   ```go
   fields := err.(errdef.Error).Fields()
-  slog.Warn("Request rejected due to invalid argument", "details", fields)
+  slog.Warn("Request rejected due to invalid argument", "fields", fields)
   ```
 
   **Output:**
@@ -196,7 +196,7 @@ For more advanced control, you can:
   {
     "level": "WARN",
     "msg": "Request rejected due to invalid argument",
-    "details": {
+    "fields": {
       "http_status": 400,
       "invalid_param": "email"
     }
@@ -206,7 +206,8 @@ For more advanced control, you can:
 - **Log the full stack trace**: The `Stack` type also implements `slog.LogValuer`.
 
   ```go
-  slog.Error("...", "error", err, slog.Any("stack", err.(errdef.Error).Stack()))
+  stack := err.(errdef.Error).Stack()
+  slog.Error("...", "stack", stack)
   ```
 
 - **Completely override the format**: Use the `errdef.LogValuer(...)` option.
@@ -214,6 +215,7 @@ For more advanced control, you can:
   ```go
   var customFormat = errdef.LogValuer(func(err errdef.Error) slog.Value { ... })
   var ErrCustom = errdef.Define("...", customFormat)
+  slog.Error("...", "error", ErrCustom.New("error"))
   ```
 
 ### Simplified Field Constructors
