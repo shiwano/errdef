@@ -78,6 +78,17 @@ type (
 	}
 )
 
+// FieldKey returns the key associated with this constructor.
+func (f FieldOptionConstructor[T]) FieldKey() FieldKey {
+	var zero T
+	return fieldKeyFromOption(f(zero))
+}
+
+// FieldKey returns the key associated with this constructor.
+func (f FieldOptionConstructorNoArgs[T]) FieldKey() FieldKey {
+	return fieldKeyFromOption(f())
+}
+
 // WithValue creates a field option constructor that sets a specific value.
 func (f FieldOptionConstructor[T]) WithValue(value T) FieldOptionConstructorNoArgs[T] {
 	return func() Option {
@@ -213,4 +224,13 @@ func (o *jsonMarshaler) ApplyOption(a OptionApplier) {
 
 func (o *logValuer) ApplyOption(a OptionApplier) {
 	a.SetLogValuer(o.valuer)
+}
+
+func fieldKeyFromOption(opt Option) FieldKey {
+	applier := &optionApplier{def: &Definition{fields: fields{}}}
+	opt.ApplyOption(applier)
+	for k := range applier.def.fields {
+		return k
+	}
+	panic("no field key")
 }

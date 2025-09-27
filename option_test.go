@@ -9,6 +9,26 @@ import (
 	"github.com/shiwano/errdef"
 )
 
+func TestFieldOptionConstructor_FieldKey(t *testing.T) {
+	constructor1, _ := errdef.DefineField[string]("test_field_1")
+	rawConstructor2, _ := errdef.DefineField[int]("test_field_2")
+	constructor2 := rawConstructor2.WithValue(100)
+
+	key1 := constructor1.FieldKey()
+	key2 := constructor2.FieldKey()
+
+	if key1.String() != "test_field_1" {
+		t.Errorf("want field key %q, got %q", "test_field_1", key1.String())
+	}
+	if key2.String() != "test_field_2" {
+		t.Errorf("want field key %q, got %q", "test_field_2", key2.String())
+	}
+
+	if key1 == key2 {
+		t.Error("want different field keys for different field names")
+	}
+}
+
 func TestFieldOptionConstructor_WithValue(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
 	withValueConstructor := constructor.WithValue("default_value")

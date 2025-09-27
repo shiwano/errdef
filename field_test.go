@@ -35,13 +35,7 @@ func TestFields_Get(t *testing.T) {
 
 		fields := err.(errdef.Error).Fields()
 
-		keys := fields.FindKeys("test_field")
-		if len(keys) != 1 {
-			t.Fatalf("want 1 key, got %d", len(keys))
-		}
-		actualKey := keys[0]
-
-		value, found := fields.Get(actualKey)
+		value, found := fields.Get(constructor.FieldKey())
 		if !found {
 			t.Fatal("want field to be found via Fields.Get")
 		}
