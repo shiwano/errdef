@@ -13,8 +13,8 @@ func TestFieldOptionConstructor_WithValue(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
 	withValueConstructor := constructor.WithValue("default_value")
 
-	option := withValueConstructor()
-	err := errdef.New("test error", option)
+	def := errdef.Define("test_error", withValueConstructor())
+	err := def.New("test error")
 
 	value, found := extractor(err)
 	if !found {
@@ -31,8 +31,8 @@ func TestFieldOptionConstructor_WithValueFunc(t *testing.T) {
 		return "default_value"
 	})
 
-	option := withValueFuncConstructor()
-	err := errdef.New("test error", option)
+	def := errdef.Define("test_error", withValueFuncConstructor())
+	err := def.New("test error")
 
 	value, found := extractor(err)
 	if !found {
@@ -53,8 +53,8 @@ func TestFieldOptionConstructor_WithContext(t *testing.T) {
 		return ctx.Value(contextKey{}).(string)
 	})
 
-	option := withContextFuncConstructor(ctx)
-	err := errdef.New("test error", option)
+	def := errdef.Define("test_error", withContextFuncConstructor(ctx))
+	err := def.New("test error")
 
 	value, found := extractor(err)
 	if !found {
@@ -74,8 +74,8 @@ func TestFieldOptionConstructor_WithHTTPRequest(t *testing.T) {
 		return r.Header.Get("X-Request-ID")
 	})
 
-	option := withHTTPRequestConstructor(req)
-	err := errdef.New("test error", option)
+	def := errdef.Define("test_error", withHTTPRequestConstructor(req))
+	err := def.New("test error")
 
 	value, found := extractor(err)
 	if !found {
@@ -90,8 +90,8 @@ func TestFieldOptionExtractor_WithZero(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
 	zeroExtractor := extractor.WithZero()
 
-	option := constructor("test_value")
-	err := errdef.New("test error", option)
+	def := errdef.Define("test_error", constructor("test_value"))
+	err := def.New("test error")
 
 	value := zeroExtractor(err)
 	if value != "test_value" {
@@ -109,8 +109,8 @@ func TestFieldOptionExtractor_WithDefault(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
 	defaultExtractor := extractor.WithDefault("default")
 
-	option := constructor("test_value")
-	err := errdef.New("test error", option)
+	def := errdef.Define("test_error", constructor("test_value"))
+	err := def.New("test error")
 
 	value := defaultExtractor(err)
 	if value != "test_value" {
@@ -130,8 +130,8 @@ func TestFieldOptionExtractor_WithFallback(t *testing.T) {
 		return err.Error() + " fallback"
 	})
 
-	option := constructor("test_value")
-	err := errdef.New("test error", option)
+	def := errdef.Define("test_error", constructor("test_value"))
+	err := def.New("test error")
 
 	value := fallbackExtractor(err)
 	if value != "test_value" {
@@ -148,8 +148,8 @@ func TestFieldOptionExtractor_WithFallback(t *testing.T) {
 func TestFieldOptionExtractor_OrZero(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
 
-	option := constructor("test_value")
-	err := errdef.New("test error", option)
+	def := errdef.Define("test_error", constructor("test_value"))
+	err := def.New("test error")
 
 	value := extractor.OrZero(err)
 	if value != "test_value" {
@@ -166,8 +166,8 @@ func TestFieldOptionExtractor_OrZero(t *testing.T) {
 func TestFieldOptionExtractor_OrDefault(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
 
-	option := constructor("test_value")
-	err := errdef.New("test error", option)
+	def := errdef.Define("test_error", constructor("test_value"))
+	err := def.New("test error")
 
 	value := extractor.OrDefault(err, "default")
 	if value != "test_value" {
@@ -184,8 +184,8 @@ func TestFieldOptionExtractor_OrDefault(t *testing.T) {
 func TestFieldOptionExtractor_OrFallback(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
 
-	option := constructor("test_value")
-	err := errdef.New("test error", option)
+	def := errdef.Define("test_error", constructor("test_value"))
+	err := def.New("test error")
 
 	value := extractor.OrFallback(err, func(err error) string {
 		return err.Error() + " default"

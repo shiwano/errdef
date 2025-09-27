@@ -15,7 +15,8 @@ import (
 
 func TestError_Error(t *testing.T) {
 	t.Run("basic message", func(t *testing.T) {
-		err := errdef.New("test message")
+		def := errdef.Define("test_error")
+		err := def.New("test message")
 
 		if err.Error() != "test message" {
 			t.Errorf("want message %q, got %q", "test message", err.Error())
@@ -23,8 +24,9 @@ func TestError_Error(t *testing.T) {
 	})
 
 	t.Run("wrapped error message", func(t *testing.T) {
+		def := errdef.Define("test_error")
 		original := errors.New("original error")
-		wrapped := errdef.Wrap(original)
+		wrapped := def.Wrap(original)
 
 		if wrapped.Error() != "original error" {
 			t.Errorf("want message %q, got %q", "original error", wrapped.Error())
@@ -33,29 +35,19 @@ func TestError_Error(t *testing.T) {
 }
 
 func TestError_Kind(t *testing.T) {
-	t.Run("default kind", func(t *testing.T) {
-		err := errdef.New("test message").(errdef.Error)
+	def := errdef.Define("test_error")
+	err := def.New("test message").(errdef.Error)
 
-		kind := err.Kind()
-		if kind != "" {
-			t.Errorf("want empty kind for default error, got %q", kind)
-		}
-	})
-
-	t.Run("defined kind", func(t *testing.T) {
-		def := errdef.Define("test_error")
-		err := def.New("test message").(errdef.Error)
-
-		kind := err.Kind()
-		if kind != "test_error" {
-			t.Errorf("want kind %q, got %q", "test_error", kind)
-		}
-	})
+	kind := err.Kind()
+	if kind != "test_error" {
+		t.Errorf("want kind %q, got %q", "test_error", kind)
+	}
 }
 
 func TestError_Fields(t *testing.T) {
 	t.Run("no fields", func(t *testing.T) {
-		err := errdef.New("test message").(errdef.Error)
+		def := errdef.Define("test_error")
+		err := def.New("test message").(errdef.Error)
 
 		fields := err.Fields()
 
@@ -67,7 +59,8 @@ func TestError_Fields(t *testing.T) {
 
 	t.Run("with fields", func(t *testing.T) {
 		constructor, _ := errdef.DefineField[string]("user_id")
-		err := errdef.New("test message", constructor("user123")).(errdef.Error)
+		def := errdef.Define("test_error", constructor("user123"))
+		err := def.New("test message").(errdef.Error)
 
 		fields := err.Fields()
 
@@ -84,7 +77,8 @@ func TestError_Fields(t *testing.T) {
 
 func TestError_Stack(t *testing.T) {
 	t.Run("stack exists", func(t *testing.T) {
-		err := errdef.New("test message").(errdef.Error)
+		def := errdef.Define("test_error")
+		err := def.New("test message").(errdef.Error)
 
 		stack := err.Stack()
 		if stack == nil {
@@ -110,7 +104,8 @@ func TestError_Stack(t *testing.T) {
 
 func TestError_Unwrap(t *testing.T) {
 	t.Run("no cause", func(t *testing.T) {
-		err := errdef.New("test message").(errdef.Error)
+		def := errdef.Define("test_error")
+		err := def.New("test message").(errdef.Error)
 
 		unwrapped := err.Unwrap()
 		if len(unwrapped) != 0 {
@@ -119,8 +114,9 @@ func TestError_Unwrap(t *testing.T) {
 	})
 
 	t.Run("with cause", func(t *testing.T) {
+		def := errdef.Define("test_error")
 		original := errors.New("original error")
-		wrapped := errdef.Wrap(original).(errdef.Error)
+		wrapped := def.Wrap(original).(errdef.Error)
 
 		unwrapped := wrapped.Unwrap()
 		if len(unwrapped) != 1 {
@@ -179,7 +175,8 @@ func TestError_Unwrap(t *testing.T) {
 
 func TestDefinedError_Is(t *testing.T) {
 	t.Run("same instance", func(t *testing.T) {
-		err := errdef.New("test message")
+		def := errdef.Define("test_error")
+		err := def.New("test message")
 
 		if !errors.Is(err, err) {
 			t.Error("want error to be equal to itself")
@@ -216,7 +213,8 @@ func TestDefinedError_Is(t *testing.T) {
 
 func TestDebugStacker_DebugStack(t *testing.T) {
 	t.Run("debug stack format", func(t *testing.T) {
-		err := errdef.New("test message").(errdef.DebugStacker)
+		def := errdef.Define("test_error")
+		err := def.New("test message").(errdef.DebugStacker)
 
 		debugStack := err.DebugStack()
 
@@ -246,7 +244,8 @@ func TestStackTracer_StackTrace(t *testing.T) {
 			StackTrace() []uintptr
 		}
 
-		err := errdef.New("test message").(stackTracer)
+		def := errdef.Define("test_error")
+		err := def.New("test message").(stackTracer)
 
 		stackTrace := err.StackTrace()
 		if len(stackTrace) == 0 {
@@ -275,7 +274,8 @@ func TestCauser_Cause(t *testing.T) {
 			Cause() error
 		}
 
-		err := errdef.New("test message").(causer)
+		def := errdef.Define("test_error")
+		err := def.New("test message").(causer)
 
 		cause := err.Cause()
 		if cause != nil {
@@ -288,8 +288,9 @@ func TestCauser_Cause(t *testing.T) {
 			Cause() error
 		}
 
+		def := errdef.Define("test_error")
 		original := errors.New("original error")
-		wrapped := errdef.Wrap(original).(causer)
+		wrapped := def.Wrap(original).(causer)
 
 		cause := wrapped.Cause()
 		if cause != original {
@@ -300,7 +301,8 @@ func TestCauser_Cause(t *testing.T) {
 
 func TestFormatter_Format(t *testing.T) {
 	t.Run("default format", func(t *testing.T) {
-		err := errdef.New("test message")
+		def := errdef.Define("test_error")
+		err := def.New("test message")
 
 		result := fmt.Sprintf("%s", err)
 		if result != "test message" {
@@ -309,7 +311,8 @@ func TestFormatter_Format(t *testing.T) {
 	})
 
 	t.Run("quoted format", func(t *testing.T) {
-		err := errdef.New("test message")
+		def := errdef.Define("test_error")
+		err := def.New("test message")
 
 		result := fmt.Sprintf("%q", err)
 		if result != `"test message"` {
@@ -381,7 +384,8 @@ func TestFormatter_Format(t *testing.T) {
 	})
 
 	t.Run("go format", func(t *testing.T) {
-		err := errdef.New("test message", errdef.NoTrace())
+		def := errdef.Define("test_error", errdef.NoTrace())
+		err := def.New("test message")
 
 		result := fmt.Sprintf("%#v", err)
 		if matched, _ := regexp.MatchString(
@@ -415,7 +419,8 @@ func TestFormatter_Format(t *testing.T) {
 
 func TestMarshaler_MarshalJSON(t *testing.T) {
 	t.Run("basic json", func(t *testing.T) {
-		err := errdef.New("test message")
+		def := errdef.Define("test_error")
+		err := def.New("test message")
 
 		data, jsonErr := json.Marshal(err)
 		if jsonErr != nil {
@@ -430,8 +435,8 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 		if result["message"] != "test message" {
 			t.Errorf("want message %q, got %q", "test message", result["message"])
 		}
-		if result["kind"] != nil {
-			t.Errorf("want empty kind, got %q", result["kind"])
+		if result["kind"] != "test_error" {
+			t.Errorf("want kind %q, got %q", "test_error", result["kind"])
 		}
 	})
 
@@ -468,8 +473,9 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 	})
 
 	t.Run("with causes", func(t *testing.T) {
+		def := errdef.Define("test_error")
 		original := errors.New("original error")
-		wrapped := errdef.Wrap(original)
+		wrapped := def.Wrap(original)
 
 		data, jsonErr := json.Marshal(wrapped)
 		if jsonErr != nil {
@@ -493,7 +499,8 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 	})
 
 	t.Run("with stack", func(t *testing.T) {
-		err := errdef.New("test message")
+		def := errdef.Define("test_error")
+		err := def.New("test message")
 
 		data, jsonErr := json.Marshal(err)
 		if jsonErr != nil {
@@ -538,8 +545,9 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 }
 
 func TestError_LogValue(t *testing.T) {
-	t.Run("basic log value", func(t *testing.T) {
-		err := errdef.New("test message")
+	t.Run("message only", func(t *testing.T) {
+		def := errdef.Define("")
+		err := def.New("test message")
 
 		logValuer, ok := err.(slog.LogValuer)
 		if !ok {
@@ -603,7 +611,8 @@ func TestError_LogValue(t *testing.T) {
 	})
 
 	t.Run("with stack", func(t *testing.T) {
-		err := errdef.New("test message")
+		def := errdef.Define("test_error")
+		err := def.New("test message")
 
 		logValuer := err.(slog.LogValuer)
 		value := logValuer.LogValue()
@@ -636,8 +645,9 @@ func TestError_LogValue(t *testing.T) {
 	})
 
 	t.Run("with causes", func(t *testing.T) {
+		def := errdef.Define("test_error")
 		original := errors.New("original error")
-		wrapped := errdef.Wrap(original)
+		wrapped := def.Wrap(original)
 
 		logValuer := wrapped.(slog.LogValuer)
 		value := logValuer.LogValue()

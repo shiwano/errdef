@@ -9,7 +9,8 @@ import (
 )
 
 func TestStack_StackTrace(t *testing.T) {
-	err := errdef.New("test error")
+	def := errdef.Define("test_error")
+	err := def.New("test error")
 	result := err.(errdef.Error).Stack().StackTrace()
 
 	if len(result) == 0 {
@@ -29,7 +30,8 @@ func TestStack_StackTrace(t *testing.T) {
 }
 
 func TestStack_Frames(t *testing.T) {
-	err := errdef.New("test error")
+	def := errdef.Define("test_error")
+	err := def.New("test error")
 	frames := err.(errdef.Error).Stack().Frames()
 
 	if len(frames) == 0 {
@@ -49,7 +51,8 @@ func TestStack_Frames(t *testing.T) {
 }
 
 func TestStack_Len(t *testing.T) {
-	err := errdef.New("test error")
+	def := errdef.Define("test_error")
+	err := def.New("test error")
 	stack := err.(errdef.Error).Stack()
 
 	length := stack.Len()
@@ -70,7 +73,8 @@ func TestStack_Len(t *testing.T) {
 
 func TestStack_LogValue(t *testing.T) {
 	t.Run("with stack", func(t *testing.T) {
-		err := errdef.New("test error")
+		def := errdef.Define("test_error")
+		err := def.New("test error")
 		stack := err.(errdef.Error).Stack()
 
 		logValuer, ok := stack.(slog.LogValuer)

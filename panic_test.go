@@ -9,9 +9,10 @@ import (
 )
 
 func TestPanicError_Error(t *testing.T) {
+	def := errdef.Define("test_error")
 	panicValue := errors.New("panic error")
 	var err error
-	errdef.CapturePanic(&err, panicValue)
+	def.CapturePanic(&err, panicValue)
 
 	var panicErr errdef.PanicError
 	if !errors.As(err, &panicErr) {
@@ -24,9 +25,10 @@ func TestPanicError_Error(t *testing.T) {
 }
 
 func TestPanicError_PanicValue(t *testing.T) {
+	def := errdef.Define("test_error")
 	panicValue := errors.New("panic error")
 	var err error
-	errdef.CapturePanic(&err, panicValue)
+	def.CapturePanic(&err, panicValue)
 
 	var panicErr errdef.PanicError
 	if !errors.As(err, &panicErr) {
@@ -40,9 +42,10 @@ func TestPanicError_PanicValue(t *testing.T) {
 
 func TestPanicError_Unwrap(t *testing.T) {
 	t.Run("with error", func(t *testing.T) {
+		def := errdef.Define("test_error")
 		panicValue := errors.New("panic error")
 		var err error
-		errdef.CapturePanic(&err, panicValue)
+		def.CapturePanic(&err, panicValue)
 
 		var panicErr errdef.PanicError
 		if !errors.As(err, &panicErr) {
@@ -55,9 +58,10 @@ func TestPanicError_Unwrap(t *testing.T) {
 	})
 
 	t.Run("with non error", func(t *testing.T) {
+		def := errdef.Define("test_error")
 		panicValue := "panic string"
 		var err error
-		errdef.CapturePanic(&err, panicValue)
+		def.CapturePanic(&err, panicValue)
 
 		var panicErr errdef.PanicError
 		if !errors.As(err, &panicErr) {
@@ -72,9 +76,10 @@ func TestPanicError_Unwrap(t *testing.T) {
 
 func TestPanicError_Format(t *testing.T) {
 	t.Run("with standard error", func(t *testing.T) {
+		def := errdef.Define("test_error")
 		panicValue := errors.New("panic error")
 		var err error
-		errdef.CapturePanic(&err, panicValue)
+		def.CapturePanic(&err, panicValue)
 
 		var panicErr errdef.PanicError
 		if !errors.As(err, &panicErr) {
@@ -95,9 +100,10 @@ func TestPanicError_Format(t *testing.T) {
 	})
 
 	t.Run("with string value", func(t *testing.T) {
+		def := errdef.Define("test_error")
 		panicValue := "panic string"
 		var err error
-		errdef.CapturePanic(&err, panicValue)
+		def.CapturePanic(&err, panicValue)
 
 		var panicErr errdef.PanicError
 		if !errors.As(err, &panicErr) {
@@ -114,9 +120,10 @@ func TestPanicError_Format(t *testing.T) {
 	})
 
 	t.Run("with errdef.Error", func(t *testing.T) {
-		panicValue := errdef.New("panic error", errdef.NoTrace(), errdef.HTTPStatus(400))
+		def := errdef.Define("test_error")
+		panicValue := def.WithOptions(errdef.NoTrace(), errdef.HTTPStatus(400)).New("panic error")
 		var err error
-		errdef.CapturePanic(&err, panicValue)
+		def.CapturePanic(&err, panicValue)
 
 		var panicErr errdef.PanicError
 		if !errors.As(err, &panicErr) {
@@ -131,7 +138,7 @@ func TestPanicError_Format(t *testing.T) {
 			t.Errorf("%%s: want %q, got %q", "panic error", got)
 		}
 
-		if got := fmt.Sprintf("%+v", panicErr); got != "panic error\n\nFields:\n\thttp_status: 400" {
+		if got := fmt.Sprintf("%+v", panicErr); got != "panic error\n\nKind:\n\ttest_error\nFields:\n\thttp_status: 400" {
 			t.Errorf("%%+v: want %q, got %q", "panic error", got)
 		}
 	})

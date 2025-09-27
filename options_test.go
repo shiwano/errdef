@@ -12,7 +12,8 @@ import (
 )
 
 func TestHTTPStatus(t *testing.T) {
-	err := errdef.New("test error", errdef.HTTPStatus(404))
+	def := errdef.Define("test_error", errdef.HTTPStatus(404))
+	err := def.New("test error")
 
 	status, found := errdef.HTTPStatusFrom(err)
 	if !found {
@@ -24,7 +25,8 @@ func TestHTTPStatus(t *testing.T) {
 }
 
 func TestLogLevel(t *testing.T) {
-	err := errdef.New("test error", errdef.LogLevel(slog.LevelError))
+	def := errdef.Define("test_error", errdef.LogLevel(slog.LevelError))
+	err := def.New("test error")
 
 	level, found := errdef.LogLevelFrom(err)
 	if !found {
@@ -37,7 +39,8 @@ func TestLogLevel(t *testing.T) {
 
 func TestTraceID(t *testing.T) {
 	traceID := "abc123-def456"
-	err := errdef.New("test error", errdef.TraceID(traceID))
+	def := errdef.Define("test_error", errdef.TraceID(traceID))
+	err := def.New("test error")
 
 	id, found := errdef.TraceIDFrom(err)
 	if !found {
@@ -50,7 +53,8 @@ func TestTraceID(t *testing.T) {
 
 func TestDomain(t *testing.T) {
 	domain := "auth_service"
-	err := errdef.New("test error", errdef.Domain(domain))
+	def := errdef.Define("test_error", errdef.Domain(domain))
+	err := def.New("test error")
 
 	d, found := errdef.DomainFrom(err)
 	if !found {
@@ -63,7 +67,8 @@ func TestDomain(t *testing.T) {
 
 func TestUserHint(t *testing.T) {
 	hint := "Please check your credentials"
-	err := errdef.New("test error", errdef.UserHint(hint))
+	def := errdef.Define("test_error", errdef.UserHint(hint))
+	err := def.New("test error")
 
 	h, found := errdef.UserHintFrom(err)
 	if !found {
@@ -75,7 +80,8 @@ func TestUserHint(t *testing.T) {
 }
 
 func TestPublic(t *testing.T) {
-	err := errdef.New("test error", errdef.Public())
+	def := errdef.Define("test_error", errdef.Public())
+	err := def.New("test error")
 
 	if !errdef.IsPublic(err) {
 		t.Error("want error to be public")
@@ -83,7 +89,8 @@ func TestPublic(t *testing.T) {
 }
 
 func TestRetryable(t *testing.T) {
-	err := errdef.New("test error", errdef.Retryable())
+	def := errdef.Define("test_error", errdef.Retryable())
+	err := def.New("test error")
 
 	if !errdef.IsRetryable(err) {
 		t.Error("want error to be retryable")
@@ -92,7 +99,8 @@ func TestRetryable(t *testing.T) {
 
 func TestRetryAfter(t *testing.T) {
 	duration := 5 * time.Second
-	err := errdef.New("test error", errdef.RetryAfter(duration))
+	def := errdef.Define("test_error", errdef.RetryAfter(duration))
+	err := def.New("test error")
 
 	d, found := errdef.RetryAfterFrom(err)
 	if !found {
@@ -104,7 +112,8 @@ func TestRetryAfter(t *testing.T) {
 }
 
 func TestUnreportable(t *testing.T) {
-	err := errdef.New("test error", errdef.Unreportable())
+	def := errdef.Define("test_error", errdef.Unreportable())
+	err := def.New("test error")
 
 	if !errdef.IsUnreportable(err) {
 		t.Error("want error to be retryable")
@@ -113,7 +122,8 @@ func TestUnreportable(t *testing.T) {
 
 func TestExitCode(t *testing.T) {
 	code := 42
-	err := errdef.New("test error", errdef.ExitCode(code))
+	def := errdef.Define("test_error", errdef.ExitCode(code))
+	err := def.New("test error")
 
 	c, found := errdef.ExitCodeFrom(err)
 	if !found {
@@ -126,7 +136,8 @@ func TestExitCode(t *testing.T) {
 
 func TestHelpURL(t *testing.T) {
 	url := "https://example.com/help"
-	err := errdef.New("test error", errdef.HelpURL(url))
+	def := errdef.Define("test_error", errdef.HelpURL(url))
+	err := def.New("test error")
 
 	u, found := errdef.HelpURLFrom(err)
 	if !found {
