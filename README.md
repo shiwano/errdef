@@ -13,10 +13,10 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
 
 ## Features
 
-- **✨ Consistent by Design**: Achieve consistent error handling application-wide by separating error definitions from instances.
-- **🔧 Structured Metadata**: Attach type-safe metadata as options or automatically from context.
-- **🤝 Works with Go Standard**: Integrates seamlessly with standard interfaces like `errors.Is` / `errors.As`, `fmt.Formatter`, `json.Marshaler`, and `slog.LogValuer`.
-- **🚀 Rich, Built-in Options**: Provides a rich set of ready-to-use options for common use cases like web services and CLIs (e.g., `NoTrace`, `HTTPStatus`, and `LogLevel`).
+- **Consistent by Design**: Achieve consistent error handling application-wide by separating error definitions from instances.
+- **Structured Metadata**: Attach type-safe metadata as options or automatically from context.
+- **Works with Go Standard**: Integrates seamlessly with standard interfaces like `errors.Is` / `errors.As`, `fmt.Formatter`, `json.Marshaler`, and `slog.LogValuer`.
+- **Rich, Built-in Options**: Provides a rich set of ready-to-use options for common use cases like web services and CLIs (e.g., `NoTrace`, `HTTPStatus`, and `LogLevel`).
 
 ## Installation
 
@@ -39,7 +39,7 @@ import "github.com/shiwano/errdef"
 
 var (
     // Define error kinds
-    ErrNotFound      = errdef.Define("not_found", errdef.HTTPStatus(http.StatusNotFound))
+    ErrNotFound        = errdef.Define("not_found", errdef.HTTPStatus(http.StatusNotFound))
     ErrInvalidArgument = errdef.Define("invalid_argument", errdef.HTTPStatus(http.StatusBadRequest))
 
     // Define fields to attach to errors (constructor + extractor pair)
@@ -188,19 +188,6 @@ For more advanced control, you can:
   slog.Warn("invalid argument", "fields", fields)
   ```
 
-  **Output:**
-
-  ```json
-  {
-    "level": "WARN",
-    "msg": "invalid argument",
-    "fields": {
-      "http_status": 400,
-      "invalid_param": "email"
-    }
-  }
-  ```
-
 - **Log the full stack trace**: The `Stack` type also implements `slog.LogValuer`.
 
   ```go
@@ -226,7 +213,7 @@ var (
     ErrorCodeAmountTooLarge = ErrorCode.WithValue(2002)
 
     errorGroupID, _ = errdef.DefineField[string]("error_group_id")
-    ErrorGroupID = errorGroupID.WithValueFunc(func() string {
+    ErrorGroupID    = errorGroupID.WithValueFunc(func() string {
         return generateRandomID()
     })
 )
@@ -265,6 +252,7 @@ codeWithDefault := ErrorCodeFrom.WithDefault(9999)
 
 Extractors follow the same rules as `errors.As`.
 They search the error chain and extract the value from the **first matching `errdef.Error`**, then stop searching.
+If you need inner fields at the outer layer, prefer explicitly copying the needed fields when wrapping.
 
 ### Context Integration
 
