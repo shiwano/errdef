@@ -182,7 +182,7 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 					if i > 0 {
 						_, _ = io.WriteString(s, "\n")
 					}
-					_, _ = fmt.Fprintf(s, "\t%v: %+v", k, v)
+					_, _ = fmt.Fprintf(s, "\t%v: %+v", k, v.Value())
 					i++
 				}
 			}
@@ -301,7 +301,7 @@ func (e *definedError) LogValue() slog.Value {
 	if e.Fields().Len() > 0 {
 		fieldAttrs := make([]any, 0, e.Fields().Len())
 		for k, v := range e.Fields().Seq() {
-			fieldAttrs = append(fieldAttrs, slog.Any(k.String(), v))
+			fieldAttrs = append(fieldAttrs, slog.Any(k.String(), v.Value()))
 		}
 		attrs = append(attrs, slog.Group("fields", fieldAttrs...))
 	}

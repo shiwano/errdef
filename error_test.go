@@ -69,7 +69,7 @@ func TestError_Fields(t *testing.T) {
 			t.Errorf("want 1 field, got %d", len(collected))
 		}
 		keys := fields.FindKeys("user_id")
-		if got, ok := collected[keys[0]]; ok && got != "user123" {
+		if got, ok := collected[keys[0]]; ok && got.Value() != "user123" {
 			t.Errorf("want field value %q, got %q", "user123", got)
 		}
 	})

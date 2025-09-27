@@ -17,6 +17,10 @@ type (
 		key   errdef.FieldKey
 		value any
 	}
+
+	customFieldValue[T comparable] struct {
+		value T
+	}
 )
 
 func (k customFieldKey) String() string {
@@ -24,7 +28,7 @@ func (k customFieldKey) String() string {
 }
 
 func (o customField) ApplyOption(a errdef.OptionApplier) {
-	a.SetField(o.key, o.value)
+	a.SetField(o.key, &customFieldValue[any]{value: o.value})
 }
 
 func TestFields_Get(t *testing.T) {
@@ -39,7 +43,7 @@ func TestFields_Get(t *testing.T) {
 		if !found {
 			t.Fatal("want field to be found via Fields.Get")
 		}
-		if value != "test_value" {
+		if value.Value() != "test_value" {
 			t.Errorf("want value %q, got %q", "test_value", value)
 		}
 	})
@@ -70,7 +74,7 @@ func TestFields_Get(t *testing.T) {
 		if !found {
 			t.Fatal("want field to be found via Fields.Get")
 		}
-		if value != "test_value" {
+		if value.Value() != "test_value" {
 			t.Errorf("want value %q, got %q", "test_value", value)
 		}
 	})
@@ -98,7 +102,7 @@ func TestFields_FindKeys(t *testing.T) {
 	if !found1 {
 		t.Fatal("want first common_field to be found")
 	}
-	if value1 != "string_value" && value1 != 42 {
+	if value1.Value() != "string_value" && value1.Value() != 42 {
 		t.Errorf("incorrect first common_field value, got %v", value1)
 	}
 
@@ -106,7 +110,7 @@ func TestFields_FindKeys(t *testing.T) {
 	if !found2 {
 		t.Fatal("want second common_field to be found")
 	}
-	if value1 != "string_value" && value1 != 42 {
+	if value1.Value() != "string_value" && value1.Value() != 42 {
 		t.Errorf("incorrect second common_field value, got %v", value2)
 	}
 }
@@ -129,7 +133,7 @@ func TestFields_Seq(t *testing.T) {
 
 	collected := make(map[string]any)
 	for key, value := range fields.Seq() {
-		collected[key.String()] = value
+		collected[key.String()] = value.Value()
 	}
 
 	want := map[string]any{
@@ -164,7 +168,7 @@ func TestFields_SortedSeq(t *testing.T) {
 		var values []any
 		for key, value := range fields.SortedSeq() {
 			keys = append(keys, key.String())
-			values = append(values, value)
+			values = append(values, value.Value())
 		}
 
 		wantKeys := []string{"a_field", "b_field", "c_field"}
@@ -200,7 +204,7 @@ func TestFields_SortedSeq(t *testing.T) {
 		var value1 []any
 		for key, value := range fields.SortedSeq() {
 			key1 = append(key1, key.String())
-			value1 = append(value1, value)
+			value1 = append(value1, value.Value())
 		}
 
 		for range 10 {
@@ -208,7 +212,7 @@ func TestFields_SortedSeq(t *testing.T) {
 			var value2 []any
 			for key, value := range fields.SortedSeq() {
 				key2 = append(key2, key.String())
-				value2 = append(value2, value)
+				value2 = append(value2, value.Value())
 			}
 
 			if !reflect.DeepEqual(key1, key2) {
@@ -383,4 +387,17 @@ func TestFields_LogValue(t *testing.T) {
 			t.Errorf("want custom_field %q, got %q", "custom_value", customValue.String())
 		}
 	})
+}
+
+func (v *customFieldValue[T]) Value() any {
+	return v.value
+}
+
+func (v *customFieldValue[T]) Equals(other any) bool {
+	if tv, ok := other.(T); ok {
+		return v.value == tv
+	} else if fv, ok := other.(errdef.FieldValue); ok {
+		return v.Equals(fv.Value())
+	}
+	return false
 }

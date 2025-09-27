@@ -16,13 +16,13 @@ type (
 	Fields interface {
 		json.Marshaler
 		// Get retrieves the value associated with the given key.
-		Get(key FieldKey) (any, bool)
+		Get(key FieldKey) (FieldValue, bool)
 		// FindKeys finds all keys that match the given name.
 		FindKeys(name string) []FieldKey
 		// Seq returns an iterator over all key-value pairs.
-		Seq() iter.Seq2[FieldKey, any]
+		Seq() iter.Seq2[FieldKey, FieldValue]
 		// SortedSeq returns an iterator over all key-value pairs sorted by key.
-		SortedSeq() iter.Seq2[FieldKey, any]
+		SortedSeq() iter.Seq2[FieldKey, FieldValue]
 		// Len returns the number of fields.
 		Len() int
 	}
@@ -32,7 +32,16 @@ type (
 		fmt.Stringer
 	}
 
-	fields map[FieldKey]any
+	FieldValue interface {
+		Value() any
+		Equals(other any) bool
+	}
+
+	fields map[FieldKey]FieldValue
+
+	fieldValue[T comparable] struct {
+		value T
+	}
 
 	fieldKey struct {
 		name string
@@ -42,13 +51,15 @@ type (
 var (
 	_ Fields         = fields{}
 	_ slog.LogValuer = (*fields)(nil)
+	_ FieldKey       = (*fieldKey)(nil)
+	_ FieldValue     = (*fieldValue[string])(nil)
 )
 
 func newFields() fields {
 	return make(fields)
 }
 
-func (f fields) Get(key FieldKey) (any, bool) {
+func (f fields) Get(key FieldKey) (FieldValue, bool) {
 	v, ok := f[key]
 	return v, ok
 }
@@ -63,8 +74,8 @@ func (f fields) FindKeys(name string) []FieldKey {
 	return keys
 }
 
-func (f fields) Seq() iter.Seq2[FieldKey, any] {
-	return func(yield func(key FieldKey, value any) bool) {
+func (f fields) Seq() iter.Seq2[FieldKey, FieldValue] {
+	return func(yield func(key FieldKey, value FieldValue) bool) {
 		for k, v := range f {
 			if !yield(k, v) {
 				return
@@ -73,12 +84,12 @@ func (f fields) Seq() iter.Seq2[FieldKey, any] {
 	}
 }
 
-func (f fields) SortedSeq() iter.Seq2[FieldKey, any] {
-	return func(yield func(key FieldKey, value any) bool) {
+func (f fields) SortedSeq() iter.Seq2[FieldKey, FieldValue] {
+	return func(yield func(key FieldKey, value FieldValue) bool) {
 		for _, k := range slices.SortedFunc(maps.Keys(f), func(a, b FieldKey) int {
 			if a.String() == b.String() {
-				vA := f[a]
-				vB := f[b]
+				vA := f[a].Value()
+				vB := f[b].Value()
 				vAT := fmt.Sprintf("%T", vA)
 				vBT := fmt.Sprintf("%T", vB)
 				if vAT == vBT {
@@ -107,7 +118,7 @@ func (f fields) MarshalJSON() ([]byte, error) {
 	}
 	fields := make([]field, 0, len(f))
 	for k, v := range f.SortedSeq() {
-		fields = append(fields, field{Key: k.String(), Value: v})
+		fields = append(fields, field{Key: k.String(), Value: v.Value()})
 	}
 	return json.Marshal(fields)
 }
@@ -115,12 +126,12 @@ func (f fields) MarshalJSON() ([]byte, error) {
 func (f fields) LogValue() slog.Value {
 	attrs := make([]slog.Attr, 0, f.Len())
 	for k, v := range f.Seq() {
-		attrs = append(attrs, slog.Any(k.String(), v))
+		attrs = append(attrs, slog.Any(k.String(), v.Value()))
 	}
 	return slog.GroupValue(attrs...)
 }
 
-func (f fields) set(key FieldKey, value any) {
+func (f fields) set(key FieldKey, value FieldValue) {
 	f[key] = value
 }
 
@@ -128,15 +139,30 @@ func (f fields) clone() fields {
 	return maps.Clone(f)
 }
 
-func (k fieldKey) String() string {
+func (k *fieldKey) String() string {
 	return k.name
+}
+
+func (v *fieldValue[T]) Value() any {
+	return v.value
+}
+
+func (v *fieldValue[T]) Equals(other any) bool {
+	if tv, ok := other.(T); ok {
+		return v.value == tv
+	} else if fv, ok := other.(FieldValue); ok {
+		return v.Equals(fv.Value())
+	}
+	return false
 }
 
 func fieldValueFrom[T any](err error, key FieldKey) (T, bool) {
 	var e *definedError
 	if errors.As(err, &e) {
 		if v, found := e.def.fields.Get(key); found {
-			if tv, ok := v.(T); ok {
+			vv := v.Value()
+
+			if tv, ok := vv.(T); ok {
 				return tv, true
 			}
 		}

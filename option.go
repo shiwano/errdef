@@ -15,7 +15,7 @@ type (
 	// OptionApplier provides methods for applying options to error definitions.
 	OptionApplier interface {
 		// SetField sets a field value.
-		SetField(key FieldKey, value any)
+		SetField(key FieldKey, value FieldValue)
 		// DisableTrace disables stack trace collection.
 		DisableTrace()
 		// AddStackSkip adds frames to skip during stack trace collection.
@@ -48,9 +48,9 @@ type (
 		def *Definition
 	}
 
-	field struct {
+	field[T comparable] struct {
 		key   FieldKey
-		value any
+		value T
 	}
 
 	noTrace struct{}
@@ -162,7 +162,7 @@ func (f FieldOptionExtractor[T]) OrFallback(err error, fn func(err error) T) T {
 	return f.WithFallback(fn)(err)
 }
 
-func (a *optionApplier) SetField(key FieldKey, value any) {
+func (a *optionApplier) SetField(key FieldKey, value FieldValue) {
 	a.def.fields.set(key, value)
 }
 
@@ -194,8 +194,8 @@ func (a *optionApplier) SetLogValuer(valuer ErrorLogValuer) {
 	a.def.logValuer = valuer
 }
 
-func (o *field) ApplyOption(a OptionApplier) {
-	a.SetField(o.key, o.value)
+func (o *field[T]) ApplyOption(a OptionApplier) {
+	a.SetField(o.key, &fieldValue[T]{value: o.value})
 }
 
 func (o *noTrace) ApplyOption(a OptionApplier) {
