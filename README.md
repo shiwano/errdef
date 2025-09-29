@@ -13,10 +13,13 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
 
 ## Features
 
-- **Consistent by Design**: Achieve consistent error handling application-wide by separating error definitions from instances.
-- **Structured Metadata**: Attach type-safe metadata as options or automatically from context.
-- **Works with Go Standard**: Integrates seamlessly with standard interfaces like `errors.Is` / `errors.As`, `fmt.Formatter`, `json.Marshaler`, and `slog.LogValuer`.
-- **Rich, Built-in Options**: Provides a rich set of ready-to-use options for common use cases like web services and CLIs (e.g., `NoTrace`, `HTTPStatus`, and `LogLevel`).
+| Feature                     | Description                                                                                                |
+|:----------------------------|:-----------------------------------------------------------------------------------------------------------|
+| 🏛️ **Consistent Design**    | Separates definitions from instances for consistent, application-wide error handling.                      |
+| 🏷️ **Structured Data**      | Attaches rich, type-safe metadata to any error, automatically from `context` or explicitly.                |
+| 🧩 **Seamless Integration** | Works out-of-the-box with `slog`, `errors.Is`, `json.Marshaler`, Sentry, and Google Cloud Error Reporting. |
+| 🛠️ **Batteries-Included**   | Provides a rich set of built-in options for common use cases like HTTP statuses, log levels, and retries.  |
+| 🚀 **Concurrency-Safe**     | Immutable core types make it safe to use across goroutines without locks.                                  |
 
 ## Installation
 
@@ -38,11 +41,13 @@ package myapp
 import "github.com/shiwano/errdef"
 
 var (
-    // Define error kinds
+    // Define error kinds.
+    // NOTE: Error identity depends on the variable instance (e.g., ErrNotFound), not its kind string.
+    // This prevents naming collisions across packages.
     ErrNotFound        = errdef.Define("not_found", errdef.HTTPStatus(http.StatusNotFound))
     ErrInvalidArgument = errdef.Define("invalid_argument", errdef.HTTPStatus(http.StatusBadRequest))
 
-    // Define fields to attach to errors (constructor + extractor pair)
+    // Define fields to attach to errors (constructor + extractor pair).
     UserID, UserIDFrom = errdef.DefineField[string]("user_id")
 )
 ```
@@ -121,7 +126,6 @@ Causes:
 ### JSON Marshaling
 
 `errdef.Error` implements `json.Marshaler` to produce structured JSON output.
-The causes are structured for `errdef.Error`, and best-effort for others (string if needed).
 
 **Example Output:**
 
@@ -147,8 +151,6 @@ The causes are structured for `errdef.Error`, and best-effort for others (string
 ### Structured Logging (`slog`)
 
 `errdef.Error` implements `slog.LogValuer` out-of-the-box to provide structured logging with zero configuration.
-
-When you pass an `errdef.Error` to `slog`, it automatically formats into a structured group containing the message, kind, custom fields, error origin, and causal chain.
 
 ```go
 slog.Error("failed to find user", "error", err)
@@ -198,8 +200,7 @@ For more advanced control, you can:
 - **Completely override the format**: Use the `errdef.LogValuer(...)` option.
 
   ```go
-  var customFormat = errdef.LogValuer(func(err errdef.Error) slog.Value { ... })
-  var ErrCustom = errdef.Define("...", customFormat)
+  var ErrCustom = errdef.Define("...", errdef.LogValuer(func(err errdef.Error) slog.Value { ... }))
   slog.Error("...", "error", ErrCustom.New("error"))
   ```
 
@@ -226,7 +227,7 @@ err := ErrPaymentFailed.With(
 
 ### Extracting Field Values
 
-The field extractor provides several convenient, chainable methods for safely retrieving values from an error instance, especially for handling cases where a field might not exist.
+The field extractor provides several helper methods for retrieving values from an error instance, especially for handling cases where a field might not exist.
 
 ```go
 errWithCode := ErrPaymentFailed.New("payment failed")
@@ -323,10 +324,9 @@ func main() {
 }
 ```
 
-### Error Resolution (`Resolver`)
+### Error Resolution
 
 For advanced use cases like mapping error codes from external APIs, use a `Resolver`.
-It’s an immutable catalog of your definitions, constructed once at startup.
 
 ```go
 var (
