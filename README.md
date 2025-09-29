@@ -347,6 +347,16 @@ func handleStripeError(code, msg string) error {
 }
 ```
 
+### Ecosystem Integration
+
+`errdef` is designed to work seamlessly with the broader Go ecosystem.
+
+- **Structured Logging:** Implements `slog.LogValuer` for rich, structured logs out-of-the-box.
+- **Error Reporting Services:**
+  - **Sentry:** Compatible with the Sentry Go SDK by implementing the `stackTracer` interface.
+  - **Google Cloud Error Reporting**: Integrates directly with the Error Reporting service by implementing a `DebugStacker` interface.
+- **Legacy Error Handling:** Supports interoperability with `pkg/errors` by implementing the `causer` interface.
+
 ### Built-in Options
 
 | Option                      | Description                                              | Extractor        |
