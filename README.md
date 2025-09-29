@@ -230,7 +230,7 @@ The field extractor provides several convenient, chainable methods for safely re
 
 ```go
 errWithCode := ErrPaymentFailed.New("payment failed")
-errWithoutCode := errdef.New("another error")
+errWithoutCode := ErrNotFound.New("not found")
 
 code, ok := ErrorCodeFrom(errWithCode)
 // code: 2001, ok: true
@@ -320,6 +320,30 @@ func main() {
         }
         // ...
     }
+}
+```
+
+### Error Resolution (`Resolver`)
+
+For advanced use cases like mapping error codes from external APIs, use a `Resolver`.
+It’s an immutable catalog of your definitions, constructed once at startup.
+
+```go
+var (
+    ErrStripeCardDeclined = errdef.Define("card_declined", errdef.HTTPStatus(400))
+    ErrStripeRateLimit    = errdef.Define("rate_limit", errdef.HTTPStatus(429))
+    ErrStripeUnknown      = errdef.Define("stripe_unknown", errdef.HTTPStatus(500))
+
+    // Order defines priority (first-wins).
+    ErrStripe = errdef.NewResolver(
+        ErrStripeCardDeclined,
+        ErrStripeRateLimit,
+    ).WithFallback(ErrStripeUnknown) // Remove if you want strict matching.
+)
+
+func handleStripeError(code, msg string) error {
+    // Fallback is returned automatically if no exact match is found.
+    return ErrStripe.ResolveKind(errdef.Kind(code)).New(msg)
 }
 ```
 
