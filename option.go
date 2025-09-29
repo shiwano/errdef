@@ -103,16 +103,16 @@ func (f FieldOptionConstructor[T]) WithValueFunc(fn func() T) FieldOptionConstru
 	}
 }
 
-// WithContext creates a field option constructor that sets a value using a function that takes a context.
-func (f FieldOptionConstructor[T]) WithContext(fn func(ctx context.Context) T) FieldOptionConstructor[context.Context] {
+// WithContextFunc creates a field option constructor that sets a value using a function that takes a context.
+func (f FieldOptionConstructor[T]) WithContextFunc(fn func(ctx context.Context) T) FieldOptionConstructor[context.Context] {
 	return func(ctx context.Context) Option {
 		val := fn(ctx)
 		return f(val)
 	}
 }
 
-// WithHTTPRequest creates a field option constructor that sets a value using a function that takes an HTTP request.
-func (f FieldOptionConstructor[T]) WithHTTPRequest(fn func(r *http.Request) T) FieldOptionConstructor[*http.Request] {
+// WithHTTPRequestFunc creates a field option constructor that sets a value using a function that takes an HTTP request.
+func (f FieldOptionConstructor[T]) WithHTTPRequestFunc(fn func(r *http.Request) T) FieldOptionConstructor[*http.Request] {
 	return func(r *http.Request) Option {
 		val := fn(r)
 		return f(val)

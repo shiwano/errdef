@@ -63,13 +63,13 @@ func TestFieldOptionConstructor_WithValueFunc(t *testing.T) {
 	}
 }
 
-func TestFieldOptionConstructor_WithContext(t *testing.T) {
+func TestFieldOptionConstructor_WithContextFunc(t *testing.T) {
 	type contextKey struct{}
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, contextKey{}, "context_value")
 
 	constructor, extractor := errdef.DefineField[string]("test_field")
-	withContextFuncConstructor := constructor.WithContext(func(ctx context.Context) string {
+	withContextFuncConstructor := constructor.WithContextFunc(func(ctx context.Context) string {
 		return ctx.Value(contextKey{}).(string)
 	})
 
@@ -85,12 +85,12 @@ func TestFieldOptionConstructor_WithContext(t *testing.T) {
 	}
 }
 
-func TestFieldOptionConstructor_WithHTTPRequest(t *testing.T) {
+func TestFieldOptionConstructor_WithHTTPRequestFunc(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/test/path", nil)
 	req.Header.Set("X-Request-ID", "request-123")
 
 	constructor, extractor := errdef.DefineField[string]("test_field")
-	withHTTPRequestConstructor := constructor.WithHTTPRequest(func(r *http.Request) string {
+	withHTTPRequestConstructor := constructor.WithHTTPRequestFunc(func(r *http.Request) string {
 		return r.Header.Get("X-Request-ID")
 	})
 
