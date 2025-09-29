@@ -76,7 +76,7 @@ You can also safely extract field values using the extractor function (e.g., `Us
 func handler(w http.ResponseWriter, r *http.Request) {
     _, err := findUser(r.Context(), "u-123")
     if err != nil {
-        // You can use ErrNotFound.Is(err) as well
+        // You can use ErrNotFound.Is(err) as well.
         if errors.Is(err, ErrNotFound) {
             userID := UserIDFrom.OrZero(err)
             slog.Warn("User not found", "user_id", userID)
