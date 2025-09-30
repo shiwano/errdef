@@ -215,7 +215,8 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 					if j > 0 {
 						_, _ = io.WriteString(s, "\n")
 					}
-					_, _ = fmt.Fprintf(s, "\t%s", line)
+					_, _ = io.WriteString(s, "\t")
+					_, _ = io.WriteString(s, line)
 					j++
 				}
 			}
