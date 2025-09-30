@@ -255,6 +255,23 @@ Extractors follow the same rules as `errors.As`.
 They search the error chain and extract the value from the **first matching `errdef.Error`**, then stop searching.
 If you need inner fields at the outer layer, prefer explicitly copying the needed fields when wrapping.
 
+### Free-Form Details
+
+Attach arbitrary diagnostic data to an error using the `Details` function.
+
+```go
+err := ErrNotFound.With(
+  errdef.Details("tenant_id", 1, "user_ids", []int{1,2,4}),
+).Wrap(err)
+
+kvs, ok := errdef.DetailsFrom(err); ok {
+// kvs: []DetailKV{
+//   { Key: "tenant_id", Value: 1 },
+//   { Key: "user_ids", Value: []int{1,2,4} },
+// }
+// ok: true
+```
+
 ### Context Integration
 
 You can use `context.Context` to automatically attach request-scoped information to your errors.
@@ -372,6 +389,7 @@ func handleStripeError(code, msg string) error {
 | `Unreportable()`            | Prevents the error from being sent to error tracking.    | `IsUnreportable` |
 | `ExitCode(int)`             | Sets the exit code for a CLI application.                | `ExitCodeFrom`   |
 | `HelpURL(string)`           | Provides a URL for documentation or help guides.         | `HelpURLFrom`    |
+| `Details(...any)`           | Attaches free-form diagnostic details to an error.       | `DetailsFrom`    |
 | `NoTrace()`                 | Disables stack trace collection for the error.           | -                |
 | `StackSkip(int)`            | Skips a specified number of frames during stack capture. | -                |
 | `StackDepth(int)`           | Sets the depth of the stack capture (default: 32).       | -                |
