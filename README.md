@@ -256,7 +256,7 @@ err := ErrNotFound.With(
   errdef.Details("tenant_id", 1, "user_ids", []int{1,2,4}),
 ).Wrap(err)
 
-kvs, ok := errdef.DetailsFrom(err); ok {
+kvs, ok := errdef.DetailsFrom(err)
 // kvs: []DetailKV{
 //   { Key: "tenant_id", Value: 1 },
 //   { Key: "user_ids", Value: []int{1,2,4} },
