@@ -40,12 +40,12 @@ type (
 
 	fields map[FieldKey]FieldValue
 
-	fieldValue[T any] struct {
-		value T
-	}
-
 	fieldKey struct {
 		name string
+	}
+
+	fieldValue[T any] struct {
+		value T
 	}
 )
 

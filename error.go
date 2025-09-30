@@ -69,7 +69,7 @@ var (
 	_ DebugStacker   = (*definedError)(nil)
 	_ fmt.Formatter  = (*definedError)(nil)
 	_ json.Marshaler = (*definedError)(nil)
-	_ slog.LogValuer = (*definedError)(nil) // この行を追加
+	_ slog.LogValuer = (*definedError)(nil)
 	_ stackTracer    = (*definedError)(nil)
 	_ causer         = (*definedError)(nil)
 )
