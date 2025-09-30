@@ -197,13 +197,6 @@ For more advanced control, you can:
   slog.Error("...", "stack", stack)
   ```
 
-- **Completely override the format**: Use the `errdef.LogValuer(...)` option.
-
-  ```go
-  var ErrCustom = errdef.Define("...", errdef.LogValuer(func(err errdef.Error) slog.Value { ... }))
-  slog.Error("...", "error", ErrCustom.New("error"))
-  ```
-
 ### Simplified Field Constructors
 
 The field constructor can be chained with methods like `WithValue` or `WithValueFunc` to create new, simplified constructors.
