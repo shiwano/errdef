@@ -43,8 +43,8 @@ import "github.com/shiwano/errdef"
 var (
     // Define error kinds.
     // NOTE: Error identity depends on the variable instance, not its kind string.
-    ErrNotFound        = errdef.Define("not_found", errdef.HTTPStatus(http.StatusNotFound))
-    ErrInvalidArgument = errdef.Define("invalid_argument", errdef.HTTPStatus(http.StatusBadRequest))
+    ErrNotFound        = errdef.Define("not_found", errdef.HTTPStatus(404))
+    ErrInvalidArgument = errdef.Define("invalid_argument", errdef.HTTPStatus(400))
 
     // Define fields to attach to errors (constructor + extractor pair).
     UserID, UserIDFrom = errdef.DefineField[string]("user_id")
