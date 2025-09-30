@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -162,7 +163,7 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 	case 'v':
 		switch {
 		case s.Flag('+'):
-			_, _ = fmt.Fprintf(s, "%s", e.Error())
+			_, _ = io.WriteString(s, e.Error())
 
 			causes := e.Unwrap()
 
@@ -172,7 +173,8 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 
 			if e.Kind() != "" {
 				_, _ = io.WriteString(s, "\nKind:\n")
-				_, _ = fmt.Fprintf(s, "\t%v", e.Kind())
+				_, _ = io.WriteString(s, "\t")
+				_, _ = io.WriteString(s, string(e.Kind()))
 			}
 
 			if e.Fields().Len() > 0 {
@@ -182,7 +184,10 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 					if i > 0 {
 						_, _ = io.WriteString(s, "\n")
 					}
-					_, _ = fmt.Fprintf(s, "\t%v: %+v", k, v.Value())
+					_, _ = io.WriteString(s, "\t")
+					_, _ = io.WriteString(s, k.String())
+					_, _ = io.WriteString(s, ": ")
+					_, _ = fmt.Fprintf(s, "%+v", v.Value())
 					i++
 				}
 			}
@@ -195,7 +200,11 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 						if i > 0 {
 							_, _ = io.WriteString(s, "\n")
 						}
-						_, _ = fmt.Fprintf(s, "\t%s\n\t\t%s:%d", f.Func, f.File, f.Line)
+						_, _ = io.WriteString(s, "\t")
+						_, _ = io.WriteString(s, f.Func)
+						_, _ = io.WriteString(s, "\n\t\t")
+						_, _ = io.WriteString(s, f.File)
+						_, _ = io.WriteString(s, strconv.Itoa(f.Line))
 						i++
 					}
 				}
