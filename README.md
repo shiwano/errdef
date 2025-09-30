@@ -42,8 +42,7 @@ import "github.com/shiwano/errdef"
 
 var (
     // Define error kinds.
-    // NOTE: Error identity depends on the variable instance (e.g., ErrNotFound), not its kind string.
-    // This prevents naming collisions across packages.
+    // NOTE: Error identity depends on the variable instance, not its kind string.
     ErrNotFound        = errdef.Define("not_found", errdef.HTTPStatus(http.StatusNotFound))
     ErrInvalidArgument = errdef.Define("invalid_argument", errdef.HTTPStatus(http.StatusBadRequest))
 
