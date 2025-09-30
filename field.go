@@ -8,6 +8,7 @@ import (
 	"iter"
 	"log/slog"
 	"maps"
+	"reflect"
 	"slices"
 )
 
@@ -39,7 +40,7 @@ type (
 
 	fields map[FieldKey]FieldValue
 
-	fieldValue[T comparable] struct {
+	fieldValue[T any] struct {
 		value T
 	}
 
@@ -148,8 +149,48 @@ func (v *fieldValue[T]) Value() any {
 }
 
 func (v *fieldValue[T]) Equals(other any) bool {
-	if tv, ok := other.(T); ok {
-		return v.value == tv
+	if tOther, ok := other.(T); ok {
+		switch tv := any(v.value).(type) {
+		case string:
+			return tv == other.(string)
+		case int:
+			return tv == other.(int)
+		case int8:
+			return tv == other.(int8)
+		case int16:
+			return tv == other.(int16)
+		case int32:
+			return tv == other.(int32)
+		case int64:
+			return tv == other.(int64)
+		case uint:
+			return tv == other.(uint)
+		case uint8:
+			return tv == other.(uint8)
+		case uint16:
+			return tv == other.(uint16)
+		case uint32:
+			return tv == other.(uint32)
+		case uint64:
+			return tv == other.(uint64)
+		case float32:
+			return tv == other.(float32)
+		case float64:
+			return tv == other.(float64)
+		case bool:
+			return tv == other.(bool)
+		case complex64:
+			return tv == other.(complex64)
+		case complex128:
+			return tv == other.(complex128)
+		default:
+			vVal := reflect.ValueOf(v.value)
+			otherVal := reflect.ValueOf(tOther)
+			if vVal.IsValid() && otherVal.IsValid() && vVal.Comparable() && otherVal.Comparable() {
+				return vVal.Interface() == otherVal.Interface()
+			}
+			return reflect.DeepEqual(v.value, tOther)
+		}
 	} else if fv, ok := other.(FieldValue); ok {
 		return v.Equals(fv.Value())
 	}

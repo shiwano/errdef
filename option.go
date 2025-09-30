@@ -48,7 +48,7 @@ type (
 		def *Definition
 	}
 
-	field[T comparable] struct {
+	field[T any] struct {
 		key   FieldKey
 		value T
 	}

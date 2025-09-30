@@ -56,6 +56,9 @@ func (r *Resolver) ResolveKind(kind Kind) (*Definition, bool) {
 // Returns the first definition that has the specified field key with the exact value.
 func (r *Resolver) ResolveField(key FieldKey, want any) (*Definition, bool) {
 	return r.ResolveFieldFunc(key, func(v FieldValue) bool {
+		if fv, ok := want.(FieldValue); ok {
+			return v.Equals(fv.Value())
+		}
 		return v.Equals(want)
 	})
 }

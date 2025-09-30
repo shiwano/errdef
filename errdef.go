@@ -37,7 +37,7 @@ func Define(kind Kind, opts ...Option) *Definition {
 // The name string is used as the key when an error's fields are serialized
 // (e.g., to JSON). To avoid ambiguity in logs and other serialized representations,
 // it is strongly recommended to use a unique name for each defined field.
-func DefineField[T comparable](name string) (FieldOptionConstructor[T], FieldOptionExtractor[T]) {
+func DefineField[T any](name string) (FieldOptionConstructor[T], FieldOptionExtractor[T]) {
 	k := &fieldKey{name: name}
 	constructor := func(value T) Option {
 		return &field[T]{key: k, value: value}

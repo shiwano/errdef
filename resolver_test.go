@@ -153,6 +153,42 @@ func TestResolver_ResolveField(t *testing.T) {
 			t.Errorf("want nil result for field not in any definition, got %v", result)
 		}
 	})
+
+	t.Run("resolves by slice field", func(t *testing.T) {
+		sliceConstructor, _ := errdef.DefineField[[]string]("slice_field")
+
+		defWithSlice1 := errdef.Define("error_with_slice1", sliceConstructor([]string{"a", "b"}))
+		defWithSlice2 := errdef.Define("error_with_slice2", sliceConstructor([]string{"c", "d"}))
+
+		sliceResolver := errdef.NewResolver(defWithSlice1, defWithSlice2)
+
+		result, ok := sliceResolver.ResolveField(sliceConstructor.FieldKey(), []string{"a", "b"})
+
+		if !ok {
+			t.Fatal("want to resolve by slice field")
+		}
+		if result != defWithSlice1 {
+			t.Errorf("want resolved definition to be defWithSlice1, got %v", result)
+		}
+	})
+
+	t.Run("resolves by map field", func(t *testing.T) {
+		mapConstructor, _ := errdef.DefineField[map[string]int]("map_field")
+
+		defWithMap1 := errdef.Define("error_with_map1", mapConstructor(map[string]int{"key1": 1}))
+		defWithMap2 := errdef.Define("error_with_map2", mapConstructor(map[string]int{"key2": 2}))
+
+		mapResolver := errdef.NewResolver(defWithMap1, defWithMap2)
+
+		result, ok := mapResolver.ResolveField(mapConstructor.FieldKey(), map[string]int{"key1": 1})
+
+		if !ok {
+			t.Fatal("want to resolve by map field")
+		}
+		if result != defWithMap1 {
+			t.Errorf("want resolved definition to be defWithMap1, got %v", result)
+		}
+	})
 }
 
 func TestResolver_ResolveFieldFunc(t *testing.T) {

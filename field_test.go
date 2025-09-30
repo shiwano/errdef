@@ -396,8 +396,6 @@ func (v *customFieldValue[T]) Value() any {
 func (v *customFieldValue[T]) Equals(other any) bool {
 	if tv, ok := other.(T); ok {
 		return v.value == tv
-	} else if fv, ok := other.(errdef.FieldValue); ok {
-		return v.Equals(fv.Value())
 	}
 	return false
 }
