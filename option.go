@@ -103,6 +103,14 @@ func (f FieldOptionConstructor[T]) WithValueFunc(fn func() T) FieldOptionConstru
 	}
 }
 
+// WithErrorFunc creates a field option constructor that sets a value using a function that takes an error.
+func (f FieldOptionConstructor[T]) WithErrorFunc(fn func(err error) T) FieldOptionConstructor[error] {
+	return func(err error) Option {
+		val := fn(err)
+		return f(val)
+	}
+}
+
 // WithContextFunc creates a field option constructor that sets a value using a function that takes a context.
 func (f FieldOptionConstructor[T]) WithContextFunc(fn func(ctx context.Context) T) FieldOptionConstructor[context.Context] {
 	return func(ctx context.Context) Option {

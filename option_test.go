@@ -63,6 +63,26 @@ func TestFieldOptionConstructor_WithValueFunc(t *testing.T) {
 	}
 }
 
+func TestFieldOptionConstructor_WithErrorFunc(t *testing.T) {
+	baseErr := errors.New("base error")
+
+	constructor, extractor := errdef.DefineField[string]("test_field")
+	withErrorFuncConstructor := constructor.WithErrorFunc(func(err error) string {
+		return err.Error() + " processed"
+	})
+
+	def := errdef.Define("test_error")
+	err := def.WithOptions(withErrorFuncConstructor(baseErr)).New("test error")
+
+	value, found := extractor(err)
+	if !found {
+		t.Error("want field to be found")
+	}
+	if value != "base error processed" {
+		t.Errorf("want value %q, got %q", "base error processed", value)
+	}
+}
+
 func TestFieldOptionConstructor_WithContextFunc(t *testing.T) {
 	type contextKey struct{}
 	ctx := context.Background()
@@ -73,8 +93,8 @@ func TestFieldOptionConstructor_WithContextFunc(t *testing.T) {
 		return ctx.Value(contextKey{}).(string)
 	})
 
-	def := errdef.Define("test_error", withContextFuncConstructor(ctx))
-	err := def.New("test error")
+	def := errdef.Define("test_error")
+	err := def.WithOptions(withContextFuncConstructor(ctx)).New("test error")
 
 	value, found := extractor(err)
 	if !found {
@@ -94,8 +114,8 @@ func TestFieldOptionConstructor_WithHTTPRequestFunc(t *testing.T) {
 		return r.Header.Get("X-Request-ID")
 	})
 
-	def := errdef.Define("test_error", withHTTPRequestConstructor(req))
-	err := def.New("test error")
+	def := errdef.Define("test_error")
+	err := def.WithOptions(withHTTPRequestConstructor(req)).New("test error")
 
 	value, found := extractor(err)
 	if !found {
