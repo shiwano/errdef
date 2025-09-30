@@ -54,7 +54,7 @@ func StackSkip(skip int) Option {
 	return &stackSkip{skip: skip}
 }
 
-// StackDepth limits the depth of the stack trace capture.
+// StackDepth sets the depth of the stack trace capture (default: 32).
 func StackDepth(depth int) Option {
 	return &stackDepth{depth: depth}
 }

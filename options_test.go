@@ -201,7 +201,7 @@ func TestStackSkip(t *testing.T) {
 }
 
 func TestStackDepth(t *testing.T) {
-	t.Run("stack depth with zero value", func(t *testing.T) {
+	t.Run("stack depth with zero value (uses default)", func(t *testing.T) {
 		def := errdef.Define("test", errdef.StackDepth(0))
 		err := def.New("test error")
 
@@ -211,8 +211,8 @@ func TestStackDepth(t *testing.T) {
 		}
 	})
 
-	t.Run("stack depth with negative value", func(t *testing.T) {
-		def := errdef.Define("test", errdef.StackDepth(-31))
+	t.Run("stack depth with small positive value", func(t *testing.T) {
+		def := errdef.Define("test", errdef.StackDepth(1))
 		err := def.New("test error")
 
 		frames := err.(errdef.Error).Stack().Frames()
@@ -221,8 +221,8 @@ func TestStackDepth(t *testing.T) {
 		}
 	})
 
-	t.Run("stack depth with positive value", func(t *testing.T) {
-		def := errdef.Define("test", errdef.StackDepth(-31), errdef.StackDepth(1))
+	t.Run("stack depth with multiple values (last one wins)", func(t *testing.T) {
+		def := errdef.Define("test", errdef.StackDepth(10), errdef.StackDepth(2))
 		err := def.New("test error")
 
 		frames := err.(errdef.Error).Stack().Frames()

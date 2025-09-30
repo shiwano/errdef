@@ -77,7 +77,11 @@ var (
 func newError(d *Definition, cause error, msg string, joined bool, stackSkip int) error {
 	var stack stack
 	if !d.noTrace {
-		stack = newStack(callersDepth+d.stackDepth, d.stackSkip+stackSkip)
+		depth := callersDepth
+		if d.stackDepth > 0 {
+			depth = d.stackDepth
+		}
+		stack = newStack(depth, d.stackSkip+stackSkip)
 	}
 	return &definedError{
 		def:    d,

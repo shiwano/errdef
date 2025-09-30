@@ -374,7 +374,7 @@ func handleStripeError(code, msg string) error {
 | `HelpURL(string)`           | Provides a URL for documentation or help guides.         | `HelpURLFrom`    |
 | `NoTrace()`                 | Disables stack trace collection for the error.           | -                |
 | `StackSkip(int)`            | Skips a specified number of frames during stack capture. | -                |
-| `StackDepth(int)`           | Limits the depth of the stack trace capture.             | -                |
+| `StackDepth(int)`           | Sets the depth of the stack capture (default: 32).       | -                |
 | `Boundary()`                | Stops the error unwrapping chain at this point.          | -                |
 | `Formatter(f)`              | Overrides the default `fmt.Formatter` behavior.          | -                |
 | `JSONMarshaler(f)`          | Overrides the default `json.Marshaler` behavior.         | -                |
