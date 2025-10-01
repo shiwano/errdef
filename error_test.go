@@ -1,11 +1,13 @@
 package errdef_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -542,6 +544,64 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 			t.Errorf("want custom_message %q, got %q", "test message", result["custom_message"])
 		}
 	})
+
+	t.Run("comprehensive json structure", func(t *testing.T) {
+		userIDCtor, _ := errdef.DefineField[string]("user_id")
+		passwordCtor, _ := errdef.DefineField[errdef.Redacted[string]]("password")
+
+		def := errdef.Define("auth_error", userIDCtor("user123"), passwordCtor(errdef.Redact("secret")))
+		original := errors.New("connection failed")
+		err := def.Wrap(original)
+
+		data, jsonErr := json.Marshal(err)
+		if jsonErr != nil {
+			t.Fatalf("want no error, got %v", jsonErr)
+		}
+
+		var got map[string]any
+		if jsonErr := json.Unmarshal(data, &got); jsonErr != nil {
+			t.Fatalf("want valid JSON, got %v", jsonErr)
+		}
+
+		stack, _ := got["stack"].([]any)
+		if len(stack) == 0 {
+			t.Fatal("want stack frames to exist")
+		}
+		frame0 := stack[0].(map[string]any)
+
+		want := map[string]any{
+			"message": "connection failed",
+			"kind":    "auth_error",
+			"fields": []any{
+				map[string]any{
+					"key":   "password",
+					"value": "[REDACTED]",
+				},
+				map[string]any{
+					"key":   "user_id",
+					"value": "user123",
+				},
+			},
+			"causes": []any{
+				map[string]any{"message": "connection failed"},
+			},
+			"stack": stack,
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("JSON structure mismatch:\ngot:  %#v\nwant: %#v", got, want)
+		}
+
+		file, _ := frame0["file"].(string)
+		if !strings.Contains(file, "error_test.go") {
+			t.Errorf("want file to contain error_test.go, got %q", file)
+		}
+
+		funcName, _ := frame0["func"].(string)
+		if !strings.Contains(funcName, "TestMarshaler_MarshalJSON") {
+			t.Errorf("want function name to contain TestMarshaler_MarshalJSON, got %q", funcName)
+		}
+	})
 }
 
 func TestError_LogValue(t *testing.T) {
@@ -719,6 +779,70 @@ func TestError_LogValue(t *testing.T) {
 
 		if msg := attrMap["message"]; msg.Any() != nil {
 			t.Error("want no default message when custom log valuer is used")
+		}
+	})
+
+	t.Run("actual JSON logging", func(t *testing.T) {
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, nil))
+
+		userIDConstructor, _ := errdef.DefineField[string]("user_id")
+		passwordConstructor, _ := errdef.DefineField[errdef.Redacted[string]]("password")
+		def := errdef.Define(
+			"auth_error",
+			userIDConstructor("user123"),
+			passwordConstructor(errdef.Redact("my-secret-password")),
+		)
+
+		original := errors.New("connection failed")
+		err := def.Wrap(original)
+
+		logger.Error("authentication error", "error", err)
+
+		if strings.Contains(buf.String(), "my-secret-password") {
+			t.Fatal("want secret to be redacted, but found in log output")
+		}
+
+		var got map[string]any
+		if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
+			t.Fatalf("failed to unmarshal log output: %v", err)
+		}
+
+		errorGroup := got["error"].(map[string]any)
+		origin := errorGroup["origin"].(map[string]any)
+
+		want := map[string]any{
+			"time":  got["time"],
+			"level": "ERROR",
+			"msg":   "authentication error",
+			"error": map[string]any{
+				"message": "connection failed",
+				"kind":    "auth_error",
+				"fields": map[string]any{
+					"user_id":  "user123",
+					"password": "[REDACTED]",
+				},
+				"origin": map[string]any{
+					"file": origin["file"],
+					"line": origin["line"],
+					"func": origin["func"],
+				},
+				"causes": []any{"connection failed"},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("log output mismatch:\ngot:  %#v\nwant: %#v", got, want)
+		}
+
+		file, _ := origin["file"].(string)
+		if !strings.Contains(file, "error_test.go") {
+			t.Errorf("want file to contain error_test.go, got %q", file)
+		}
+
+		funcName, _ := origin["func"].(string)
+		if !strings.Contains(funcName, "TestError_LogValue") {
+			t.Errorf("want function name to contain TestError_LogValue, got %q", funcName)
 		}
 	})
 }
