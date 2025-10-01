@@ -355,6 +355,21 @@ func handleStripeError(code, msg string) error {
 }
 ```
 
+### Redaction
+
+Sensitive values such as tokens, passwords, or personal identifiers can be wrapped with `Redacted[T]`.
+It automatically formats as `"[REDACTED]"` for logging (`slog`), JSON (`json.Marshal`), and printing (`fmt`), while the original value remains accessible internally via the `.Value()` method.
+
+```go
+var UserEmail, UserEmailFrom = errdef.DefineField[errdef.Redacted[string]]("user_email")
+
+err := ErrInvalidArgument.With(
+  UserEmail(errdef.Redact("alice@example.com")),
+).Wrap(err)
+
+fmt.Printf("%+v\n", err) // user_email: [REDACTED]
+```
+
 ### Ecosystem Integration
 
 `errdef` is designed to work seamlessly with the broader Go ecosystem.
