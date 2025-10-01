@@ -323,8 +323,9 @@ func TestFormatter_Format(t *testing.T) {
 	})
 
 	t.Run("verbose format", func(t *testing.T) {
-		constructor, _ := errdef.DefineField[string]("user_id")
-		def := errdef.Define("test_error", constructor("user123"))
+		userIDCtor, _ := errdef.DefineField[string]("user_id")
+		passwordCtor, _ := errdef.DefineField[errdef.Redacted[string]]("password")
+		def := errdef.Define("test_error", userIDCtor("user123"), passwordCtor(errdef.Redact("secret")))
 		err := def.New("test message")
 
 		result := fmt.Sprintf("%+v", err)
@@ -334,6 +335,7 @@ func TestFormatter_Format(t *testing.T) {
 				`Kind:\n`+
 				`\ttest_error\n`+
 				`Fields:\n`+
+				`\tpassword: \[REDACTED\]\n`+
 				`\tuser_id: user123\n`+
 				`Stack:\n`+
 				`[\s\S]*`,
