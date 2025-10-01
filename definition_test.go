@@ -392,7 +392,11 @@ func TestDefinition_CapturePanic(t *testing.T) {
 	t.Run("capture string panic", func(t *testing.T) {
 		def := errdef.Define("panic_error")
 		var err error
-		def.CapturePanic(&err, "test panic")
+		if val, ok := def.CapturePanic(&err, "test panic"); !ok {
+			t.Fatal("want panic to be captured")
+		} else if val != "test panic" {
+			t.Errorf("want returned panic value %q, got %v", "test panic", val)
+		}
 
 		if err == nil {
 			t.Fatal("want error to be set")
@@ -419,7 +423,11 @@ func TestDefinition_CapturePanic(t *testing.T) {
 		def := errdef.Define("panic_error")
 		panicValue := errors.New("panic error")
 		var err error
-		def.CapturePanic(&err, panicValue)
+		if val, ok := def.CapturePanic(&err, panicValue); !ok {
+			t.Fatal("want panic to be captured")
+		} else if val != panicValue {
+			t.Errorf("want returned panic value %v, got %v", panicValue, val)
+		}
 
 		if err == nil {
 			t.Fatal("want error to be set")
@@ -445,7 +453,11 @@ func TestDefinition_CapturePanic(t *testing.T) {
 	t.Run("nil panic value", func(t *testing.T) {
 		def := errdef.Define("panic_error")
 		var err error
-		def.CapturePanic(&err, nil)
+		if val, ok := def.CapturePanic(&err, nil); ok {
+			t.Error("want false when capturing nil panic value")
+		} else if val != nil {
+			t.Errorf("want returned panic value to be nil, got %v", val)
+		}
 
 		if err != nil {
 			t.Errorf("want no error for nil panic value, got %v", err)
@@ -454,14 +466,22 @@ func TestDefinition_CapturePanic(t *testing.T) {
 
 	t.Run("nil error pointer", func(t *testing.T) {
 		def := errdef.Define("panic_error")
-		def.CapturePanic(nil, "panic value")
+		if val, ok := def.CapturePanic(nil, "panic value"); ok {
+			t.Error("want false when capturing with nil error pointer")
+		} else if val != nil {
+			t.Errorf("want returned panic value to be nil, got %v", val)
+		}
 	})
 
 	t.Run("with definition fields", func(t *testing.T) {
 		constructor, extractor := errdef.DefineField[string]("context")
 		def := errdef.Define("panic_error").WithOptions(constructor("service_call"))
 		var err error
-		def.CapturePanic(&err, "service panic")
+		if val, ok := def.CapturePanic(&err, "service panic"); !ok {
+			t.Fatal("want panic to be captured")
+		} else if val != "service panic" {
+			t.Errorf("want returned panic value %q, got %v", "service panic", val)
+		}
 
 		if err == nil {
 			t.Fatal("want error to be set")
@@ -487,17 +507,30 @@ func TestDefinition_CapturePanic(t *testing.T) {
 
 	t.Run("real panic scenario with definition", func(t *testing.T) {
 		def := errdef.Define("service_panic")
-		var err error
+		var (
+			err      error
+			panicVal any
+			captured bool
+		)
 
 		func() {
 			defer func() {
-				def.CapturePanic(&err, recover())
+				if val, ok := def.CapturePanic(&err, recover()); ok {
+					panicVal = val
+					captured = true
+				}
 			}()
 			panic("service crashed")
 		}()
 
 		if err == nil {
 			t.Fatal("want error to be set")
+		}
+		if !captured {
+			t.Fatal("want panic to be captured")
+		}
+		if panicVal != "service crashed" {
+			t.Errorf("want panic value %q, got %v", "service crashed", panicVal)
 		}
 
 		if !errors.Is(err, def) {

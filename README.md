@@ -313,7 +313,9 @@ var ErrPanic = errdef.Define("panic", errdef.HTTPStatus(500))
 
 func processRequest(w http.ResponseWriter, r *http.Request) (err error) {
     defer func() {
-        ErrPanic.CapturePanic(&err, recover())
+        if recovered, ok := ErrPanic.CapturePanic(&err, recover()); ok {
+           // ...
+        }
     }()
     maybePanic()
     return nil
@@ -323,10 +325,7 @@ func main() {
     if err := processRequest(w, r); err != nil {
         var pe errdef.PanicError
         if errors.As(err, &pe) {
-            slog.Error("recovered from panic", 
-                "panic_value", pe.PanicValue(),
-                "error", fmt.Sprintf("%+v", err),
-            )
+            slog.Error("recovered from panic", "panic_value", pe.PanicValue())
         }
         // ...
     }

@@ -96,15 +96,17 @@ func (d *Definition) Join(causes ...error) error {
 	return newError(d, cause, cause.Error(), true, callersSkip)
 }
 
-// CapturePanic captures a panic value and converts it to an error wrapped by this definition.
-// If errPtr is nil or panicValue is nil, this function does nothing.
+// CapturePanic captures a panic value and converts it to an error wrapped by this definition,
+// and returns the original panic value and true.
+// If errPtr is nil or panicValue is nil, this function does nothing and returns nil and false.
 // The resulting error implements PanicError interface to preserve the original panic value.
-func (d *Definition) CapturePanic(errPtr *error, panicValue any) {
+func (d *Definition) CapturePanic(errPtr *error, panicValue any) (any, bool) {
 	if panicValue == nil || errPtr == nil {
-		return
+		return nil, false
 	}
 	cause := newPanicError(panicValue)
 	*errPtr = d.Wrapf(cause, "panic: %s", cause.Error())
+	return panicValue, true
 }
 
 // Is reports whether this definition matches the given error.
