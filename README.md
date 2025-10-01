@@ -249,7 +249,7 @@ If you need inner fields at the outer layer, prefer explicitly copying the neede
 
 ### Free-Form Details
 
-Attach arbitrary diagnostic data to an error using the `Details` function.
+You can attaches free-form diagnostic details to an error under the "details" field.
 
 ```go
 err := ErrNotFound.With(
@@ -284,6 +284,21 @@ func someHandler(ctx context.Context) error {
     // With(ctx, …) applies context options first, then explicit options (last-write-wins)
     return ErrRateLimited.With(ctx).New("too many requests")
 }
+```
+
+### Redaction
+
+Sensitive values such as tokens, passwords, or personal identifiers can be wrapped with `Redacted[T]`.
+It automatically formats as `"[REDACTED]"` for logging (`slog`), JSON (`json.Marshal`), and printing (`fmt`), while the original value remains accessible internally via the `.Value()` method.
+
+```go
+var UserEmail, UserEmailFrom = errdef.DefineField[errdef.Redacted[string]]("user_email")
+
+err := ErrInvalidArgument.With(
+  UserEmail(errdef.Redact("alice@example.com")),
+).Wrap(err)
+
+fmt.Printf("%+v\n", err) // user_email: [REDACTED]
 ```
 
 ### Joining Errors
@@ -353,21 +368,6 @@ func handleStripeError(code, msg string) error {
     // Fallback is returned automatically if no exact match is found.
     return ErrStripe.ResolveKind(errdef.Kind(code)).New(msg)
 }
-```
-
-### Redaction
-
-Sensitive values such as tokens, passwords, or personal identifiers can be wrapped with `Redacted[T]`.
-It automatically formats as `"[REDACTED]"` for logging (`slog`), JSON (`json.Marshal`), and printing (`fmt`), while the original value remains accessible internally via the `.Value()` method.
-
-```go
-var UserEmail, UserEmailFrom = errdef.DefineField[errdef.Redacted[string]]("user_email")
-
-err := ErrInvalidArgument.With(
-  UserEmail(errdef.Redact("alice@example.com")),
-).Wrap(err)
-
-fmt.Printf("%+v\n", err) // user_email: [REDACTED]
 ```
 
 ### Ecosystem Integration
