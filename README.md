@@ -11,9 +11,10 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
 
 > **Requirements:** Go 1.25+
 
-- [Installation](#installation)
+## Table of Contents
+
 - [Getting Started](#getting-started)
-- [Advanced Features](#advanced-features)
+- [Features](#features)
   - [Error Constructors](#error-constructors)
   - [Detailed Error Formatting](#detailed-error-formatting)
   - [JSON Marshaling](#json-marshaling)
@@ -31,13 +32,11 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
 - [Contributing](#contributing)
 - [License](#license)
 
-## Installation
+## Getting Started
 
 ```shell
 go get github.com/shiwano/errdef
 ```
-
-## Getting Started
 
 ```go
 package main
@@ -84,7 +83,7 @@ user not found
 user id: u123
 ```
 
-## Advanced Features
+## Features
 
 ### Error Constructors
 
