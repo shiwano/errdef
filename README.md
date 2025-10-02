@@ -105,14 +105,14 @@ errors.Is(e4, cause) // true
 #### Attaching Additional Options
 
 - `With(ctx, ...opts)`: Requires ctx. Use when options need request-scoped data.
-- `WithOption(...opts)`: No ctx. Use for context-independent options.
+- `WithOptions(...opts)`: No ctx. Use for context-independent options.
 
 ```go
 // Context-aware (requires ctx)
 e1 := ErrNotFound.With(context.TODO(), UserID("u123")).New("user not found")
 
 // Context-free (no ctx)
-e2 := ErrNotFound.WithOption(UserID("u123")).New("user not found")
+e2 := ErrNotFound.WithOptions(UserID("u123")).New("user not found")
 ```
 
 ### Detailed Error Formatting
