@@ -11,8 +11,9 @@ import (
 const redactedStr = "[REDACTED]"
 
 // Redacted[T] wraps a value so it always renders as "[REDACTED]"
-// when printed, marshaled, or logged, while still allowing access
-// to the original value via Value().
+// when printed, marshaled, or logged (fmt, json, slog),
+// while still allowing access to the original value via Value().
+// Use this to prevent accidental exposure of sensitive data in logs/output.
 type Redacted[T any] struct {
 	value T
 }
@@ -24,14 +25,6 @@ var (
 	_ encoding.TextMarshaler = Redacted[any]{}
 	_ slog.LogValuer         = Redacted[any]{}
 )
-
-// Redact wraps value in a Redacted[T], which always renders as "[REDACTED]"
-// when formatted, marshaled, or logged (fmt, json, slog), while preserving
-// the original value for in-process use via the Value() method.
-// Use this to prevent accidental exposure of sensitive data in logs/output.
-func Redact[T any](value T) Redacted[T] {
-	return Redacted[T]{value: value}
-}
 
 func (r Redacted[T]) Value() T {
 	return r.value
@@ -55,4 +48,12 @@ func (r Redacted[T]) MarshalText() ([]byte, error) {
 
 func (r Redacted[T]) LogValue() slog.Value {
 	return slog.StringValue(redactedStr)
+}
+
+// Redact wraps value in a Redacted[T], which always renders as "[REDACTED]"
+// when printed, marshaled, or logged (fmt, json, slog),
+// while still allowing access to the original value via Value().
+// Use this to prevent accidental exposure of sensitive data in logs/output.
+func Redact[T any](value T) Redacted[T] {
+	return Redacted[T]{value: value}
 }

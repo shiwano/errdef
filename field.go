@@ -33,8 +33,11 @@ type (
 		fmt.Stringer
 	}
 
+	// FieldValue represents a value for structured error fields.
 	FieldValue interface {
+		// Value returns the underlying value.
 		Value() any
+		// Equals checks if the value is equal to another value.
 		Equals(other any) bool
 	}
 
