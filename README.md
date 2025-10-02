@@ -249,7 +249,7 @@ If you need inner fields at the outer layer, prefer explicitly copying the neede
 
 ### Free-Form Details
 
-You can attaches free-form diagnostic details to an error under the "details" field.
+You can attach free-form diagnostic details to an error under the "details" field.
 
 ```go
 err := ErrNotFound.With(
@@ -289,7 +289,7 @@ func someHandler(ctx context.Context) error {
 ### Redaction
 
 Sensitive values such as tokens, passwords, or personal identifiers can be wrapped with `Redacted[T]`.
-It automatically formats as `"[REDACTED]"` for logging (`slog`), JSON (`json.Marshal`), and printing (`fmt`), while the original value remains accessible internally via the `.Value()` method.
+It automatically formats as `[REDACTED]` for logging (`slog`), JSON (`json.Marshal`), and printing (`fmt`), while the original value remains accessible internally via the `.Value()` method.
 
 ```go
 var UserEmail, UserEmailFrom = errdef.DefineField[errdef.Redacted[string]]("user_email")
