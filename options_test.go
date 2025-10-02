@@ -232,6 +232,66 @@ func TestStackDepth(t *testing.T) {
 	})
 }
 
+func TestTraceSampleRate(t *testing.T) {
+	t.Run("probability 0 never captures stack", func(t *testing.T) {
+		def := errdef.Define("test", errdef.TraceSampleRate(0.0))
+		for range 100 {
+			err := def.New("test error")
+			frames := err.(errdef.Error).Stack().Frames()
+			if len(frames) != 0 {
+				t.Errorf("want no stack frames with p=0.0, got %d", len(frames))
+				break
+			}
+		}
+	})
+
+	t.Run("probability 1 always captures stack", func(t *testing.T) {
+		def := errdef.Define("test", errdef.TraceSampleRate(1.0))
+		for range 100 {
+			err := def.New("test error")
+			frames := err.(errdef.Error).Stack().Frames()
+			if len(frames) == 0 {
+				t.Error("want stack frames with p=1.0, got none")
+				break
+			}
+		}
+	})
+
+	t.Run("probability 0.5 samples probabilistically", func(t *testing.T) {
+		def := errdef.Define("test", errdef.TraceSampleRate(0.5))
+		capturedCount := 0
+		notCapturedCount := 0
+
+		for range 100 {
+			err := def.New("test error")
+			frames := err.(errdef.Error).Stack().Frames()
+			if len(frames) > 0 {
+				capturedCount++
+			} else {
+				notCapturedCount++
+			}
+		}
+
+		if capturedCount == 0 {
+			t.Error("want at least one stack to be captured with p=0.5")
+		} else if notCapturedCount == 0 {
+			t.Error("want at least one stack to be skipped with p=0.5")
+		}
+	})
+
+	t.Run("NoTrace takes precedence over TraceSampleRate", func(t *testing.T) {
+		def := errdef.Define("test", errdef.TraceSampleRate(1.0), errdef.NoTrace())
+		for range 100 {
+			err := def.New("test error")
+			frames := err.(errdef.Error).Stack().Frames()
+			if len(frames) != 0 {
+				t.Errorf("want no stack frames when NoTrace is set, got %d", len(frames))
+				break
+			}
+		}
+	})
+}
+
 func TestBoundary(t *testing.T) {
 	original := errors.New("original error")
 	def := errdef.Define("test", errdef.Boundary())

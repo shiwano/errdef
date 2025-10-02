@@ -409,31 +409,32 @@ func handleStripeError(code, msg string) error {
 
 ### Built-in Options
 
-| Option                      | Description                                              | Extractor        |
-|:----------------------------|:---------------------------------------------------------|:-----------------|
-| `HTTPStatus(int)`           | Attaches an HTTP status code.                            | `HTTPStatusFrom` |
-| `LogLevel(slog.Level)`      | Attaches a log level of type `slog.Level`.               | `LogLevelFrom`   |
-| `TraceID(string)`           | Attaches a trace or request ID.                          | `TraceIDFrom`    |
-| `Domain(string)`            | Labels the error with a service or subsystem name.       | `DomainFrom`     |
-| `UserHint(string)`          | Provides a safe, user-facing hint message.               | `UserHintFrom`   |
-| `Public()`                  | Marks the error as safe to expose externally.            | `IsPublic`       |
-| `Retryable()`               | Marks the operation as retryable.                        | `IsRetryable`    |
-| `RetryAfter(time.Duration)` | Recommends a delay to wait before retrying.              | `RetryAfterFrom` |
-| `Unreportable()`            | Prevents the error from being sent to error tracking.    | `IsUnreportable` |
-| `ExitCode(int)`             | Sets the exit code for a CLI application.                | `ExitCodeFrom`   |
-| `HelpURL(string)`           | Provides a URL for documentation or help guides.         | `HelpURLFrom`    |
-| `Details(...any)`           | Attaches free-form diagnostic details to an error.       | `DetailsFrom`    |
-| `NoTrace()`                 | Disables stack trace collection for the error.           | -                |
-| `StackSkip(int)`            | Skips a specified number of frames during stack capture. | -                |
-| `StackDepth(int)`           | Sets the depth of the stack capture (default: 32).       | -                |
-| `Boundary()`                | Stops the error unwrapping chain at this point.          | -                |
-| `Formatter(f)`              | Overrides the default `fmt.Formatter` behavior.          | -                |
-| `JSONMarshaler(f)`          | Overrides the default `json.Marshaler` behavior.         | -                |
-| `LogValuer(f)`              | Overrides the default `slog.LogValuer` behavior.         | -                |
+| Option                      | Description                                               | Extractor        |
+|:----------------------------|:----------------------------------------------------------|:-----------------|
+| `HTTPStatus(int)`           | Attaches an HTTP status code.                             | `HTTPStatusFrom` |
+| `LogLevel(slog.Level)`      | Attaches a log level of type `slog.Level`.                | `LogLevelFrom`   |
+| `TraceID(string)`           | Attaches a trace or request ID.                           | `TraceIDFrom`    |
+| `Domain(string)`            | Labels the error with a service or subsystem name.        | `DomainFrom`     |
+| `UserHint(string)`          | Provides a safe, user-facing hint message.                | `UserHintFrom`   |
+| `Public()`                  | Marks the error as safe to expose externally.             | `IsPublic`       |
+| `Retryable()`               | Marks the operation as retryable.                         | `IsRetryable`    |
+| `RetryAfter(time.Duration)` | Recommends a delay to wait before retrying.               | `RetryAfterFrom` |
+| `Unreportable()`            | Prevents the error from being sent to error tracking.     | `IsUnreportable` |
+| `ExitCode(int)`             | Sets the exit code for a CLI application.                 | `ExitCodeFrom`   |
+| `HelpURL(string)`           | Provides a URL for documentation or help guides.          | `HelpURLFrom`    |
+| `Details(...any)`           | Attaches free-form diagnostic details to an error.        | `DetailsFrom`    |
+| `NoTrace()`                 | Disables stack trace collection for the error.            | -                |
+| `TraceSampleRate(float64)`  | Enables probabilistic stack capture when creating errors. | -                |
+| `StackSkip(int)`            | Skips a specified number of frames during stack capture.  | -                |
+| `StackDepth(int)`           | Sets the depth of the stack capture (default: 32).        | -                |
+| `Boundary()`                | Stops the error unwrapping chain at this point.           | -                |
+| `Formatter(f)`              | Overrides the default `fmt.Formatter` behavior.           | -                |
+| `JSONMarshaler(f)`          | Overrides the default `json.Marshaler` behavior.          | -                |
+| `LogValuer(f)`              | Overrides the default `slog.LogValuer` behavior.          | -                |
 
 #### Performance Knobs
 
-- For hot paths where stack capture isn't necessary: Use `NoTrace()`
+- For hot paths where stack capture isn't necessary: Use `NoTrace()` or `TraceSampleRate(float64)`
 - To limit the number of frames captured in deep call stacks: Use `StackDepth(int)`
 - To prevent deep error chains during error handling: Use `Boundary()`
 

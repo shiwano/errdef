@@ -2,6 +2,7 @@ package errdef
 
 import (
 	"context"
+	"math/rand/v2"
 	"net/http"
 )
 
@@ -18,6 +19,8 @@ type (
 		SetField(key FieldKey, value FieldValue)
 		// DisableTrace disables stack trace collection.
 		DisableTrace()
+		// SetTraceSampler sets a function to determine if a stack trace should be collected.
+		SetTraceSampler(f func() bool)
 		// AddStackSkip adds frames to skip during stack trace collection.
 		AddStackSkip(skip int)
 		// SetStackDepth sets the absolute depth for stack trace collection.
@@ -54,6 +57,10 @@ type (
 	}
 
 	noTrace struct{}
+
+	traceSampleRate struct {
+		p float64
+	}
 
 	stackSkip struct {
 		skip int
@@ -178,6 +185,10 @@ func (a *optionApplier) DisableTrace() {
 	a.def.noTrace = true
 }
 
+func (a *optionApplier) SetTraceSampler(f func() bool) {
+	a.def.traceSampler = f
+}
+
 func (a *optionApplier) AddStackSkip(skip int) {
 	a.def.stackSkip += skip
 }
@@ -208,6 +219,17 @@ func (o *field[T]) ApplyOption(a OptionApplier) {
 
 func (o *noTrace) ApplyOption(a OptionApplier) {
 	a.DisableTrace()
+}
+
+func (o *traceSampleRate) ApplyOption(a OptionApplier) {
+	switch {
+	case o.p <= 0:
+		a.SetTraceSampler(func() bool { return false })
+	case o.p >= 1:
+		a.SetTraceSampler(func() bool { return true })
+	default:
+		a.SetTraceSampler(func() bool { return rand.Float64() < o.p })
+	}
 }
 
 func (o *stackSkip) ApplyOption(a OptionApplier) {
