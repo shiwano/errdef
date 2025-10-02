@@ -77,12 +77,6 @@ func main() {
 }
 ```
 
-```text
-$ go run .
-user not found
-user id: u123
-```
-
 ## Features
 
 ### Error Constructors
