@@ -10,7 +10,7 @@ import (
 type Definition struct {
 	root          *Definition
 	kind          Kind
-	fields        fields
+	fields        *fields
 	noTrace       bool
 	stackSkip     int
 	stackDepth    int
@@ -132,10 +132,6 @@ func (d *Definition) clone() *Definition {
 func (d *Definition) applyOptions(opts []Option) {
 	if len(opts) == 0 {
 		return
-	}
-
-	if d.fields == nil {
-		d.fields = newFields()
 	}
 	a := &optionApplier{def: d}
 	for _, opt := range opts {

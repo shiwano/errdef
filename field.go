@@ -43,7 +43,10 @@ type (
 		Equals(other any) bool
 	}
 
-	fields map[FieldKey]indexedFieldValue
+	fields struct {
+		data      map[FieldKey]indexedFieldValue
+		lastIndex int
+	}
 
 	fieldKey struct {
 		name string
@@ -60,23 +63,26 @@ type (
 )
 
 var (
-	_ Fields     = fields{}
+	_ Fields     = (*fields)(nil)
 	_ FieldKey   = (*fieldKey)(nil)
 	_ FieldValue = (*fieldValue[string])(nil)
 )
 
-func newFields() fields {
-	return make(fields)
+func newFields() *fields {
+	return &fields{
+		data:      nil,
+		lastIndex: 0,
+	}
 }
 
-func (f fields) Get(key FieldKey) (FieldValue, bool) {
-	v, ok := f[key]
+func (f *fields) Get(key FieldKey) (FieldValue, bool) {
+	v, ok := f.data[key]
 	return v.value, ok
 }
 
-func (f fields) FindKeys(name string) []FieldKey {
+func (f *fields) FindKeys(name string) []FieldKey {
 	var keys []FieldKey
-	for k := range f {
+	for k := range f.data {
 		if k.String() == name {
 			keys = append(keys, k)
 		}
@@ -86,7 +92,7 @@ func (f fields) FindKeys(name string) []FieldKey {
 
 func (f fields) Seq() iter.Seq2[FieldKey, FieldValue] {
 	return func(yield func(key FieldKey, value FieldValue) bool) {
-		for k, v := range f {
+		for k, v := range f.data {
 			if !yield(k, v.value) {
 				return
 			}
@@ -94,12 +100,12 @@ func (f fields) Seq() iter.Seq2[FieldKey, FieldValue] {
 	}
 }
 
-func (f fields) SortedSeq() iter.Seq2[FieldKey, FieldValue] {
+func (f *fields) SortedSeq() iter.Seq2[FieldKey, FieldValue] {
 	return func(yield func(key FieldKey, value FieldValue) bool) {
-		for _, k := range slices.SortedFunc(maps.Keys(f), func(a, b FieldKey) int {
-			return cmp.Compare(f[a].index, f[b].index)
+		for _, k := range slices.SortedFunc(maps.Keys(f.data), func(a, b FieldKey) int {
+			return cmp.Compare(f.data[a].index, f.data[b].index)
 		}) {
-			v := f[k]
+			v := f.data[k]
 			if !yield(k, v.value) {
 				return
 			}
@@ -107,23 +113,23 @@ func (f fields) SortedSeq() iter.Seq2[FieldKey, FieldValue] {
 	}
 }
 
-func (f fields) Len() int {
-	return len(f)
+func (f *fields) Len() int {
+	return len(f.data)
 }
 
-func (f fields) MarshalJSON() ([]byte, error) {
+func (f *fields) MarshalJSON() ([]byte, error) {
 	type field struct {
 		Key   string `json:"key"`
 		Value any    `json:"value"`
 	}
-	fields := make([]field, 0, len(f))
+	fields := make([]field, 0, len(f.data))
 	for k, v := range f.SortedSeq() {
 		fields = append(fields, field{Key: k.String(), Value: v.Value()})
 	}
 	return json.Marshal(fields)
 }
 
-func (f fields) LogValue() slog.Value {
+func (f *fields) LogValue() slog.Value {
 	attrs := make([]slog.Attr, 0, f.Len())
 	for k, v := range f.SortedSeq() {
 		attrs = append(attrs, slog.Any(k.String(), v.Value()))
@@ -131,15 +137,22 @@ func (f fields) LogValue() slog.Value {
 	return slog.GroupValue(attrs...)
 }
 
-func (f fields) set(key FieldKey, value FieldValue) {
-	f[key] = indexedFieldValue{
+func (f *fields) set(key FieldKey, value FieldValue) {
+	if f.data == nil {
+		f.data = make(map[FieldKey]indexedFieldValue)
+	}
+	f.lastIndex++
+	f.data[key] = indexedFieldValue{
 		value: value,
-		index: len(f),
+		index: f.lastIndex,
 	}
 }
 
-func (f fields) clone() fields {
-	return maps.Clone(f)
+func (f *fields) clone() *fields {
+	return &fields{
+		data:      maps.Clone(f.data),
+		lastIndex: f.lastIndex,
+	}
 }
 
 func (k *fieldKey) String() string {

@@ -17,7 +17,8 @@ type Kind string
 // monitoring tools.
 func Define(kind Kind, opts ...Option) *Definition {
 	def := &Definition{
-		kind: kind,
+		kind:   kind,
+		fields: newFields(),
 	}
 	def.root = def
 	def.applyOptions(opts)

@@ -235,9 +235,9 @@ func (o *logValuer) ApplyOption(a OptionApplier) {
 }
 
 func fieldKeyFromOption(opt Option) FieldKey {
-	applier := &optionApplier{def: &Definition{fields: fields{}}}
+	applier := &optionApplier{def: &Definition{fields: newFields()}}
 	opt.ApplyOption(applier)
-	for k := range applier.def.fields {
+	for k := range applier.def.fields.data {
 		return k
 	}
 	panic("no field key")
