@@ -11,15 +11,25 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
 
 > **Requirements:** Go 1.25+
 
-## Features
-
-| Feature                     | Description                                                                                                |
-|:----------------------------|:-----------------------------------------------------------------------------------------------------------|
-| 🏛️ **Consistent Design**    | Separates definitions from instances for consistent, application-wide error handling.                      |
-| 🏷️ **Structured Data**      | Attaches rich, type-safe metadata to any error, automatically from `context` or explicitly.                |
-| 🧩 **Seamless Integration** | Works out-of-the-box with `slog`, `errors.Is`, `json.Marshaler`, Sentry, and Google Cloud Error Reporting. |
-| 🛠️ **Batteries-Included**   | Provides a rich set of built-in options for common use cases like HTTP statuses, log levels, and retries.  |
-| 🚀 **Concurrency-Safe**     | Immutable core types make it safe to use across goroutines without locks.                                  |
+- [Installation](#installation)
+- [Getting Started](#getting-started)
+- [Advanced Features](#advanced-features)
+  - [Error Constructors](#error-constructors)
+  - [Detailed Error Formatting](#detailed-error-formatting)
+  - [JSON Marshaling](#json-marshaling)
+  - [Structured Logging (`slog`)](#structured-logging-slog)
+  - [Simplified Field Constructors](#simplified-field-constructors)
+  - [Extracting Field Values](#extracting-field-values)
+  - [Free-Form Details](#free-form-details)
+  - [Context Integration](#context-integration)
+  - [Redaction](#redaction)
+  - [Joining Errors](#joining-errors)
+  - [Panic Handling](#panic-handling)
+  - [Error Resolution](#error-resolution)
+  - [Ecosystem Integration](#ecosystem-integration)
+  - [Built-in Options](#built-in-options)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Installation
 
@@ -29,65 +39,88 @@ go get github.com/shiwano/errdef
 
 ## Getting Started
 
-### 1. Define Your Errors
-
-First, define the error kinds used in your application with `errdef.Define`.
-You can also define fields to attach structured data to errors using `errdef.DefineField`.
-This is typically done once at the package's global scope.
-
 ```go
-package myapp
+package main
 
-import "github.com/shiwano/errdef"
+import (
+    "context"
+    "errors"
+    "fmt"
+
+    "github.com/shiwano/errdef"
+)
 
 var (
-    // Define error kinds.
-    // NOTE: Error identity depends on the variable instance, not its kind string.
-    ErrNotFound        = errdef.Define("not_found", errdef.HTTPStatus(404))
-    ErrInvalidArgument = errdef.Define("invalid_argument", errdef.HTTPStatus(400))
+    // Reusable error definition (sentinel-like, extensible).
+    ErrNotFound = errdef.Define("not_found", errdef.HTTPStatus(404))
 
-    // Define fields to attach to errors (constructor + extractor pair).
+    // Type-safe field (constructor + extractor pair).
     UserID, UserIDFrom = errdef.DefineField[string]("user_id")
 )
-```
 
-### 2. Create Error Instances
-
-Next, create error instances from a `Definition` using methods like `New`, `Errorf`, `Wrap`, or `Wrapf`.
-The `With` method allows you to attach information from a `context` or apply additional options.
-
-```go
-func findUser(ctx context.Context, userID string) (*User, error) {
-    user, err := db.Find(ctx, userID)
-    if err != nil {
-        return nil, ErrNotFound.With(ctx, UserID(userID)).Wrapf(err, "user not found")
-    }
-    return user, nil
+func findUser(ctx context.Context, id string) error {
+    // Create an error; attach typed fields as needed.
+    return ErrNotFound.With(ctx, UserID(id)).New("user not found")
 }
-```
 
-### 3. Check and Use Errors
+func main() {
+    err := findUser(context.TODO(), "u123")
 
-The created errors can be checked using the standard `errors.Is`.
-You can also safely extract field values using the extractor function (e.g., `UserIDFrom`) created by `DefineField`.
+    // Standard errors.Is still works.
+    if errors.Is(err, ErrNotFound) {
+        fmt.Println("user not found")
+    }
 
-```go
-func handler(w http.ResponseWriter, r *http.Request) {
-    _, err := findUser(r.Context(), "u-123")
-    if err != nil {
-        // You can use ErrNotFound.Is(err) as well.
-        if errors.Is(err, ErrNotFound) {
-            userID := UserIDFrom.OrZero(err)
-            slog.Warn("User not found", "user_id", userID)
-            // ...
-            return
-        }
-        // ...
+    // Extract fields in a type-safe way.
+    if userID, ok := UserIDFrom(err); ok {
+        fmt.Println("user id:", userID)
     }
 }
 ```
 
-## Advanced Usage
+```text
+$ go run .
+user not found
+user id: u123
+```
+
+## Advanced Features
+
+### Error Constructors
+
+Choose how to construct an error depending on whether you create a new one or keep a cause.
+
+- `New(msg)`: Create a new error.
+- `Errorf(fmt, ...)`: Create with a formatted message.
+- `Wrap(cause)`: Wrap and keep the cause (`errors.Is(err, cause)` stays true).
+- `Wrapf(cause, fmt, ...)`: Wrap with a cause and a formatted message.
+
+```go
+// New / Errorf
+e1 := ErrNotFound.New("user not found")
+e2 := ErrNotFound.Errorf("user %s not found", "u123")
+
+// Wrap / Wrapf (keep the cause)
+cause := sql.ErrNoRows
+e3 := ErrNotFound.Wrap(cause)
+e4 := ErrNotFound.Wrapf(cause, "lookup failed: %s", "u123")
+
+errors.Is(e3, cause) // true
+errors.Is(e4, cause) // true
+```
+
+#### Attaching Additional Options
+
+- `With(ctx, ...opts)`: Requires ctx. Use when options need request-scoped data.
+- `WithOption(...opts)`: No ctx. Use for context-independent options.
+
+```go
+// Context-aware (requires ctx)
+e1 := ErrNotFound.With(context.TODO(), UserID("u123")).New("user not found")
+
+// Context-free (no ctx)
+e2 := ErrNotFound.WithOption(UserID("u123")).New("user not found")
+```
 
 ### Detailed Error Formatting
 
@@ -244,7 +277,7 @@ codeWithDefault := ErrorCodeFrom.WithDefault(9999)
 #### Extractor Search Policy
 
 Extractors follow the same rules as `errors.As`.
-They search the error chain and extract the value from the **first matching `errdef.Error`**, then stop searching.
+They search the error chain and extract the value from the first matching `errdef.Error`, then stop searching.
 If you need inner fields at the outer layer, prefer explicitly copying the needed fields when wrapping.
 
 ### Free-Form Details
@@ -256,12 +289,11 @@ err := ErrNotFound.With(
   errdef.Details("tenant_id", 1, "user_ids", []int{1,2,4}),
 ).Wrap(err)
 
-kvs, ok := errdef.DetailsFrom(err)
-// kvs: []DetailKV{
+details := errdef.DetailsFrom.OrZero(err)
+// details: []DetailKV{
 //   { Key: "tenant_id", Value: 1 },
 //   { Key: "user_ids", Value: []int{1,2,4} },
 // }
-// ok: true
 ```
 
 ### Context Integration
@@ -288,8 +320,8 @@ func someHandler(ctx context.Context) error {
 
 ### Redaction
 
-Sensitive values such as tokens, passwords, or personal identifiers can be wrapped with `Redacted[T]`.
-It automatically formats as `[REDACTED]` for logging (`slog`), JSON (`json.Marshal`), and printing (`fmt`), while the original value remains accessible internally via the `.Value()` method.
+Wrap secrets (tokens, emails, IDs, etc.) with `Redacted[T]` to ensure they always render as `"[REDACTED]"` in logs and serialized output (`fmt`, `json`, `slog`).
+The original value remains accessible via `.Value()` for internal use.
 
 ```go
 var UserEmail, UserEmailFrom = errdef.DefineField[errdef.Redacted[string]]("user_email")
@@ -298,7 +330,10 @@ err := ErrInvalidArgument.With(
   UserEmail(errdef.Redact("alice@example.com")),
 ).Wrap(err)
 
-fmt.Printf("%+v\n", err) // user_email: [REDACTED]
+// fmt.Printf("%+v\n", err): user_email: [REDACTED]
+// log/slog prints         : user_email="[REDACTED]"
+// json.Marshal(err)       : { "user_email": "[REDACTED]" }
+// internal access         : email, _ := UserEmailFrom(err); _ = email.Value()
 ```
 
 ### Joining Errors
@@ -328,22 +363,21 @@ var ErrPanic = errdef.Define("panic", errdef.HTTPStatus(500))
 
 func processRequest(w http.ResponseWriter, r *http.Request) (err error) {
     defer func() {
-        if recovered, ok := ErrPanic.CapturePanic(&err, recover()); ok {
-           // ...
+        if panicVal, captured := ErrPanic.CapturePanic(&err, recover()); captured {
+           slog.Warn("a panic was captured", "panic_value", panicVal)
+           // ... further handling if needed ...
         }
     }()
     maybePanic()
     return nil
 }
 
-func main() {
-    if err := processRequest(w, r); err != nil {
-        var pe errdef.PanicError
-        if errors.As(err, &pe) {
-            slog.Error("recovered from panic", "panic_value", pe.PanicValue())
-        }
-        // ...
+if err := processRequest(w, r); err != nil {
+    var pe errdef.PanicError
+    if errors.As(err, &pe) {
+        slog.Error("a panic occurred", "panic_value", pe.PanicValue())
     }
+    // ...
 }
 ```
 
@@ -365,7 +399,7 @@ var (
 )
 
 func handleStripeError(code, msg string) error {
-    // Fallback is returned automatically if no exact match is found.
+    // Fallback is returned if no exact match is found.
     return ErrStripe.ResolveKind(errdef.Kind(code)).New(msg)
 }
 ```
@@ -377,7 +411,7 @@ func handleStripeError(code, msg string) error {
 - **Structured Logging:** Implements `slog.LogValuer` for rich, structured logs out-of-the-box.
 - **Error Reporting Services:**
   - **Sentry:** Compatible with the Sentry Go SDK by implementing the `stackTracer` interface.
-  - **Google Cloud Error Reporting**: Integrates directly with the Error Reporting service by implementing a `DebugStacker` interface.
+  - **Google Cloud Error Reporting**: Integrates directly with the service by implementing the `DebugStacker` interface.
 - **Legacy Error Handling:** Supports interoperability with `pkg/errors` by implementing the `causer` interface.
 
 ### Built-in Options
