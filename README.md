@@ -19,8 +19,8 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
   - [Detailed Error Formatting](#detailed-error-formatting)
   - [JSON Marshaling](#json-marshaling)
   - [Structured Logging (`slog`)](#structured-logging-slog)
-  - [Simplified Field Constructors](#simplified-field-constructors)
-  - [Extracting Field Values](#extracting-field-values)
+  - [Field Constructors](#field-constructors)
+  - [Field Extractors](#field-extractors)
   - [Free-Form Details](#free-form-details)
   - [Context Integration](#context-integration)
   - [Redaction](#redaction)
@@ -222,7 +222,7 @@ For more advanced control, you can:
   slog.Error("...", "stack", stack)
   ```
 
-### Simplified Field Constructors
+### Field Constructors
 
 The field constructor can be chained with methods like `WithValue` or `WithValueFunc` to create new, simplified constructors.
 This is useful for creating options with predefined or dynamically generated values.
@@ -243,7 +243,7 @@ err := ErrPaymentFailed.With(
 ).New("amount too large")
 ```
 
-### Extracting Field Values
+### Field Extractors
 
 The field extractor provides several helper methods for retrieving values from an error instance, especially for handling cases where a field might not exist.
 
