@@ -58,16 +58,6 @@ func NoTrace() Option {
 	return &noTrace{}
 }
 
-// TraceSampleRate enables probabilistic stack capture when creating errors.
-// NoTrace() still takes precedence and disables stack capture entirely.
-// p is clamped into [0.0, 1.0]:
-//   - p <= 0.0: never capture stacks (equivalent to always sampling false)
-//   - p >= 1.0: always capture stacks (equivalent to always sampling true)
-//   - 0.0 < p < 1.0: capture with probability p
-func TraceSampleRate(p float64) Option {
-	return &traceSampleRate{p: p}
-}
-
 // StackSkip skips a specified number of frames during stack capture.
 func StackSkip(skip int) Option {
 	return &stackSkip{skip: skip}

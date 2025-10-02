@@ -12,7 +12,6 @@ type Definition struct {
 	kind          Kind
 	fields        fields
 	noTrace       bool
-	traceSampler  func() bool
 	stackSkip     int
 	stackDepth    int
 	boundary      bool
@@ -121,7 +120,6 @@ func (d *Definition) clone() *Definition {
 		kind:          d.kind,
 		fields:        d.fields.clone(),
 		noTrace:       d.noTrace,
-		traceSampler:  d.traceSampler,
 		stackSkip:     d.stackSkip,
 		stackDepth:    d.stackDepth,
 		boundary:      d.boundary,
