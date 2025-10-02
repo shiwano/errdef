@@ -12,6 +12,8 @@ type (
 		StackTrace() []uintptr
 		// Frames returns the stack trace as structured frame information.
 		Frames() []Frame
+		// HeadFrame returns the top frame of the stack trace.
+		HeadFrame() (Frame, bool)
 		// Len returns the number of frames in the stack trace.
 		Len() int
 	}
@@ -71,6 +73,20 @@ func (s stack) Frames() []Frame {
 		}
 	}
 	return frames
+}
+
+func (s stack) HeadFrame() (Frame, bool) {
+	if len(s) == 0 {
+		return Frame{}, false
+	}
+	fs := runtime.CallersFrames(s)
+	f, _ := fs.Next()
+	frame := Frame{
+		Func: f.Function,
+		File: f.File,
+		Line: f.Line,
+	}
+	return frame, true
 }
 
 func (s stack) Len() int {

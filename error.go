@@ -311,10 +311,8 @@ func (e *definedError) LogValue() slog.Value {
 	}
 
 	if e.Stack().Len() > 0 {
-		frames := e.Stack().Frames()
-		if len(frames) > 0 {
-			origin := frames[0]
-			attrs = append(attrs, slog.Any("origin", origin))
+		if frame, ok := e.Stack().HeadFrame(); ok {
+			attrs = append(attrs, slog.Any("origin", frame))
 		}
 	}
 

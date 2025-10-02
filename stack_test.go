@@ -53,6 +53,44 @@ func TestStack_Frames(t *testing.T) {
 	}
 }
 
+func TestStack_HeadFrame(t *testing.T) {
+	t.Run("with stack", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		err := def.New("test error")
+		stack := err.(errdef.Error).Stack()
+
+		frame, ok := stack.HeadFrame()
+		if !ok {
+			t.Error("want ok to be true for non-empty stack")
+		}
+
+		if !strings.Contains(frame.Func, "TestStack_HeadFrame") {
+			t.Errorf("want func to contain 'TestStack_HeadFrame', got %s", frame.Func)
+		}
+		if !strings.Contains(frame.File, "stack_test.go") {
+			t.Errorf("want file to contain 'stack_test.go', got %s", frame.File)
+		}
+		if frame.Line == 0 {
+			t.Error("want non-zero line number")
+		}
+	})
+
+	t.Run("empty stack", func(t *testing.T) {
+		def := errdef.Define("test_error", errdef.NoTrace())
+		err := def.New("test error")
+		stack := err.(errdef.Error).Stack()
+
+		frame, ok := stack.HeadFrame()
+		if ok {
+			t.Error("want ok to be false for empty stack")
+		}
+		emptyFrame := errdef.Frame{}
+		if frame != emptyFrame {
+			t.Errorf("want zero-value frame for empty stack, got %+v", frame)
+		}
+	})
+}
+
 func TestStack_Len(t *testing.T) {
 	def := errdef.Define("test_error")
 	err := def.New("test error")
