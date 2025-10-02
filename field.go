@@ -41,7 +41,7 @@ type (
 		Equals(other any) bool
 	}
 
-	fields map[FieldKey]FieldValue
+	fields map[FieldKey]indexedFieldValue
 
 	fieldKey struct {
 		name string
@@ -50,11 +50,16 @@ type (
 	fieldValue[T any] struct {
 		value T
 	}
+
+	indexedFieldValue struct {
+		value FieldValue
+		index int
+	}
 )
 
 var (
 	_ Fields         = fields{}
-	_ slog.LogValuer = (*fields)(nil)
+	_ slog.LogValuer = fields{}
 	_ FieldKey       = (*fieldKey)(nil)
 	_ FieldValue     = (*fieldValue[string])(nil)
 )
@@ -65,7 +70,7 @@ func newFields() fields {
 
 func (f fields) Get(key FieldKey) (FieldValue, bool) {
 	v, ok := f[key]
-	return v, ok
+	return v.value, ok
 }
 
 func (f fields) FindKeys(name string) []FieldKey {
@@ -81,7 +86,7 @@ func (f fields) FindKeys(name string) []FieldKey {
 func (f fields) Seq() iter.Seq2[FieldKey, FieldValue] {
 	return func(yield func(key FieldKey, value FieldValue) bool) {
 		for k, v := range f {
-			if !yield(k, v) {
+			if !yield(k, v.value) {
 				return
 			}
 		}
@@ -91,20 +96,10 @@ func (f fields) Seq() iter.Seq2[FieldKey, FieldValue] {
 func (f fields) SortedSeq() iter.Seq2[FieldKey, FieldValue] {
 	return func(yield func(key FieldKey, value FieldValue) bool) {
 		for _, k := range slices.SortedFunc(maps.Keys(f), func(a, b FieldKey) int {
-			if a.String() == b.String() {
-				vA := f[a].Value()
-				vB := f[b].Value()
-				vAT := fmt.Sprintf("%T", vA)
-				vBT := fmt.Sprintf("%T", vB)
-				if vAT == vBT {
-					return cmp.Compare(fmt.Sprintf("%v", vA), fmt.Sprintf("%v", vB))
-				}
-				return cmp.Compare(vAT, vBT)
-			}
-			return cmp.Compare(a.String(), b.String())
+			return cmp.Compare(f[a].index, f[b].index)
 		}) {
 			v := f[k]
-			if !yield(k, v) {
+			if !yield(k, v.value) {
 				return
 			}
 		}
@@ -129,14 +124,17 @@ func (f fields) MarshalJSON() ([]byte, error) {
 
 func (f fields) LogValue() slog.Value {
 	attrs := make([]slog.Attr, 0, f.Len())
-	for k, v := range f.Seq() {
+	for k, v := range f.SortedSeq() {
 		attrs = append(attrs, slog.Any(k.String(), v.Value()))
 	}
 	return slog.GroupValue(attrs...)
 }
 
 func (f fields) set(key FieldKey, value FieldValue) {
-	f[key] = value
+	f[key] = indexedFieldValue{
+		value: value,
+		index: len(f),
+	}
 }
 
 func (f fields) clone() fields {

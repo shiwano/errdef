@@ -335,8 +335,8 @@ func TestFormatter_Format(t *testing.T) {
 				`Kind:\n`+
 				`\ttest_error\n`+
 				`Fields:\n`+
-				`\tpassword: \[REDACTED\]\n`+
 				`\tuser_id: user123\n`+
+				`\tpassword: \[REDACTED\]\n`+
 				`Stack:\n`+
 				`[\s\S]*`,
 			result,
@@ -576,12 +576,12 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 			"kind":    "auth_error",
 			"fields": []any{
 				map[string]any{
-					"key":   "password",
-					"value": "[REDACTED]",
-				},
-				map[string]any{
 					"key":   "user_id",
 					"value": "user123",
+				},
+				map[string]any{
+					"key":   "password",
+					"value": "[REDACTED]",
 				},
 			},
 			"causes": []any{
