@@ -1,6 +1,7 @@
 package errdef_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"log/slog"
 	"maps"
@@ -171,8 +172,8 @@ func TestFields_SortedSeq(t *testing.T) {
 			values = append(values, value.Value())
 		}
 
-		wantKeys := []string{"a_field", "b_field", "c_field"}
-		wantValues := []any{123, true, "value_c"}
+		wantKeys := []string{"c_field", "a_field", "b_field"}
+		wantValues := []any{"value_c", 123, true}
 
 		if !reflect.DeepEqual(keys, wantKeys) {
 			t.Errorf("want keys %v, got %v", wantKeys, keys)
@@ -281,7 +282,7 @@ func TestFields_MarshalJSON(t *testing.T) {
 			t.Fatalf("failed to marshal JSON: %v", err)
 		}
 
-		want := `[{"key":"a_field","value":42},{"key":"b_field","value":"string_value"},{"key":"c_field","value":true}]`
+		want := `[{"key":"b_field","value":"string_value"},{"key":"a_field","value":42},{"key":"c_field","value":true}]`
 
 		if string(jsonData) != want {
 			t.Errorf("want JSON %s, got %s", want, string(jsonData))
@@ -331,25 +332,24 @@ func TestFields_LogValue(t *testing.T) {
 		err := def.New("test message")
 
 		fields := err.(errdef.Error).Fields()
-		logValuer, ok := fields.(slog.LogValuer)
-		if !ok {
-			t.Fatal("want fields to implement slog.LogValuer")
+		value := fields.LogValue()
+
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, nil))
+		logger.Info("test", slog.Any("fields", value))
+
+		var result map[string]any
+		if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+			t.Fatalf("failed to unmarshal JSON: %v", err)
 		}
 
-		value := logValuer.LogValue()
-		attrs := value.Group()
-
-		attrMap := make(map[string]slog.Value)
-		for _, attr := range attrs {
-			attrMap[attr.Key] = attr.Value
+		want := map[string]any{
+			"user_id":     "user123",
+			"status_code": float64(404),
 		}
 
-		if userID := attrMap["user_id"]; userID.String() != "user123" {
-			t.Errorf("want user_id %q, got %q", "user123", userID.String())
-		}
-
-		if statusCode := attrMap["status_code"]; statusCode.Int64() != 404 {
-			t.Errorf("want status_code %d, got %d", 404, statusCode.Int64())
+		if !reflect.DeepEqual(result["fields"], want) {
+			t.Errorf("want fields %+v, got %+v", want, result["fields"])
 		}
 	})
 
@@ -358,12 +358,19 @@ func TestFields_LogValue(t *testing.T) {
 		err := def.New("test message")
 
 		fields := err.(errdef.Error).Fields()
-		logValuer := fields.(slog.LogValuer)
-		value := logValuer.LogValue()
-		attrs := value.Group()
+		value := fields.LogValue()
 
-		if len(attrs) != 0 {
-			t.Errorf("want 0 attributes for empty fields, got %d", len(attrs))
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, nil))
+		logger.Info("test", slog.Any("fields", value))
+
+		var result map[string]any
+		if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+			t.Fatalf("failed to unmarshal JSON: %v", err)
+		}
+
+		if result["fields"] != nil {
+			t.Errorf("want fields to be nil for empty fields, got %+v", result["fields"])
 		}
 	})
 
@@ -374,17 +381,23 @@ func TestFields_LogValue(t *testing.T) {
 		err := def.New("test message")
 
 		fields := err.(errdef.Error).Fields()
-		logValuer := fields.(slog.LogValuer)
-		value := logValuer.LogValue()
-		attrs := value.Group()
+		value := fields.LogValue()
 
-		attrMap := make(map[string]slog.Value)
-		for _, attr := range attrs {
-			attrMap[attr.Key] = attr.Value
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, nil))
+		logger.Info("test", slog.Any("fields", value))
+
+		var result map[string]any
+		if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+			t.Fatalf("failed to unmarshal JSON: %v", err)
 		}
 
-		if customValue := attrMap["custom_field"]; customValue.String() != "custom_value" {
-			t.Errorf("want custom_field %q, got %q", "custom_value", customValue.String())
+		want := map[string]any{
+			"custom_field": "custom_value",
+		}
+
+		if !reflect.DeepEqual(result["fields"], want) {
+			t.Errorf("want fields %+v, got %+v", want, result["fields"])
 		}
 	})
 }

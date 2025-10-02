@@ -16,6 +16,8 @@ type (
 	// Fields represents a collection of structured error fields.
 	Fields interface {
 		json.Marshaler
+		slog.LogValuer
+
 		// Get retrieves the value associated with the given key.
 		Get(key FieldKey) (FieldValue, bool)
 		// FindKeys finds all keys that match the given name.
@@ -58,10 +60,9 @@ type (
 )
 
 var (
-	_ Fields         = fields{}
-	_ slog.LogValuer = fields{}
-	_ FieldKey       = (*fieldKey)(nil)
-	_ FieldValue     = (*fieldValue[string])(nil)
+	_ Fields     = fields{}
+	_ FieldKey   = (*fieldKey)(nil)
+	_ FieldValue = (*fieldValue[string])(nil)
 )
 
 func newFields() fields {

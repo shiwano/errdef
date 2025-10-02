@@ -1,7 +1,10 @@
 package errdef_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"log/slog"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -76,28 +79,30 @@ func TestStack_LogValue(t *testing.T) {
 		def := errdef.Define("test_error")
 		err := def.New("test error")
 		stack := err.(errdef.Error).Stack()
+		value := stack.LogValue()
 
-		logValuer, ok := stack.(slog.LogValuer)
-		if !ok {
-			t.Fatal("want stack to implement slog.LogValuer")
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, nil))
+		logger.Info("test", slog.Any("stack", value))
+
+		var result map[string]any
+		if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+			t.Fatalf("failed to unmarshal JSON: %v", err)
 		}
 
-		value := logValuer.LogValue()
-		frames := value.Any().([]errdef.Frame)
+		frames := stack.Frames()
 
-		if len(frames) == 0 {
-			t.Error("want non-empty frames in log value")
+		want := make([]any, len(frames))
+		for i, f := range frames {
+			want[i] = map[string]any{
+				"func": f.Func,
+				"file": f.File,
+				"line": float64(f.Line),
+			}
 		}
 
-		firstFrame := frames[0]
-		if !strings.Contains(firstFrame.Func, "TestStack_LogValue") {
-			t.Errorf("want function name to contain TestStack_LogValue, got %q", firstFrame.Func)
-		}
-		if !strings.Contains(firstFrame.File, "stack_test.go") {
-			t.Errorf("want file to contain stack_test.go, got %q", firstFrame.File)
-		}
-		if firstFrame.Line <= 0 {
-			t.Errorf("want positive line number, got %d", firstFrame.Line)
+		if !reflect.DeepEqual(result["stack"], want) {
+			t.Errorf("want stack %+v, got %+v", want, result["stack"])
 		}
 	})
 
@@ -105,13 +110,19 @@ func TestStack_LogValue(t *testing.T) {
 		def := errdef.Define("test_error", errdef.NoTrace())
 		err := def.New("test error")
 		stack := err.(errdef.Error).Stack()
+		value := stack.LogValue()
 
-		logValuer := stack.(slog.LogValuer)
-		value := logValuer.LogValue()
-		frames := value.Any().([]errdef.Frame)
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, nil))
+		logger.Info("test", slog.Any("stack", value))
 
-		if len(frames) != 0 {
-			t.Errorf("want empty frames when trace is disabled, got %d frames", len(frames))
+		var result map[string]any
+		if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+			t.Fatalf("failed to unmarshal JSON: %v", err)
+		}
+
+		if result["stack"] != nil {
+			t.Errorf("want stack to be nil for empty stack, got %+v", result["stack"])
 		}
 	})
 }

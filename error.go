@@ -312,24 +312,15 @@ func (e *definedError) LogValue() slog.Value {
 	}
 
 	if e.Fields().Len() > 0 {
-		fieldAttrs := make([]any, 0, e.Fields().Len())
-		for k, v := range e.Fields().Seq() {
-			fieldAttrs = append(fieldAttrs, slog.Any(k.String(), v.Value()))
-		}
-		attrs = append(attrs, slog.Group("fields", fieldAttrs...))
+		fieldValue := e.Fields().LogValue()
+		attrs = append(attrs, slog.GroupAttrs("fields", fieldValue.Group()...))
 	}
 
 	if e.Stack().Len() > 0 {
 		frames := e.Stack().Frames()
 		if len(frames) > 0 {
 			origin := frames[0]
-			attrs = append(attrs,
-				slog.Group("origin",
-					slog.String("file", origin.File),
-					slog.Int("line", origin.Line),
-					slog.String("func", origin.Func),
-				),
-			)
+			attrs = append(attrs, slog.Any("origin", origin.LogValue()))
 		}
 	}
 

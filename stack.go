@@ -8,6 +8,8 @@ import (
 type (
 	// Stack represents a stack trace captured when an error was created.
 	Stack interface {
+		slog.LogValuer
+
 		// StackTrace returns the raw stack trace as program counters.
 		StackTrace() []uintptr
 		// Frames returns the stack trace as structured frame information.
@@ -27,8 +29,8 @@ type (
 )
 
 var (
-	_ Stack          = (*stack)(nil)
-	_ slog.LogValuer = (*stack)(nil)
+	_ Stack          = stack{}
+	_ slog.LogValuer = Frame{}
 )
 
 const (
@@ -78,4 +80,12 @@ func (s stack) Len() int {
 
 func (s stack) LogValue() slog.Value {
 	return slog.AnyValue(s.Frames())
+}
+
+func (f Frame) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("func", f.Func),
+		slog.String("file", f.File),
+		slog.Int("line", f.Line),
+	)
 }
