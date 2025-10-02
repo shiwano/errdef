@@ -79,7 +79,7 @@ func TestStack_LogValue(t *testing.T) {
 		def := errdef.Define("test_error")
 		err := def.New("test error")
 		stack := err.(errdef.Error).Stack()
-		value := stack.LogValue()
+		value := stack.(slog.LogValuer).LogValue()
 
 		var buf bytes.Buffer
 		logger := slog.New(slog.NewJSONHandler(&buf, nil))
@@ -110,7 +110,7 @@ func TestStack_LogValue(t *testing.T) {
 		def := errdef.Define("test_error", errdef.NoTrace())
 		err := def.New("test error")
 		stack := err.(errdef.Error).Stack()
-		value := stack.LogValue()
+		value := stack.(slog.LogValuer).LogValue()
 
 		var buf bytes.Buffer
 		logger := slog.New(slog.NewJSONHandler(&buf, nil))

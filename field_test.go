@@ -277,7 +277,7 @@ func TestFields_MarshalJSON(t *testing.T) {
 
 		fields := err.(errdef.Error).Fields()
 
-		jsonData, err := fields.MarshalJSON()
+		jsonData, err := fields.(json.Marshaler).MarshalJSON()
 		if err != nil {
 			t.Fatalf("failed to marshal JSON: %v", err)
 		}
@@ -303,7 +303,7 @@ func TestFields_MarshalJSON(t *testing.T) {
 
 		fields := err.(errdef.Error).Fields()
 
-		jsonData, err := fields.MarshalJSON()
+		jsonData, err := fields.(json.Marshaler).MarshalJSON()
 		if err != nil {
 			t.Fatalf("failed to marshal JSON: %v", err)
 		}
@@ -332,7 +332,7 @@ func TestFields_LogValue(t *testing.T) {
 		err := def.New("test message")
 
 		fields := err.(errdef.Error).Fields()
-		value := fields.LogValue()
+		value := fields.(slog.LogValuer).LogValue()
 
 		var buf bytes.Buffer
 		logger := slog.New(slog.NewJSONHandler(&buf, nil))
@@ -358,7 +358,7 @@ func TestFields_LogValue(t *testing.T) {
 		err := def.New("test message")
 
 		fields := err.(errdef.Error).Fields()
-		value := fields.LogValue()
+		value := fields.(slog.LogValuer).LogValue()
 
 		var buf bytes.Buffer
 		logger := slog.New(slog.NewJSONHandler(&buf, nil))
@@ -381,7 +381,7 @@ func TestFields_LogValue(t *testing.T) {
 		err := def.New("test message")
 
 		fields := err.(errdef.Error).Fields()
-		value := fields.LogValue()
+		value := fields.(slog.LogValuer).LogValue()
 
 		var buf bytes.Buffer
 		logger := slog.New(slog.NewJSONHandler(&buf, nil))

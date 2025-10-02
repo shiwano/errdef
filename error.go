@@ -259,11 +259,6 @@ func (e *definedError) MarshalJSON() ([]byte, error) {
 		return e.def.jsonMarshaler(e)
 	}
 
-	fields, err := e.Fields().MarshalJSON()
-	if err != nil {
-		return nil, err
-	}
-
 	var causes []json.RawMessage
 	for _, c := range e.Unwrap() {
 		if marshaler, ok := c.(json.Marshaler); ok {
@@ -286,13 +281,13 @@ func (e *definedError) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Message string            `json:"message"`
 		Kind    string            `json:"kind,omitempty"`
-		Fields  json.RawMessage   `json:"fields,omitempty"`
+		Fields  Fields            `json:"fields,omitempty"`
 		Stack   []Frame           `json:"stack,omitempty"`
 		Causes  []json.RawMessage `json:"causes,omitempty"`
 	}{
 		Message: e.Error(),
 		Kind:    string(e.Kind()),
-		Fields:  fields,
+		Fields:  e.Fields(),
 		Stack:   e.stack.Frames(),
 		Causes:  causes,
 	})
@@ -312,15 +307,14 @@ func (e *definedError) LogValue() slog.Value {
 	}
 
 	if e.Fields().Len() > 0 {
-		fieldValue := e.Fields().LogValue()
-		attrs = append(attrs, slog.GroupAttrs("fields", fieldValue.Group()...))
+		attrs = append(attrs, slog.Any("fields", e.Fields()))
 	}
 
 	if e.Stack().Len() > 0 {
 		frames := e.Stack().Frames()
 		if len(frames) > 0 {
 			origin := frames[0]
-			attrs = append(attrs, slog.Any("origin", origin.LogValue()))
+			attrs = append(attrs, slog.Any("origin", origin))
 		}
 	}
 

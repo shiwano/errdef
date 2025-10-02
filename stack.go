@@ -8,8 +8,6 @@ import (
 type (
 	// Stack represents a stack trace captured when an error was created.
 	Stack interface {
-		slog.LogValuer
-
 		// StackTrace returns the raw stack trace as program counters.
 		StackTrace() []uintptr
 		// Frames returns the stack trace as structured frame information.
@@ -30,6 +28,7 @@ type (
 
 var (
 	_ Stack          = stack{}
+	_ slog.LogValuer = stack{}
 	_ slog.LogValuer = Frame{}
 )
 
