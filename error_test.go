@@ -594,6 +594,150 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 			t.Errorf("want function name to contain TestMarshaler_MarshalJSON, got %q", funcName)
 		}
 	})
+
+	t.Run("causes with definedError", func(t *testing.T) {
+		def1 := errdef.Define("inner_error", errdef.NoTrace())
+		def2 := errdef.Define("outer_error", errdef.NoTrace())
+
+		innerErr := def1.New("inner message")
+		outerErr := def2.Wrap(innerErr)
+
+		data, jsonErr := json.Marshal(outerErr)
+		if jsonErr != nil {
+			t.Fatalf("want no error, got %v", jsonErr)
+		}
+
+		var got map[string]any
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("want valid JSON, got %v", err)
+		}
+
+		want := map[string]any{
+			"message": "inner message",
+			"kind":    "outer_error",
+			"causes": []any{
+				map[string]any{
+					"message": "inner message",
+					"kind":    "inner_error",
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("JSON mismatch:\ngot:  %#v\nwant: %#v", got, want)
+		}
+	})
+
+	t.Run("causes with json.Marshaler", func(t *testing.T) {
+		customErr := &customError{Code: 500, Msg: "custom error"}
+
+		def := errdef.Define("wrapper_error", errdef.NoTrace())
+		err := def.Wrap(customErr)
+
+		data, jsonErr := json.Marshal(err)
+		if jsonErr != nil {
+			t.Fatalf("want no error, got %v", jsonErr)
+		}
+
+		var got map[string]any
+		if unmarshalErr := json.Unmarshal(data, &got); unmarshalErr != nil {
+			t.Fatalf("want valid JSON, got %v", unmarshalErr)
+		}
+
+		want := map[string]any{
+			"message": "error code 500: custom error",
+			"kind":    "wrapper_error",
+			"causes": []any{
+				map[string]any{
+					"message": "error code 500: custom error",
+					"data": map[string]any{
+						"code": float64(500),
+						"msg":  "custom error",
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("JSON mismatch:\ngot:  %#v\nwant: %#v", got, want)
+		}
+	})
+
+	t.Run("causes with standard error", func(t *testing.T) {
+		def := errdef.Define("wrapper_error", errdef.NoTrace())
+		stdErr := errors.New("standard error")
+		err := def.Wrap(stdErr)
+
+		data, jsonErr := json.Marshal(err)
+		if jsonErr != nil {
+			t.Fatalf("want no error, got %v", jsonErr)
+		}
+
+		var got map[string]any
+		if unmarshalErr := json.Unmarshal(data, &got); unmarshalErr != nil {
+			t.Fatalf("want valid JSON, got %v", unmarshalErr)
+		}
+
+		want := map[string]any{
+			"message": "standard error",
+			"kind":    "wrapper_error",
+			"causes": []any{
+				map[string]any{
+					"message": "standard error",
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("JSON mismatch:\ngot:  %#v\nwant: %#v", got, want)
+		}
+	})
+
+	t.Run("causes with mixed error types", func(t *testing.T) {
+		def1 := errdef.Define("defined_error", errdef.NoTrace())
+		def2 := errdef.Define("wrapper_error", errdef.NoTrace())
+
+		definedErr := def1.New("defined error")
+		customErr := &customError{Code: 404, Msg: "not found"}
+		stdErr := errors.New("standard error")
+
+		joined := def2.Join(definedErr, customErr, stdErr)
+
+		data, jsonErr := json.Marshal(joined)
+		if jsonErr != nil {
+			t.Fatalf("want no error, got %v", jsonErr)
+		}
+
+		var got map[string]any
+		if unmarshalErr := json.Unmarshal(data, &got); unmarshalErr != nil {
+			t.Fatalf("want valid JSON, got %v", unmarshalErr)
+		}
+
+		want := map[string]any{
+			"message": "defined error\nerror code 404: not found\nstandard error",
+			"kind":    "wrapper_error",
+			"causes": []any{
+				map[string]any{
+					"message": "defined error",
+					"kind":    "defined_error",
+				},
+				map[string]any{
+					"message": "error code 404: not found",
+					"data": map[string]any{
+						"code": float64(404),
+						"msg":  "not found",
+					},
+				},
+				map[string]any{
+					"message": "standard error",
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("JSON mismatch:\ngot:  %#v\nwant: %#v", got, want)
+		}
+	})
 }
 
 func TestError_LogValue(t *testing.T) {
@@ -844,4 +988,18 @@ func TestError_LogValue(t *testing.T) {
 			t.Errorf("want function name to contain TestError_LogValue, got %q", funcName)
 		}
 	})
+}
+
+type customError struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+}
+
+func (e *customError) Error() string {
+	return fmt.Sprintf("error code %d: %s", e.Code, e.Msg)
+}
+
+func (e *customError) MarshalJSON() ([]byte, error) {
+	type alias customError
+	return json.Marshal((*alias)(e))
 }

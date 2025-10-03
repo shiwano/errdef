@@ -261,21 +261,46 @@ func (e *definedError) MarshalJSON() ([]byte, error) {
 
 	var causes []json.RawMessage
 	for _, c := range e.Unwrap() {
-		if marshaler, ok := c.(json.Marshaler); ok {
-			b, err := marshaler.MarshalJSON()
+		switch t := c.(type) {
+		case *definedError:
+			b, err := t.MarshalJSON()
 			if err != nil {
 				return nil, err
 			}
 			causes = append(causes, b)
-		} else {
+		case json.Marshaler:
+			data, err := t.MarshalJSON()
+			if err != nil {
+				return nil, err
+			}
+
+			b, err := json.Marshal(struct {
+				Message string          `json:"message"`
+				Data    json.RawMessage `json:"data"`
+			}{
+				Message: c.Error(),
+				Data:    data,
+			})
+			if err != nil {
+				return nil, err
+			}
+			causes = append(causes, b)
+		default:
 			b, err := json.Marshal(struct {
 				Message string `json:"message"`
-			}{Message: c.Error()})
+			}{
+				Message: c.Error(),
+			})
 			if err != nil {
 				return nil, err
 			}
 			causes = append(causes, b)
 		}
+	}
+
+	var fields Fields
+	if e.Fields().Len() > 0 {
+		fields = e.Fields()
 	}
 
 	return json.Marshal(struct {
@@ -287,7 +312,7 @@ func (e *definedError) MarshalJSON() ([]byte, error) {
 	}{
 		Message: e.Error(),
 		Kind:    string(e.Kind()),
-		Fields:  e.Fields(),
+		Fields:  fields,
 		Stack:   e.stack.Frames(),
 		Causes:  causes,
 	})
