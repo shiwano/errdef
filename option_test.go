@@ -9,7 +9,7 @@ import (
 	"github.com/shiwano/errdef"
 )
 
-func TestFieldOptionConstructor_FieldKey(t *testing.T) {
+func TestFieldConstructor_FieldKey(t *testing.T) {
 	constructor1, _ := errdef.DefineField[string]("test_field_1")
 	rawConstructor2, _ := errdef.DefineField[int]("test_field_2")
 	constructor2 := rawConstructor2.WithValue(100)
@@ -29,7 +29,7 @@ func TestFieldOptionConstructor_FieldKey(t *testing.T) {
 	}
 }
 
-func TestFieldOptionConstructor_WithValue(t *testing.T) {
+func TestFieldConstructor_WithValue(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
 	withValueConstructor := constructor.WithValue("default_value")
 
@@ -45,7 +45,7 @@ func TestFieldOptionConstructor_WithValue(t *testing.T) {
 	}
 }
 
-func TestFieldOptionConstructor_WithValueFunc(t *testing.T) {
+func TestFieldConstructor_WithValueFunc(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
 	withValueFuncConstructor := constructor.WithValueFunc(func() string {
 		return "default_value"
@@ -63,7 +63,7 @@ func TestFieldOptionConstructor_WithValueFunc(t *testing.T) {
 	}
 }
 
-func TestFieldOptionConstructor_WithErrorFunc(t *testing.T) {
+func TestFieldConstructor_WithErrorFunc(t *testing.T) {
 	baseErr := errors.New("base error")
 
 	constructor, extractor := errdef.DefineField[string]("test_field")
@@ -83,7 +83,7 @@ func TestFieldOptionConstructor_WithErrorFunc(t *testing.T) {
 	}
 }
 
-func TestFieldOptionConstructor_WithContextFunc(t *testing.T) {
+func TestFieldConstructor_WithContextFunc(t *testing.T) {
 	type contextKey struct{}
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, contextKey{}, "context_value")
@@ -105,7 +105,7 @@ func TestFieldOptionConstructor_WithContextFunc(t *testing.T) {
 	}
 }
 
-func TestFieldOptionConstructor_WithHTTPRequestFunc(t *testing.T) {
+func TestFieldConstructor_WithHTTPRequestFunc(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/test/path", nil)
 	req.Header.Set("X-Request-ID", "request-123")
 
@@ -126,7 +126,7 @@ func TestFieldOptionConstructor_WithHTTPRequestFunc(t *testing.T) {
 	}
 }
 
-func TestFieldOptionExtractor_WithZero(t *testing.T) {
+func TestFieldExtractor_WithZero(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
 	zeroExtractor := extractor.WithZero()
 
@@ -145,7 +145,7 @@ func TestFieldOptionExtractor_WithZero(t *testing.T) {
 	}
 }
 
-func TestFieldOptionExtractor_WithDefault(t *testing.T) {
+func TestFieldExtractor_WithDefault(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
 	defaultExtractor := extractor.WithDefault("default")
 
@@ -164,7 +164,7 @@ func TestFieldOptionExtractor_WithDefault(t *testing.T) {
 	}
 }
 
-func TestFieldOptionExtractor_WithFallback(t *testing.T) {
+func TestFieldExtractor_WithFallback(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
 	fallbackExtractor := extractor.WithFallback(func(err error) string {
 		return err.Error() + " fallback"
@@ -185,7 +185,7 @@ func TestFieldOptionExtractor_WithFallback(t *testing.T) {
 	}
 }
 
-func TestFieldOptionExtractor_OrZero(t *testing.T) {
+func TestFieldExtractor_OrZero(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
 
 	def := errdef.Define("test_error", constructor("test_value"))
@@ -203,7 +203,7 @@ func TestFieldOptionExtractor_OrZero(t *testing.T) {
 	}
 }
 
-func TestFieldOptionExtractor_OrDefault(t *testing.T) {
+func TestFieldExtractor_OrDefault(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
 
 	def := errdef.Define("test_error", constructor("test_value"))
@@ -221,7 +221,7 @@ func TestFieldOptionExtractor_OrDefault(t *testing.T) {
 	}
 }
 
-func TestFieldOptionExtractor_OrFallback(t *testing.T) {
+func TestFieldExtractor_OrFallback(t *testing.T) {
 	constructor, extractor := errdef.DefineField[string]("test_field")
 
 	def := errdef.Define("test_error", constructor("test_value"))

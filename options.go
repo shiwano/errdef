@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Detail represents a single key-value pair of diagnostic information.
 type Detail struct {
 	Key   string `json:"key"`
 	Value any    `json:"value"`

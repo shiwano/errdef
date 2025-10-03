@@ -32,17 +32,17 @@ type (
 		SetLogValuer(valuer ErrorLogValuer)
 	}
 
-	// FieldOptionConstructor creates an Option that sets a field value.
-	FieldOptionConstructor[T any] func(value T) Option
+	// FieldConstructor creates an Option that sets a field value.
+	FieldConstructor[T any] func(value T) Option
 
-	// FieldOptionExtractor extracts a field value from an error.
-	FieldOptionExtractor[T any] func(err error) (T, bool)
+	// FieldExtractor extracts a field value from an error.
+	FieldExtractor[T any] func(err error) (T, bool)
 
-	// FieldOptionConstructorNoArgs creates an Option with a default value when called with no arguments.
-	FieldOptionConstructorNoArgs[T any] func() Option
+	// FieldConstructorNoArgs creates an Option with a default value when called with no arguments.
+	FieldConstructorNoArgs[T any] func() Option
 
-	// FieldOptionExtractorSingleReturn extracts a field value from an error, returning only the value.
-	FieldOptionExtractorSingleReturn[T any] func(err error) T
+	// FieldExtractorSingleReturn extracts a field value from an error, returning only the value.
+	FieldExtractorSingleReturn[T any] func(err error) T
 
 	optionApplier struct {
 		def *Definition
@@ -79,32 +79,32 @@ type (
 )
 
 // FieldKey returns the key associated with this constructor.
-func (f FieldOptionConstructor[T]) FieldKey() FieldKey {
+func (f FieldConstructor[T]) FieldKey() FieldKey {
 	var zero T
 	return fieldKeyFromOption(f(zero))
 }
 
 // FieldKey returns the key associated with this constructor.
-func (f FieldOptionConstructorNoArgs[T]) FieldKey() FieldKey {
+func (f FieldConstructorNoArgs[T]) FieldKey() FieldKey {
 	return fieldKeyFromOption(f())
 }
 
 // WithValue creates a field option constructor that sets a specific value.
-func (f FieldOptionConstructor[T]) WithValue(value T) FieldOptionConstructorNoArgs[T] {
+func (f FieldConstructor[T]) WithValue(value T) FieldConstructorNoArgs[T] {
 	return func() Option {
 		return f(value)
 	}
 }
 
 // WithValueFunc creates a field option constructor that sets a value using a function.
-func (f FieldOptionConstructor[T]) WithValueFunc(fn func() T) FieldOptionConstructorNoArgs[T] {
+func (f FieldConstructor[T]) WithValueFunc(fn func() T) FieldConstructorNoArgs[T] {
 	return func() Option {
 		return f(fn())
 	}
 }
 
 // WithErrorFunc creates a field option constructor that sets a value using a function that takes an error.
-func (f FieldOptionConstructor[T]) WithErrorFunc(fn func(err error) T) FieldOptionConstructor[error] {
+func (f FieldConstructor[T]) WithErrorFunc(fn func(err error) T) FieldConstructor[error] {
 	return func(err error) Option {
 		val := fn(err)
 		return f(val)
@@ -112,7 +112,7 @@ func (f FieldOptionConstructor[T]) WithErrorFunc(fn func(err error) T) FieldOpti
 }
 
 // WithContextFunc creates a field option constructor that sets a value using a function that takes a context.
-func (f FieldOptionConstructor[T]) WithContextFunc(fn func(ctx context.Context) T) FieldOptionConstructor[context.Context] {
+func (f FieldConstructor[T]) WithContextFunc(fn func(ctx context.Context) T) FieldConstructor[context.Context] {
 	return func(ctx context.Context) Option {
 		val := fn(ctx)
 		return f(val)
@@ -120,7 +120,7 @@ func (f FieldOptionConstructor[T]) WithContextFunc(fn func(ctx context.Context) 
 }
 
 // WithHTTPRequestFunc creates a field option constructor that sets a value using a function that takes an HTTP request.
-func (f FieldOptionConstructor[T]) WithHTTPRequestFunc(fn func(r *http.Request) T) FieldOptionConstructor[*http.Request] {
+func (f FieldConstructor[T]) WithHTTPRequestFunc(fn func(r *http.Request) T) FieldConstructor[*http.Request] {
 	return func(r *http.Request) Option {
 		val := fn(r)
 		return f(val)
@@ -128,7 +128,7 @@ func (f FieldOptionConstructor[T]) WithHTTPRequestFunc(fn func(r *http.Request) 
 }
 
 // WithZero creates a field extractor that returns only the value, ignoring the boolean.
-func (f FieldOptionExtractor[T]) WithZero() FieldOptionExtractorSingleReturn[T] {
+func (f FieldExtractor[T]) WithZero() FieldExtractorSingleReturn[T] {
 	return func(err error) T {
 		val, _ := f(err)
 		return val
@@ -136,7 +136,7 @@ func (f FieldOptionExtractor[T]) WithZero() FieldOptionExtractorSingleReturn[T] 
 }
 
 // WithDefault creates a field extractor that returns a default value if the field is not found.
-func (f FieldOptionExtractor[T]) WithDefault(value T) FieldOptionExtractorSingleReturn[T] {
+func (f FieldExtractor[T]) WithDefault(value T) FieldExtractorSingleReturn[T] {
 	return func(err error) T {
 		if val, ok := f(err); ok {
 			return val
@@ -146,7 +146,7 @@ func (f FieldOptionExtractor[T]) WithDefault(value T) FieldOptionExtractorSingle
 }
 
 // WithFallback creates a field extractor that calls a function to obtain a value if the field is not found.
-func (f FieldOptionExtractor[T]) WithFallback(fn func(err error) T) FieldOptionExtractorSingleReturn[T] {
+func (f FieldExtractor[T]) WithFallback(fn func(err error) T) FieldExtractorSingleReturn[T] {
 	return func(err error) T {
 		if val, ok := f(err); ok {
 			return val
@@ -156,17 +156,17 @@ func (f FieldOptionExtractor[T]) WithFallback(fn func(err error) T) FieldOptionE
 }
 
 // OrZero extracts the field value from the error, returning the zero value if not found.
-func (f FieldOptionExtractor[T]) OrZero(err error) T {
+func (f FieldExtractor[T]) OrZero(err error) T {
 	return f.WithZero()(err)
 }
 
 // OrDefault extracts the field value from the error, returning a default value if not found.
-func (f FieldOptionExtractor[T]) OrDefault(err error, value T) T {
+func (f FieldExtractor[T]) OrDefault(err error, value T) T {
 	return f.WithDefault(value)(err)
 }
 
 // OrFallback extracts the field value from the error, calling a function to obtain a value if not found.
-func (f FieldOptionExtractor[T]) OrFallback(err error, fn func(err error) T) T {
+func (f FieldExtractor[T]) OrFallback(err error, fn func(err error) T) T {
 	return f.WithFallback(fn)(err)
 }
 
