@@ -235,15 +235,11 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 			}
 		case s.Flag('#'):
 			// Avoid infinite recursion in case someone does %#v on definedError.
-			type definedError struct {
-				def    *Definition
-				msg    string
-				cause  error
-				stack  stack
-				joined bool
-			}
-			var tmp = definedError(*e)
-			_, _ = fmt.Fprintf(s, "%#v", &tmp)
+			type (
+				definedError_ definedError
+				definedError  definedError_
+			)
+			_, _ = fmt.Fprintf(s, "%#v", (*definedError)(e))
 		default:
 			_, _ = io.WriteString(s, e.Error())
 		}
