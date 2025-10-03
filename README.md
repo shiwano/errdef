@@ -402,12 +402,10 @@ var (
 )
 
 func handleStripeError(code, msg string) error {
-    // Resolve by error code.
     return ErrStripe.ResolveKind(errdef.Kind(code)).New(msg)
 }
 
 func handleStripeHTTPError(statusCode int, msg string) error {
-    // Resolve by HTTP status code field.
     return ErrStripe.ResolveField(errdef.HTTPStatus.FieldKey(), statusCode).New(msg)
 }
 ```
