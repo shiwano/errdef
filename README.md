@@ -77,6 +77,8 @@ func main() {
 }
 ```
 
+> **Note:** `errors.Is` compares the identity of a definition, not its kind string (e.g. `"not_found"`).
+
 ## Features
 
 ### Error Constructors
@@ -216,7 +218,7 @@ For more advanced control, you can:
 
   ```go
   fields := err.(errdef.Error).Fields()
-  slog.Warn("invalid argument", "fields", fields)
+  slog.Warn("...", "fields", fields)
   ```
 
 - **Log the full stack trace**: The `Stack` type also implements `slog.LogValuer`.
@@ -279,7 +281,7 @@ If you need inner fields at the outer layer, prefer explicitly copying the neede
 
 ### Free-Form Details
 
-You can attach free-form diagnostic details to an error under the "details" field.
+You can attach free-form diagnostic details to an error under the `"details"` field.
 
 ```go
 err := ErrNotFound.With(
@@ -287,11 +289,13 @@ err := ErrNotFound.With(
 ).Wrap(err)
 
 details := errdef.DetailsFrom.OrZero(err)
-// details: []DetailKV{
+// details: []Detail{
 //   { Key: "tenant_id", Value: 1 },
 //   { Key: "user_ids", Value: []int{1,2,4} },
 // }
 ```
+
+> **Note:** Arguments are provided as key-value pairs, similar to `slog.Info()`. You can also pass `Detail` or `[]Detail` directly. Invalid formats (e.g., trailing string, non-string key) are stored gracefully instead of panicking.
 
 ### Context Integration
 
@@ -300,9 +304,11 @@ You can use `context.Context` to automatically attach request-scoped information
 ```go
 func tracingMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        reqID := r.Header.Get("X-Request-ID")
-        // Attach the TraceID option to the context
-        ctx := errdef.ContextWithOptions(r.Context(), errdef.TraceID(reqID))
+        // Attach the TraceID option to the context.
+        ctx := errdef.ContextWithOptions(
+            r.Context(),
+            errdef.TraceID(r.Header.Get("X-Request-ID")),
+        )
         next.ServeHTTP(w, r.WithContext(ctx))
     })
 }
@@ -310,7 +316,7 @@ func tracingMiddleware(next http.Handler) http.Handler {
 var ErrRateLimited = errdef.Define("rate_limited", errdef.HTTPStatus(429))
 
 func someHandler(ctx context.Context) error {
-    // With(ctx, …) applies context options first, then explicit options (last-write-wins)
+    // The TraceID option is automatically attached from the context.
     return ErrRateLimited.With(ctx).New("too many requests")
 }
 ```
@@ -362,7 +368,7 @@ func processRequest(w http.ResponseWriter, r *http.Request) (err error) {
     defer func() {
         if panicVal, captured := ErrPanic.CapturePanic(&err, recover()); captured {
            slog.Warn("a panic was captured", "panic_value", panicVal)
-           // ... further handling if needed ...
+           // ...
         }
     }()
     maybePanic()
@@ -396,10 +402,17 @@ var (
 )
 
 func handleStripeError(code, msg string) error {
-    // Fallback is returned if no exact match is found.
+    // Resolve by error code.
     return ErrStripe.ResolveKind(errdef.Kind(code)).New(msg)
 }
+
+func handleStripeHTTPError(statusCode int, msg string) error {
+    // Resolve by HTTP status code field.
+    return ErrStripe.ResolveField(errdef.HTTPStatus.FieldKey(), statusCode).New(msg)
+}
 ```
+
+> **Note:** If multiple definitions have the same Kind or field value, the first one in the resolver's definition order will be used.
 
 ### Ecosystem Integration
 
