@@ -463,16 +463,12 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 			t.Errorf("want kind %q, got %q", "test_error", result["kind"])
 		}
 
-		fields := result["fields"].([]any)
+		fields := result["fields"].(map[string]any)
 		if len(fields) != 1 {
 			t.Errorf("want 1 field, got %d", len(fields))
 		}
-		field := fields[0].(map[string]any)
-		if field["key"] != "user_id" {
-			t.Errorf("want field key %q, got %q", "user_id", field["key"])
-		}
-		if field["value"] != "user123" {
-			t.Errorf("want field value %q, got %q", "user123", field["value"])
+		if fields["user_id"] != "user123" {
+			t.Errorf("want field %q, got %q", "user123", fields["user_id"])
 		}
 	})
 
@@ -574,15 +570,9 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 		want := map[string]any{
 			"message": "connection failed",
 			"kind":    "auth_error",
-			"fields": []any{
-				map[string]any{
-					"key":   "user_id",
-					"value": "user123",
-				},
-				map[string]any{
-					"key":   "password",
-					"value": "[REDACTED]",
-				},
+			"fields": map[string]any{
+				"user_id":  "user123",
+				"password": "[REDACTED]",
 			},
 			"causes": []any{
 				map[string]any{"message": "connection failed"},
