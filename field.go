@@ -117,13 +117,11 @@ func (f *fields) Len() int {
 }
 
 func (f *fields) MarshalJSON() ([]byte, error) {
-	type field struct {
-		Key   string `json:"key"`
-		Value any    `json:"value"`
-	}
-	fields := make([]field, 0, len(f.data))
+	fields := make(map[string]any, len(f.data))
 	for k, v := range f.SortedSeq() {
-		fields = append(fields, field{Key: k.String(), Value: v.Value()})
+		// If multiple fields have the same name,
+		// the last one in insertion order will be used.
+		fields[k.String()] = v.Value()
 	}
 	return json.Marshal(fields)
 }
@@ -131,6 +129,8 @@ func (f *fields) MarshalJSON() ([]byte, error) {
 func (f *fields) LogValue() slog.Value {
 	attrs := make([]slog.Attr, 0, f.Len())
 	for k, v := range f.SortedSeq() {
+		// If multiple fields have the same name,
+		// the last one in insertion order will be used.
 		attrs = append(attrs, slog.Any(k.String(), v.Value()))
 	}
 	return slog.GroupValue(attrs...)

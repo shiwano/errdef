@@ -158,10 +158,10 @@ Causes:
 {
   "message": "user not found",
   "kind": "not_found",
-  "fields": [
-    { "key": "http_status",  "value": 404 },
-    { "key": "user_id", "value": "u-123" }
-  ],
+  "fields": {
+    "http_status": 404,
+    "user_id": "u-123"
+  },
   "stack": [
     { "function":"main.findUser","file":"/path/to/your/project/main.go","line":23 },
     { "function":"main.main","file":"/path/to/your/project/main.go","line":35 },
@@ -172,6 +172,8 @@ Causes:
   ]
 }
 ```
+
+> **Note:** If multiple fields have the same name, the last one in insertion order will be used in the JSON output.
 
 ### Structured Logging (`slog`)
 
@@ -205,6 +207,8 @@ slog.Error("failed to find user", "error", err)
   }
 }
 ```
+
+> **Note:** If multiple fields have the same name, the last one in insertion order will be used in the log output.
 
 For more advanced control, you can:
 

@@ -282,18 +282,19 @@ func TestFields_MarshalJSON(t *testing.T) {
 			t.Fatalf("failed to marshal JSON: %v", err)
 		}
 
-		want := `[{"key":"b_field","value":"string_value"},{"key":"a_field","value":42},{"key":"c_field","value":true}]`
-
-		if string(jsonData) != want {
-			t.Errorf("want JSON %s, got %s", want, string(jsonData))
-		}
-
-		var result []map[string]any
+		var result map[string]any
 		if err := json.Unmarshal(jsonData, &result); err != nil {
 			t.Fatalf("failed to unmarshal JSON: %v", err)
 		}
-		if len(result) != 3 {
-			t.Fatalf("want 3 fields, got %d", len(result))
+
+		want := map[string]any{
+			"b_field": "string_value",
+			"a_field": float64(42),
+			"c_field": true,
+		}
+
+		if !reflect.DeepEqual(result, want) {
+			t.Errorf("want %+v, got %+v", want, result)
 		}
 	})
 
@@ -308,18 +309,48 @@ func TestFields_MarshalJSON(t *testing.T) {
 			t.Fatalf("failed to marshal JSON: %v", err)
 		}
 
-		want := `[]`
-
-		if string(jsonData) != want {
-			t.Errorf("want JSON %s, got %s", want, string(jsonData))
-		}
-
-		var result []map[string]any
+		var result map[string]any
 		if err := json.Unmarshal(jsonData, &result); err != nil {
 			t.Fatalf("failed to unmarshal JSON: %v", err)
 		}
-		if len(result) != 0 {
-			t.Errorf("want 0 fields, got %d", len(result))
+
+		want := map[string]any{}
+
+		if !reflect.DeepEqual(result, want) {
+			t.Errorf("want %+v, got %+v", want, result)
+		}
+	})
+
+	t.Run("overwrite same name fields", func(t *testing.T) {
+		constructor1, _ := errdef.DefineField[string]("field")
+		constructor2, _ := errdef.DefineField[int]("field")
+		constructor3, _ := errdef.DefineField[bool]("field")
+
+		def := errdef.Define("test_error",
+			constructor1("first"),
+			constructor2(42),
+			constructor3(true),
+		)
+		err := def.New("test message")
+
+		fields := err.(errdef.Error).Fields()
+
+		jsonData, err := fields.(json.Marshaler).MarshalJSON()
+		if err != nil {
+			t.Fatalf("failed to marshal JSON: %v", err)
+		}
+
+		var result map[string]any
+		if err := json.Unmarshal(jsonData, &result); err != nil {
+			t.Fatalf("failed to unmarshal JSON: %v", err)
+		}
+
+		want := map[string]any{
+			"field": true,
+		}
+
+		if !reflect.DeepEqual(result, want) {
+			t.Errorf("want %+v, got %+v", want, result)
 		}
 	})
 }
@@ -371,6 +402,39 @@ func TestFields_LogValue(t *testing.T) {
 
 		if result["fields"] != nil {
 			t.Errorf("want fields to be nil for empty fields, got %+v", result["fields"])
+		}
+	})
+
+	t.Run("overwrite same name fields", func(t *testing.T) {
+		constructor1, _ := errdef.DefineField[string]("field")
+		constructor2, _ := errdef.DefineField[int]("field")
+		constructor3, _ := errdef.DefineField[bool]("field")
+
+		def := errdef.Define("test_error",
+			constructor1("first"),
+			constructor2(42),
+			constructor3(true),
+		)
+		err := def.New("test message")
+
+		fields := err.(errdef.Error).Fields()
+		value := fields.(slog.LogValuer).LogValue()
+
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, nil))
+		logger.Info("test", slog.Any("fields", value))
+
+		var result map[string]any
+		if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+			t.Fatalf("failed to unmarshal JSON: %v", err)
+		}
+
+		want := map[string]any{
+			"field": true,
+		}
+
+		if !reflect.DeepEqual(result["fields"], want) {
+			t.Errorf("want fields %+v, got %+v", want, result["fields"])
 		}
 	})
 
