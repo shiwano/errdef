@@ -115,18 +115,9 @@ func (d *Definition) Is(err error) bool {
 }
 
 func (d *Definition) clone() *Definition {
-	return &Definition{
-		root:          d.root,
-		kind:          d.kind,
-		fields:        d.fields.clone(),
-		noTrace:       d.noTrace,
-		stackSkip:     d.stackSkip,
-		stackDepth:    d.stackDepth,
-		boundary:      d.boundary,
-		formatter:     d.formatter,
-		jsonMarshaler: d.jsonMarshaler,
-		logValuer:     d.logValuer,
-	}
+	clone := *d
+	clone.fields = d.fields.clone()
+	return &clone
 }
 
 func (d *Definition) applyOptions(opts []Option) {
