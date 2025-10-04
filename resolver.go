@@ -14,6 +14,15 @@ type (
 		resolver *Resolver
 		fallback *Definition
 	}
+
+	resolver interface {
+		Definitions() []*Definition
+	}
+)
+
+var (
+	_ resolver = (*Resolver)(nil)
+	_ resolver = (*FallbackResolver)(nil)
 )
 
 // NewResolver creates a new Resolver with the given definitions.
@@ -34,6 +43,11 @@ func NewResolver(defs ...*Definition) *Resolver {
 		defs:   defs,
 		byKind: byKind,
 	}
+}
+
+// Definitions returns all definitions managed by the resolver.
+func (r *Resolver) Definitions() []*Definition {
+	return r.defs[:]
 }
 
 // WithFallback creates a new FallbackResolver that uses the given definition
@@ -75,6 +89,13 @@ func (r *Resolver) ResolveFieldFunc(key FieldKey, eq func(v FieldValue) bool) (*
 		return def, true // First definition wins
 	}
 	return nil, false
+}
+
+// Definitions returns all definitions managed by the resolver.
+func (r *FallbackResolver) Definitions() []*Definition {
+	defs := r.resolver.Definitions()
+	defs = append(defs, r.fallback)
+	return defs
 }
 
 // ResolveKind resolves a definition by its Kind.
