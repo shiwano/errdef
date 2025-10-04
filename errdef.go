@@ -39,7 +39,7 @@ func Define(kind Kind, opts ...Option) *Definition {
 // (e.g., to JSON). To avoid ambiguity in logs and other serialized representations,
 // it is strongly recommended to use a unique name for each defined field.
 func DefineField[T any](name string) (FieldConstructor[T], FieldExtractor[T]) {
-	k := &fieldKey{name: name}
+	k := &fieldKey[T]{name: name}
 	constructor := func(value T) Option {
 		return &field[T]{key: k, value: value}
 	}

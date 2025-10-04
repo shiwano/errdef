@@ -27,6 +27,7 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
   - [Joining Errors](#joining-errors)
   - [Panic Handling](#panic-handling)
   - [Error Resolution](#error-resolution)
+  - [Error Deserialization](#error-deserialization)
   - [Ecosystem Integration](#ecosystem-integration)
   - [Built-in Options](#built-in-options)
 - [Contributing](#contributing)
@@ -411,6 +412,60 @@ func handleStripeHTTPError(statusCode int, msg string) error {
 ```
 
 > **Note:** If multiple definitions have the same Kind or field value, the first one in the resolver's definition order will be used.
+
+### Error Deserialization
+
+The `errdef/unmarshaler` package provides the ability to deserialize `errdef.Error` instances from structured data such as JSON.
+This allows you to reconstruct errors received from external systems into well-typed `errdef.Error` instances.
+
+- **Type-Safe Conversion:** Automatically converts field values to their expected types, supporting numeric types, structs, and slices.
+- **Kind Resolution:** Uses a `Resolver` to map kind strings to error definitions, ensuring the correct error type is restored.
+- **Foreign Error Support:** Handles unknown error types as `ForeignCause`, preserving the cause chain without losing information.
+- **Stack Preservation:** Restores serialized stack trace information to aid in debugging.
+- **Custom Decoders:** You can provide custom decoders for other formats (e.g., Protobuf, MessagePack) by implementing the `Decoder` function type and using `unmarshaler.New(resolver, decoder)`.
+
+```go
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+    "log/slog"
+
+    "github.com/shiwano/errdef"
+    "github.com/shiwano/errdef/unmarshaler"
+)
+
+var (
+    ErrNotFound            = errdef.Define("not_found")
+    UserID, UserIDFrom     = errdef.DefineField[string]("user_id")
+)
+
+func main() {
+    // Serialize an errdef.Error to JSON
+    original := ErrNotFound.WithOptions(UserID("u123")).New("user not found")
+    data, _ := json.Marshal(original)
+
+    // Deserialize JSON back into an errdef.Error
+    resolver := errdef.NewResolver(ErrNotFound)
+    u := unmarshaler.NewJSON(resolver)
+    restored, _ := u.Unmarshal(data)
+
+    fmt.Println(restored.Kind())             // "not_found"
+    fmt.Println(restored.Error())            // "user not found"
+    userID, _ := UserIDFrom(restored)
+    fmt.Println(userID)                      // "u123"
+
+    // The restored error works with json.Marshaler
+    remarshaled, _ := json.Marshal(restored)
+    fmt.Println(string(remarshaled))         // {"message":"user not found","kind":"not_found",...}
+
+    // The restored error works with slog.LogValuer
+    slog.Error("operation failed", "error", restored)
+}
+```
+
+> **Note:** Deserialization is performed on a **best-effort basis**. The unmarshaler attempts to convert field values to their expected types, but if conversion fails, the field is stored as an unknown field without causing an error.
 
 ### Ecosystem Integration
 

@@ -24,14 +24,6 @@ type (
 	}
 )
 
-func (k customFieldKey) String() string {
-	return string(k)
-}
-
-func (o customField) ApplyOption(a errdef.OptionApplier) {
-	a.SetField(o.key, &customFieldValue[any]{value: o.value})
-}
-
 func TestFields_Get(t *testing.T) {
 	t.Run("existing key", func(t *testing.T) {
 		constructor, _ := errdef.DefineField[string]("test_field")
@@ -464,6 +456,22 @@ func TestFields_LogValue(t *testing.T) {
 			t.Errorf("want fields %+v, got %+v", want, result["fields"])
 		}
 	})
+}
+
+func (o customField) ApplyOption(a errdef.OptionApplier) {
+	a.SetField(o.key, &customFieldValue[any]{value: o.value})
+}
+
+func (k customFieldKey) String() string {
+	return string(k)
+}
+
+func (k customFieldKey) NewValue(value any) (errdef.FieldValue, bool) {
+	return nil, false
+}
+
+func (k customFieldKey) ZeroValue() errdef.FieldValue {
+	return &customFieldValue[any]{value: nil}
 }
 
 func (v *customFieldValue[T]) Value() any {

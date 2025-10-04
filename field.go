@@ -30,6 +30,11 @@ type (
 	// FieldKey represents a key for structured error fields.
 	FieldKey interface {
 		fmt.Stringer
+
+		// From creates a new FieldValue with the same type from the given value.
+		NewValue(value any) (FieldValue, bool)
+		// ZeroValue returns a FieldValue representing the zero value for the key's type.
+		ZeroValue() FieldValue
 	}
 
 	// FieldValue represents a value for structured error fields.
@@ -45,7 +50,7 @@ type (
 		lastIndex int
 	}
 
-	fieldKey struct {
+	fieldKey[T any] struct {
 		name string
 	}
 
@@ -63,7 +68,7 @@ var (
 	_ Fields         = (*fields)(nil)
 	_ json.Marshaler = (*fields)(nil)
 	_ slog.LogValuer = (*fields)(nil)
-	_ FieldKey       = (*fieldKey)(nil)
+	_ FieldKey       = (*fieldKey[string])(nil)
 	_ FieldValue     = (*fieldValue[string])(nil)
 )
 
@@ -154,8 +159,20 @@ func (f *fields) clone() *fields {
 	}
 }
 
-func (k *fieldKey) String() string {
+func (k *fieldKey[T]) String() string {
 	return k.name
+}
+
+func (k *fieldKey[T]) NewValue(value any) (FieldValue, bool) {
+	if tv, ok := value.(T); ok {
+		return &fieldValue[T]{value: tv}, true
+	}
+	return nil, false
+}
+
+func (k *fieldKey[T]) ZeroValue() FieldValue {
+	var zero T
+	return &fieldValue[T]{value: zero}
 }
 
 func (v *fieldValue[T]) Value() any {
