@@ -114,6 +114,11 @@ func (d *Definition) Is(err error) bool {
 	return errors.Is(err, d)
 }
 
+// Fields returns the fields associated with this definition.
+func (d *Definition) Fields() Fields {
+	return d.fields
+}
+
 func (d *Definition) clone() *Definition {
 	clone := *d
 	clone.fields = d.fields.clone()
