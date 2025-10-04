@@ -212,9 +212,9 @@ func (v *fieldValue[T]) Equals(other any) bool {
 }
 
 func fieldValueFrom[T any](err error, key FieldKey) (T, bool) {
-	var e *definedError
+	var e Error
 	if errors.As(err, &e) {
-		if v, found := e.def.fields.Get(key); found {
+		if v, found := e.Fields().Get(key); found {
 			vv := v.Value()
 
 			if tv, ok := vv.(T); ok {
