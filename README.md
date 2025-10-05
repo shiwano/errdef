@@ -437,8 +437,8 @@ import (
 )
 
 var (
-    ErrNotFound            = errdef.Define("not_found")
-    UserID, UserIDFrom     = errdef.DefineField[string]("user_id")
+    ErrNotFound        = errdef.Define("not_found")
+    UserID, UserIDFrom = errdef.DefineField[string]("user_id")
 )
 
 func main() {
