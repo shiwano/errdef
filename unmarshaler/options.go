@@ -5,6 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"io/fs"
+	"net"
+	"net/http"
 	"os"
 )
 
@@ -34,10 +37,37 @@ func standardSentinelErrors() []error {
 		io.ErrClosedPipe,
 		context.Canceled,
 		context.DeadlineExceeded,
-		os.ErrNotExist,
-		os.ErrExist,
+		os.ErrInvalid,
 		os.ErrPermission,
+		os.ErrExist,
+		os.ErrNotExist,
 		os.ErrClosed,
+		os.ErrNoDeadline,
+		os.ErrDeadlineExceeded,
+		os.ErrProcessDone,
+		fs.ErrInvalid,
+		fs.ErrPermission,
+		fs.ErrExist,
+		fs.ErrNotExist,
+		fs.ErrClosed,
+		net.ErrClosed,
+		net.ErrWriteToConnected,
+		http.ErrNotSupported,
+		http.ErrMissingBoundary,
+		http.ErrNotMultipart,
+		http.ErrBodyNotAllowed,
+		http.ErrHijacked,
+		http.ErrContentLength,
+		http.ErrBodyReadAfterClose,
+		http.ErrHandlerTimeout,
+		http.ErrLineTooLong,
+		http.ErrMissingFile,
+		http.ErrNoCookie,
+		http.ErrNoLocation,
+		http.ErrSchemeMismatch,
+		http.ErrServerClosed,
+		http.ErrSkipAltProtocol,
+		http.ErrUseLastResponse,
 		sql.ErrConnDone,
 		sql.ErrTxDone,
 		sql.ErrNoRows,
