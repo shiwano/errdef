@@ -437,7 +437,7 @@ var (
 
 func main() {
     // Serialize an errdef.Error to JSON
-    original := ErrNotFound.WithOptions(UserID("u123")).Wrap(io.EOF, "user not found")
+    original := ErrNotFound.WithOptions(UserID("u123")).Wrapf(io.EOF, "user not found")
     data, _ := json.Marshal(original)
 
     // Deserialize JSON back into an errdef.Error
