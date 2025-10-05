@@ -445,10 +445,9 @@ func main() {
     u := unmarshaler.NewJSON(resolver, unmarshaler.WithStandardSentinelErrors())
     restored, _ := u.Unmarshal(data)
 
-    fmt.Println(restored.Kind())   // "not_found"
-    fmt.Println(restored.Error())  // "user not found: EOF"
-    userID, _ := UserIDFrom(restored)
-    fmt.Println(userID)            // "u123"
+    fmt.Println(restored.Kind())             // "not_found"
+    fmt.Println(restored.Error())            // "user not found: EOF"
+    fmt.Println(UserIDFrom.OrZero(restored)) // "u123"
 }
 ```
 
