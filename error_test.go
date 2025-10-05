@@ -572,7 +572,10 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 				"password": "[REDACTED]",
 			},
 			"causes": []any{
-				map[string]any{"message": "connection failed"},
+				map[string]any{
+					"message": "connection failed",
+					"type":    "*errors.errorString",
+				},
 			},
 			"stack": stack,
 		}
@@ -647,6 +650,7 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 			"causes": []any{
 				map[string]any{
 					"message": "error code 500: custom error",
+					"type":    "*errdef_test.customError",
 					"data": map[string]any{
 						"code": float64(500),
 						"msg":  "custom error",
@@ -681,6 +685,7 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 			"causes": []any{
 				map[string]any{
 					"message": "standard error",
+					"type":    "*errors.errorString",
 				},
 			},
 		}
@@ -720,6 +725,7 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 				},
 				map[string]any{
 					"message": "error code 404: not found",
+					"type":    "*errdef_test.customError",
 					"data": map[string]any{
 						"code": float64(404),
 						"msg":  "not found",
@@ -727,6 +733,7 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 				},
 				map[string]any{
 					"message": "standard error",
+					"type":    "*errors.errorString",
 				},
 			},
 		}

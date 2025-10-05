@@ -138,7 +138,3 @@ func (v *unmarshaledFieldValue) Value() any {
 func (v *unmarshaledFieldValue) Equals(other any) bool {
 	return false
 }
-
-func (v *unmarshaledFieldValue) From(value any) (errdef.FieldValue, bool) {
-	return nil, false
-}

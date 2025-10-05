@@ -55,6 +55,15 @@ type (
 		Cause() error
 	}
 
+	// errorEncoder defines methods for exporting error information in various formats.
+	// This interface is used internally to implement fmt.Formatter, json.Marshaler,
+	// and slog.LogValuer in the unmarshaler package.
+	errorEncoder interface {
+		ErrorFormatter(err Error, s fmt.State, verb rune)
+		ErrorJSONMarshaler(err Error) ([]byte, error)
+		ErrorLogValuer(err Error) slog.Value
+	}
+
 	definedError struct {
 		def    *Definition
 		msg    string
@@ -72,6 +81,7 @@ var (
 	_ slog.LogValuer = (*definedError)(nil)
 	_ stackTracer    = (*definedError)(nil)
 	_ causer         = (*definedError)(nil)
+	_ errorEncoder   = (*definedError)(nil)
 )
 
 func newError(d *Definition, cause error, msg string, joined bool, stackSkip int) error {
@@ -161,8 +171,29 @@ func (e *definedError) Cause() error {
 }
 
 func (e *definedError) Format(s fmt.State, verb rune) {
+	if verb == 'v' && s.Flag('#') {
+		// Avoid infinite recursion in case someone does %#v on definedError.
+		type (
+			definedError_ definedError
+			definedError  definedError_
+		)
+		_, _ = fmt.Fprintf(s, "%#v", (*definedError)(e))
+		return
+	}
+	e.ErrorFormatter(e, s, verb)
+}
+
+func (e *definedError) MarshalJSON() ([]byte, error) {
+	return e.ErrorJSONMarshaler(e)
+}
+
+func (e *definedError) LogValue() slog.Value {
+	return e.ErrorLogValuer(e)
+}
+
+func (e *definedError) ErrorFormatter(err Error, s fmt.State, verb rune) {
 	if e.def.formatter != nil {
-		e.def.formatter(e, s, verb)
+		e.def.formatter(err, s, verb)
 		return
 	}
 
@@ -170,24 +201,24 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 	case 'v':
 		switch {
 		case s.Flag('+'):
-			_, _ = io.WriteString(s, e.Error())
+			_, _ = io.WriteString(s, err.Error())
 
-			causes := e.Unwrap()
+			causes := err.Unwrap()
 
-			if e.Kind() != "" || e.Fields().Len() > 0 || e.Stack().Len() > 0 || len(causes) > 0 {
+			if err.Kind() != "" || err.Fields().Len() > 0 || err.Stack().Len() > 0 || len(causes) > 0 {
 				_, _ = io.WriteString(s, "\n")
 			}
 
-			if e.Kind() != "" {
+			if err.Kind() != "" {
 				_, _ = io.WriteString(s, "\nKind:\n")
 				_, _ = io.WriteString(s, "\t")
-				_, _ = io.WriteString(s, string(e.Kind()))
+				_, _ = io.WriteString(s, string(err.Kind()))
 			}
 
-			if e.Fields().Len() > 0 {
+			if err.Fields().Len() > 0 {
 				_, _ = io.WriteString(s, "\nFields:\n")
 				i := 0
-				for k, v := range e.Fields().SortedSeq() {
+				for k, v := range err.Fields().SortedSeq() {
 					if i > 0 {
 						_, _ = io.WriteString(s, "\n")
 					}
@@ -199,10 +230,10 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 				}
 			}
 
-			if e.Stack().Len() > 0 {
+			if err.Stack().Len() > 0 {
 				_, _ = io.WriteString(s, "\nStack:\n")
 				i := 0
-				for _, f := range e.Stack().Frames() {
+				for _, f := range err.Stack().Frames() {
 					if f.File != "" {
 						if i > 0 {
 							_, _ = io.WriteString(s, "\n")
@@ -237,36 +268,54 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 				}
 			}
 		case s.Flag('#'):
-			// Avoid infinite recursion in case someone does %#v on definedError.
-			type (
-				definedError_ definedError
-				definedError  definedError_
-			)
-			_, _ = fmt.Fprintf(s, "%#v", (*definedError)(e))
+			// Don't support %#v to avoid infinite recursion in this method.
+			_, _ = io.WriteString(s, err.Error())
 		default:
-			_, _ = io.WriteString(s, e.Error())
+			_, _ = io.WriteString(s, err.Error())
 		}
 	case 's':
-		_, _ = io.WriteString(s, e.Error())
+		_, _ = io.WriteString(s, err.Error())
 	case 'q':
-		_, _ = fmt.Fprintf(s, "%q", e.Error())
+		_, _ = fmt.Fprintf(s, "%q", err.Error())
 	}
 }
 
-func (e *definedError) MarshalJSON() ([]byte, error) {
+func (e *definedError) ErrorJSONMarshaler(err Error) ([]byte, error) {
 	if e.def.jsonMarshaler != nil {
 		return e.def.jsonMarshaler(e)
 	}
 
+	var fields Fields
+	if err.Fields().Len() > 0 {
+		fields = err.Fields()
+	}
+
+	var stacks []Frame
+	if err.Stack().Len() > 0 {
+		stacks = err.Stack().Frames()
+	}
+
 	var causes []json.RawMessage
-	for _, c := range e.Unwrap() {
+	for _, c := range err.Unwrap() {
 		switch t := c.(type) {
-		case *definedError:
-			b, err := t.MarshalJSON()
-			if err != nil {
-				return nil, err
+		case Error:
+			if m, ok := t.(json.Marshaler); ok {
+				b, err := m.MarshalJSON()
+				if err != nil {
+					return nil, err
+				}
+				causes = append(causes, b)
+			} else {
+				b, err := json.Marshal(struct {
+					Message string `json:"message"`
+				}{
+					Message: c.Error(),
+				})
+				if err != nil {
+					return nil, err
+				}
+				causes = append(causes, b)
 			}
-			causes = append(causes, b)
 		case json.Marshaler:
 			data, err := t.MarshalJSON()
 			if err != nil {
@@ -275,9 +324,11 @@ func (e *definedError) MarshalJSON() ([]byte, error) {
 
 			b, err := json.Marshal(struct {
 				Message string          `json:"message"`
+				Type    string          `json:"type"`
 				Data    json.RawMessage `json:"data"`
 			}{
 				Message: c.Error(),
+				Type:    fmt.Sprintf("%T", c),
 				Data:    data,
 			})
 			if err != nil {
@@ -287,8 +338,10 @@ func (e *definedError) MarshalJSON() ([]byte, error) {
 		default:
 			b, err := json.Marshal(struct {
 				Message string `json:"message"`
+				Type    string `json:"type"`
 			}{
 				Message: c.Error(),
+				Type:    fmt.Sprintf("%T", c),
 			})
 			if err != nil {
 				return nil, err
@@ -296,12 +349,6 @@ func (e *definedError) MarshalJSON() ([]byte, error) {
 			causes = append(causes, b)
 		}
 	}
-
-	var fields Fields
-	if e.Fields().Len() > 0 {
-		fields = e.Fields()
-	}
-
 	return json.Marshal(struct {
 		Message string            `json:"message"`
 		Kind    string            `json:"kind,omitempty"`
@@ -309,38 +356,38 @@ func (e *definedError) MarshalJSON() ([]byte, error) {
 		Stack   []Frame           `json:"stack,omitempty"`
 		Causes  []json.RawMessage `json:"causes,omitempty"`
 	}{
-		Message: e.Error(),
-		Kind:    string(e.Kind()),
+		Message: err.Error(),
+		Kind:    string(err.Kind()),
 		Fields:  fields,
-		Stack:   e.stack.Frames(),
+		Stack:   stacks,
 		Causes:  causes,
 	})
 }
 
-func (e *definedError) LogValue() slog.Value {
+func (e *definedError) ErrorLogValuer(err Error) slog.Value {
 	if e.def.logValuer != nil {
 		return e.def.logValuer(e)
 	}
 
 	attrs := make([]slog.Attr, 0, 5)
 
-	attrs = append(attrs, slog.String("message", e.msg))
+	attrs = append(attrs, slog.String("message", err.Error()))
 
-	if e.Kind() != "" {
-		attrs = append(attrs, slog.String("kind", string(e.Kind())))
+	if err.Kind() != "" {
+		attrs = append(attrs, slog.String("kind", string(err.Kind())))
 	}
 
-	if e.Fields().Len() > 0 {
-		attrs = append(attrs, slog.Any("fields", e.Fields()))
+	if err.Fields().Len() > 0 {
+		attrs = append(attrs, slog.Any("fields", err.Fields()))
 	}
 
-	if e.Stack().Len() > 0 {
-		if frame, ok := e.Stack().HeadFrame(); ok {
+	if err.Stack().Len() > 0 {
+		if frame, ok := err.Stack().HeadFrame(); ok {
 			attrs = append(attrs, slog.Any("origin", frame))
 		}
 	}
 
-	causes := e.Unwrap()
+	causes := err.Unwrap()
 	if len(causes) > 0 {
 		causeMessages := make([]string, len(causes))
 		for i, c := range causes {
@@ -348,6 +395,5 @@ func (e *definedError) LogValue() slog.Value {
 		}
 		attrs = append(attrs, slog.Any("causes", causeMessages))
 	}
-
 	return slog.GroupValue(attrs...)
 }
