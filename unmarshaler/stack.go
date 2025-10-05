@@ -1,7 +1,6 @@
 package unmarshaler
 
 import (
-	"encoding/json"
 	"log/slog"
 
 	"github.com/shiwano/errdef"
@@ -11,7 +10,6 @@ type stack []errdef.Frame
 
 var (
 	_ errdef.Stack   = stack{}
-	_ json.Marshaler = stack{}
 	_ slog.LogValuer = stack{}
 )
 
@@ -32,10 +30,6 @@ func (s stack) HeadFrame() (errdef.Frame, bool) {
 
 func (s stack) Len() int {
 	return len(s)
-}
-
-func (s stack) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.Frames())
 }
 
 func (s stack) LogValue() slog.Value {
