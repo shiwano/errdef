@@ -568,3 +568,108 @@ func TestUnmarshaledError_LogValue(t *testing.T) {
 		t.Errorf("data mismatch:\nwant: %+v\ngot:  %+v", want, errorData)
 	}
 }
+
+func TestUnmarshaledError_DebugStack(t *testing.T) {
+	def := errdef.Define("test_error")
+	resolver := errdef.NewResolver(def)
+	u := unmarshaler.NewJSON(resolver)
+
+	orig := def.New("test message")
+	data, err := json.Marshal(orig)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	unmarshaled, err := u.Unmarshal(data)
+	if err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+
+	debugStacker, ok := unmarshaled.(errdef.DebugStacker)
+	if !ok {
+		t.Fatal("want unmarshaled error to implement DebugStacker")
+	}
+
+	debugStack := debugStacker.DebugStack()
+
+	if !strings.Contains(debugStack, "test message") {
+		t.Errorf("want debug stack to contain error message, got: %q", debugStack)
+	}
+
+	if !strings.Contains(debugStack, "goroutine 1 [running]:") {
+		t.Errorf("want debug stack to contain goroutine info, got: %q", debugStack)
+	}
+
+	if unmarshaled.Stack().Len() > 0 {
+		frame, _ := unmarshaled.Stack().HeadFrame()
+		if !strings.Contains(debugStack, frame.Func) {
+			t.Errorf("want debug stack to contain function name %q, got: %q", frame.Func, debugStack)
+		}
+		if !strings.Contains(debugStack, frame.File) {
+			t.Errorf("want debug stack to contain file name %q, got: %q", frame.File, debugStack)
+		}
+	}
+}
+
+func TestUnmarshaledError_Cause(t *testing.T) {
+	t.Run("with cause", func(t *testing.T) {
+		def := errdef.Define("outer_error")
+		innerDef := errdef.Define("inner_error")
+		resolver := errdef.NewResolver(def, innerDef)
+		u := unmarshaler.NewJSON(resolver)
+
+		inner := innerDef.New("inner message")
+		outer := def.Wrap(inner)
+
+		data, err := json.Marshal(outer)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		unmarshaled, err := u.Unmarshal(data)
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		causer, ok := unmarshaled.(interface{ Cause() error })
+		if !ok {
+			t.Fatal("want unmarshaled error to implement causer")
+		}
+
+		cause := causer.Cause()
+		if cause == nil {
+			t.Fatal("want cause to exist")
+		}
+
+		if cause.Error() != "inner message" {
+			t.Errorf("want cause message %q, got %q", "inner message", cause.Error())
+		}
+	})
+
+	t.Run("without cause", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		resolver := errdef.NewResolver(def)
+		u := unmarshaler.NewJSON(resolver)
+
+		orig := def.New("test message")
+		data, err := json.Marshal(orig)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		unmarshaled, err := u.Unmarshal(data)
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		causer, ok := unmarshaled.(interface{ Cause() error })
+		if !ok {
+			t.Fatal("want unmarshaled error to implement causer")
+		}
+
+		cause := causer.Cause()
+		if cause != nil {
+			t.Errorf("want cause to be nil, got: %v", cause)
+		}
+	})
+}
