@@ -415,14 +415,8 @@ func handleStripeHTTPError(statusCode int, msg string) error {
 
 ### Error Deserialization
 
-The `errdef/unmarshaler` package provides the ability to deserialize `errdef.Error` instances from structured data such as JSON.
-This allows you to reconstruct errors received from external systems into well-typed `errdef.Error` instances.
-
-- **Type-Safe Conversion:** Automatically converts field values to their expected types, supporting numeric types, structs, and slices.
-- **Kind Resolution:** Uses a `Resolver` to map kind strings to error definitions, ensuring the correct error type is restored.
-- **Foreign Error Support:** Handles unknown error types in causes, preserving the cause without losing information.
-- **Stack Preservation:** Restores serialized stack trace information to aid in debugging.
-- **Custom Decoders:** You can provide custom decoders for other formats (e.g., Protobuf, MessagePack) by implementing the `Decoder` function type and using `unmarshaler.New(resolver, decoder)`.
+The `errdef/unmarshaler` package allows you to deserialize `errdef.Error` instances from JSON or other formats.
+Use a `Resolver` to map kind strings to error definitions, and the unmarshaler will restore typed errors with their fields and stack traces.
 
 ```go
 package main
@@ -430,7 +424,7 @@ package main
 import (
     "encoding/json"
     "fmt"
-    "log/slog"
+    "io"
 
     "github.com/shiwano/errdef"
     "github.com/shiwano/errdef/unmarshaler"
@@ -443,29 +437,20 @@ var (
 
 func main() {
     // Serialize an errdef.Error to JSON
-    original := ErrNotFound.WithOptions(UserID("u123")).New("user not found")
+    original := ErrNotFound.WithOptions(UserID("u123")).Wrap(io.EOF, "user not found")
     data, _ := json.Marshal(original)
 
     // Deserialize JSON back into an errdef.Error
     resolver := errdef.NewResolver(ErrNotFound)
-    u := unmarshaler.NewJSON(resolver)
+    u := unmarshaler.NewJSON(resolver, unmarshaler.WithStandardSentinelErrors())
     restored, _ := u.Unmarshal(data)
 
-    fmt.Println(restored.Kind())             // "not_found"
-    fmt.Println(restored.Error())            // "user not found"
+    fmt.Println(restored.Kind())   // "not_found"
+    fmt.Println(restored.Error())  // "user not found: EOF"
     userID, _ := UserIDFrom(restored)
-    fmt.Println(userID)                      // "u123"
-
-    // The restored error works with json.Marshaler
-    remarshaled, _ := json.Marshal(restored)
-    fmt.Println(string(remarshaled))         // {"message":"user not found","kind":"not_found",...}
-
-    // The restored error works with slog.LogValuer
-    slog.Error("operation failed", "error", restored)
+    fmt.Println(userID)            // "u123"
 }
 ```
-
-> **Note:** Deserialization is performed on a **best-effort basis**. The unmarshaler attempts to convert field values to their expected types, but if conversion fails, the field is stored as an unknown field without causing an error.
 
 ### Ecosystem Integration
 
