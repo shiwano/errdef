@@ -299,25 +299,13 @@ func (e *definedError) ErrorJSONMarshaler(err Error) ([]byte, error) {
 	for _, c := range err.Unwrap() {
 		switch t := c.(type) {
 		case Error:
-			if m, ok := t.(json.Marshaler); ok {
-				b, err := m.MarshalJSON()
-				if err != nil {
-					return nil, err
-				}
-				causes = append(causes, b)
-			} else {
-				b, err := json.Marshal(struct {
-					Message string `json:"message"`
-				}{
-					Message: c.Error(),
-				})
-				if err != nil {
-					return nil, err
-				}
-				causes = append(causes, b)
+			b, err := t.(json.Marshaler).MarshalJSON()
+			if err != nil {
+				return nil, err
 			}
+			causes = append(causes, b)
 		case json.Marshaler:
-			data, err := t.MarshalJSON()
+			data, err := json.Marshal(t)
 			if err != nil {
 				return nil, err
 			}
