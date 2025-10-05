@@ -420,7 +420,7 @@ This allows you to reconstruct errors received from external systems into well-t
 
 - **Type-Safe Conversion:** Automatically converts field values to their expected types, supporting numeric types, structs, and slices.
 - **Kind Resolution:** Uses a `Resolver` to map kind strings to error definitions, ensuring the correct error type is restored.
-- **Foreign Error Support:** Handles unknown error types as `ForeignCause`, preserving the cause chain without losing information.
+- **Foreign Error Support:** Handles unknown error types in causes, preserving the cause without losing information.
 - **Stack Preservation:** Restores serialized stack trace information to aid in debugging.
 - **Custom Decoders:** You can provide custom decoders for other formats (e.g., Protobuf, MessagePack) by implementing the `Decoder` function type and using `unmarshaler.New(resolver, decoder)`.
 
