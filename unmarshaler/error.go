@@ -10,6 +10,14 @@ import (
 )
 
 type (
+	// UnmarshaledError is an error type returned by Unmarshaler.
+	UnmarshaledError interface {
+		errdef.Error
+
+		// Unmarshaled is a marker method to identify this interface.
+		Unmarshaled()
+	}
+
 	unmarshaledError struct {
 		definedError  errdef.Error
 		fields        map[errdef.FieldKey]errdef.FieldValue
@@ -30,7 +38,7 @@ type (
 )
 
 var (
-	_ errdef.Error        = (*unmarshaledError)(nil)
+	_ UnmarshaledError    = (*unmarshaledError)(nil)
 	_ errdef.DebugStacker = (*unmarshaledError)(nil)
 	_ fmt.Formatter       = (*unmarshaledError)(nil)
 	_ json.Marshaler      = (*unmarshaledError)(nil)
@@ -60,6 +68,8 @@ func (e *unmarshaledError) Stack() errdef.Stack {
 func (e *unmarshaledError) Unwrap() []error {
 	return e.causes
 }
+
+func (e *unmarshaledError) Unmarshaled() {}
 
 func (e *unmarshaledError) Is(target error) bool {
 	if is, ok := e.definedError.(interface{ Is(error) bool }); ok {
@@ -111,5 +121,5 @@ func (e *unmarshaledError) Cause() error {
 	if len(e.causes) == 0 {
 		return nil
 	}
-	return e.causes[0]
+	return e.causes[0] // return the first cause only
 }

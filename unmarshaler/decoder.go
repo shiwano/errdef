@@ -27,7 +27,7 @@ func jsonDecoder(data []byte) (*DecodedData, error) {
 }
 
 func mapToDecodedData(data map[string]any) (*DecodedData, error) {
-	decoded := &DecodedData{}
+	decoded := DecodedData{}
 
 	if msg, ok := data["message"].(string); ok {
 		decoded.Message = msg
@@ -70,5 +70,5 @@ func mapToDecodedData(data map[string]any) (*DecodedData, error) {
 		}
 		decoded.Causes = causes
 	}
-	return decoded, nil
+	return &decoded, nil
 }

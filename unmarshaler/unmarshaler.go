@@ -34,7 +34,7 @@ func NewJSON(resolver Resolver) *Unmarshaler {
 	}
 }
 
-func (d *Unmarshaler) Unmarshal(data []byte) (errdef.Error, error) {
+func (d *Unmarshaler) Unmarshal(data []byte) (UnmarshaledError, error) {
 	decoded, err := d.decoder(data)
 	if err != nil {
 		return nil, ErrDecodeFailure.Wrap(err)
@@ -55,7 +55,7 @@ func (d *Unmarshaler) resolveKind(kind errdef.Kind) (*errdef.Definition, error) 
 	return nil, ErrInternal.New("resolver does not support kind resolution")
 }
 
-func (d *Unmarshaler) unmarshal(decoded *DecodedData) (errdef.Error, error) {
+func (d *Unmarshaler) unmarshal(decoded *DecodedData) (UnmarshaledError, error) {
 	def, err := d.resolveKind(errdef.Kind(decoded.Kind))
 	if err != nil {
 		return nil, err
