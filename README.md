@@ -446,7 +446,7 @@ func main() {
     restored, _ := u.Unmarshal(data)
 
     fmt.Println(restored.Kind())             // "not_found"
-    fmt.Println(restored.Error())            // "user not found: EOF"
+    fmt.Println(restored.Error())            // "user not found"
     fmt.Println(UserIDFrom.OrZero(restored)) // "u123"
     fmt.Println(errors.Is(restored, io.EOF)) // true
 }
