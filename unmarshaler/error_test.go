@@ -312,12 +312,14 @@ func TestUnmarshaledError_MarshalJSON(t *testing.T) {
 	t.Run("roundtrip", func(t *testing.T) {
 		userID, _ := errdef.DefineField[string]("user_id")
 		def := errdef.Define("outer_error", userID("user123"))
+		middleDef := errdef.Define("middle_error")
 		innerDef := errdef.Define("inner_error")
-		resolver := errdef.NewResolver(def, innerDef)
+		resolver := errdef.NewResolver(def, middleDef, innerDef)
 		u := unmarshaler.NewJSON(resolver)
 
 		inner := innerDef.New("inner message")
-		outer := def.Wrap(inner)
+		middle := middleDef.Wrap(inner)
+		outer := def.Wrap(middle)
 
 		data1, err := json.Marshal(outer)
 		if err != nil {

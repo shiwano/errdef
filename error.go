@@ -297,46 +297,13 @@ func (e *definedError) ErrorJSONMarshaler(err Error) ([]byte, error) {
 
 	var causes []json.RawMessage
 	for _, c := range err.Unwrap() {
-		switch t := c.(type) {
-		case Error:
-			b, err := t.(json.Marshaler).MarshalJSON()
-			if err != nil {
-				return nil, err
-			}
-			causes = append(causes, b)
-		case json.Marshaler:
-			data, err := json.Marshal(t)
-			if err != nil {
-				return nil, err
-			}
-
-			b, err := json.Marshal(struct {
-				Message string          `json:"message"`
-				Type    string          `json:"type"`
-				Data    json.RawMessage `json:"data"`
-			}{
-				Message: c.Error(),
-				Type:    fmt.Sprintf("%T", c),
-				Data:    data,
-			})
-			if err != nil {
-				return nil, err
-			}
-			causes = append(causes, b)
-		default:
-			b, err := json.Marshal(struct {
-				Message string `json:"message"`
-				Type    string `json:"type"`
-			}{
-				Message: c.Error(),
-				Type:    fmt.Sprintf("%T", c),
-			})
-			if err != nil {
-				return nil, err
-			}
-			causes = append(causes, b)
+		b, marshalErr := marshalCauseJSON(c)
+		if marshalErr != nil {
+			return nil, marshalErr
 		}
+		causes = append(causes, b)
 	}
+
 	return json.Marshal(struct {
 		Message string            `json:"message"`
 		Kind    string            `json:"kind,omitempty"`
@@ -384,4 +351,40 @@ func (e *definedError) ErrorLogValuer(err Error) slog.Value {
 		attrs = append(attrs, slog.Any("causes", causeMessages))
 	}
 	return slog.GroupValue(attrs...)
+}
+
+func marshalCauseJSON(c error) (json.RawMessage, error) {
+	switch t := c.(type) {
+	case Error:
+		return t.(json.Marshaler).MarshalJSON()
+	default:
+		var nestedCauses []json.RawMessage
+		if unwrapper, ok := c.(interface{ Unwrap() error }); ok {
+			if nested := unwrapper.Unwrap(); nested != nil {
+				nestedCause, err := marshalCauseJSON(nested)
+				if err != nil {
+					return nil, err
+				}
+				nestedCauses = append(nestedCauses, nestedCause)
+			}
+		} else if unwrapper, ok := c.(interface{ Unwrap() []error }); ok {
+			for _, nested := range unwrapper.Unwrap() {
+				nestedCause, err := marshalCauseJSON(nested)
+				if err != nil {
+					return nil, err
+				}
+				nestedCauses = append(nestedCauses, nestedCause)
+			}
+		}
+
+		return json.Marshal(struct {
+			Message string            `json:"message"`
+			Type    string            `json:"type"`
+			Causes  []json.RawMessage `json:"causes,omitempty"`
+		}{
+			Message: c.Error(),
+			Type:    fmt.Sprintf("%T", c),
+			Causes:  nestedCauses,
+		})
+	}
 }

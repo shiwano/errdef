@@ -628,42 +628,6 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 		}
 	})
 
-	t.Run("causes with json.Marshaler", func(t *testing.T) {
-		customErr := &customError{Code: 500, Msg: "custom error"}
-
-		def := errdef.Define("wrapper_error", errdef.NoTrace())
-		err := def.Wrap(customErr)
-
-		data, jsonErr := json.Marshal(err)
-		if jsonErr != nil {
-			t.Fatalf("want no error, got %v", jsonErr)
-		}
-
-		var got map[string]any
-		if unmarshalErr := json.Unmarshal(data, &got); unmarshalErr != nil {
-			t.Fatalf("want valid JSON, got %v", unmarshalErr)
-		}
-
-		want := map[string]any{
-			"message": "error code 500: custom error",
-			"kind":    "wrapper_error",
-			"causes": []any{
-				map[string]any{
-					"message": "error code 500: custom error",
-					"type":    "*errdef_test.customError",
-					"data": map[string]any{
-						"code": float64(500),
-						"msg":  "custom error",
-					},
-				},
-			},
-		}
-
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("JSON mismatch:\ngot:  %#v\nwant: %#v", got, want)
-		}
-	})
-
 	t.Run("causes with standard error", func(t *testing.T) {
 		def := errdef.Define("wrapper_error", errdef.NoTrace())
 		stdErr := errors.New("standard error")
@@ -700,10 +664,9 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 		def2 := errdef.Define("wrapper_error", errdef.NoTrace())
 
 		definedErr := def1.New("defined error")
-		customErr := &customError{Code: 404, Msg: "not found"}
 		stdErr := errors.New("standard error")
 
-		joined := def2.Join(definedErr, customErr, stdErr)
+		joined := def2.Join(definedErr, stdErr)
 
 		data, jsonErr := json.Marshal(joined)
 		if jsonErr != nil {
@@ -716,7 +679,7 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 		}
 
 		want := map[string]any{
-			"message": "defined error\nerror code 404: not found\nstandard error",
+			"message": "defined error\nstandard error",
 			"kind":    "wrapper_error",
 			"causes": []any{
 				map[string]any{
@@ -724,16 +687,93 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 					"kind":    "defined_error",
 				},
 				map[string]any{
-					"message": "error code 404: not found",
-					"type":    "*errdef_test.customError",
-					"data": map[string]any{
-						"code": float64(404),
-						"msg":  "not found",
-					},
-				},
-				map[string]any{
 					"message": "standard error",
 					"type":    "*errors.errorString",
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("JSON mismatch:\ngot:  %#v\nwant: %#v", got, want)
+		}
+	})
+
+	t.Run("nested causes with fmt.Errorf wrap", func(t *testing.T) {
+		def := errdef.Define("wrapper_error", errdef.NoTrace())
+
+		baseErr := errors.New("base error")
+		wrappedErr := fmt.Errorf("wrapped: %w", baseErr)
+		err := def.Wrap(wrappedErr)
+
+		data, jsonErr := json.Marshal(err)
+		if jsonErr != nil {
+			t.Fatalf("want no error, got %v", jsonErr)
+		}
+
+		var got map[string]any
+		if unmarshalErr := json.Unmarshal(data, &got); unmarshalErr != nil {
+			t.Fatalf("want valid JSON, got %v", unmarshalErr)
+		}
+
+		want := map[string]any{
+			"message": "wrapped: base error",
+			"kind":    "wrapper_error",
+			"causes": []any{
+				map[string]any{
+					"message": "wrapped: base error",
+					"type":    "*fmt.wrapError",
+					"causes": []any{
+						map[string]any{
+							"message": "base error",
+							"type":    "*errors.errorString",
+						},
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("JSON mismatch:\ngot:  %#v\nwant: %#v", got, want)
+		}
+	})
+
+	t.Run("deeply nested error chain", func(t *testing.T) {
+		def := errdef.Define("wrapper_error", errdef.NoTrace())
+
+		err1 := errors.New("level 3 error")
+		err2 := fmt.Errorf("level 2: %w", err1)
+		err3 := fmt.Errorf("level 1: %w", err2)
+		err := def.Wrap(err3)
+
+		data, jsonErr := json.Marshal(err)
+		if jsonErr != nil {
+			t.Fatalf("want no error, got %v", jsonErr)
+		}
+
+		var got map[string]any
+		if unmarshalErr := json.Unmarshal(data, &got); unmarshalErr != nil {
+			t.Fatalf("want valid JSON, got %v", unmarshalErr)
+		}
+
+		want := map[string]any{
+			"message": "level 1: level 2: level 3 error",
+			"kind":    "wrapper_error",
+			"causes": []any{
+				map[string]any{
+					"message": "level 1: level 2: level 3 error",
+					"type":    "*fmt.wrapError",
+					"causes": []any{
+						map[string]any{
+							"message": "level 2: level 3 error",
+							"type":    "*fmt.wrapError",
+							"causes": []any{
+								map[string]any{
+									"message": "level 3 error",
+									"type":    "*errors.errorString",
+								},
+							},
+						},
+					},
 				},
 			},
 		}
@@ -992,18 +1032,4 @@ func TestError_LogValue(t *testing.T) {
 			t.Errorf("want function name to contain TestError_LogValue, got %q", funcName)
 		}
 	})
-}
-
-type customError struct {
-	Code int    `json:"code"`
-	Msg  string `json:"msg"`
-}
-
-func (e *customError) Error() string {
-	return fmt.Sprintf("error code %d: %s", e.Code, e.Msg)
-}
-
-func (e *customError) MarshalJSON() ([]byte, error) {
-	type alias customError
-	return json.Marshal((*alias)(e))
 }

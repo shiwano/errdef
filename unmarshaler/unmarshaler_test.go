@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/shiwano/errdef"
@@ -615,4 +616,290 @@ func TestUnmarshaler_SentinelErrors_WithoutOption(t *testing.T) {
 	} else if causeErr.Kind() != unmarshaler.UnknownError.Kind() {
 		t.Errorf("want kind %q, got %q", unmarshaler.UnknownError.Kind(), causeErr.Kind())
 	}
+}
+
+func TestUnmarshaler_Causes_UnknownError_Recursive(t *testing.T) {
+	def := errdef.Define("test_error")
+	resolver := errdef.NewResolver(def)
+	u := unmarshaler.NewJSON(resolver)
+
+	t.Run("single nested unknown error", func(t *testing.T) {
+		jsonData := `{
+			"message": "outer message",
+			"kind": "test_error",
+			"causes": [
+				{
+					"message": "unknown outer",
+					"kind": "unknown_kind",
+					"type": "CustomError",
+					"causes": [
+						{
+							"message": "unknown inner",
+							"kind": "another_unknown",
+							"type": "AnotherError"
+						}
+					]
+				}
+			]
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, err := json.Marshal(unmarshaled)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		var gotMap map[string]any
+		if err := json.Unmarshal(got, &gotMap); err != nil {
+			t.Fatalf("failed to unmarshal result: %v", err)
+		}
+
+		want := map[string]any{
+			"message": "outer message",
+			"kind":    "test_error",
+			"causes": []any{
+				map[string]any{
+					"message": "unknown outer",
+					"kind":    "errdef/unmarshaler.unknown_error",
+					"fields": map[string]any{
+						"type": "CustomError",
+					},
+					"causes": []any{
+						map[string]any{
+							"message": "unknown inner",
+							"kind":    "errdef/unmarshaler.unknown_error",
+							"fields": map[string]any{
+								"type": "AnotherError",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(gotMap, want) {
+			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", gotMap, want)
+		}
+	})
+
+	t.Run("multiple nested unknown errors", func(t *testing.T) {
+		jsonData := `{
+			"message": "outer message",
+			"kind": "test_error",
+			"causes": [
+				{
+					"message": "unknown outer",
+					"kind": "unknown_kind",
+					"type": "CustomError",
+					"causes": [
+						{
+							"message": "unknown inner 1",
+							"kind": "another_unknown",
+							"type": "AnotherError1"
+						},
+						{
+							"message": "unknown inner 2",
+							"kind": "yet_another_unknown",
+							"type": "AnotherError2"
+						}
+					]
+				}
+			]
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, err := json.Marshal(unmarshaled)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		var gotMap map[string]any
+		if err := json.Unmarshal(got, &gotMap); err != nil {
+			t.Fatalf("failed to unmarshal result: %v", err)
+		}
+
+		want := map[string]any{
+			"message": "outer message",
+			"kind":    "test_error",
+			"causes": []any{
+				map[string]any{
+					"message": "unknown inner 1\nunknown inner 2",
+					"kind":    "errdef/unmarshaler.unknown_error",
+					"fields": map[string]any{
+						"type": "CustomError",
+					},
+					"causes": []any{
+						map[string]any{
+							"message": "unknown inner 1",
+							"kind":    "errdef/unmarshaler.unknown_error",
+							"fields": map[string]any{
+								"type": "AnotherError1",
+							},
+						},
+						map[string]any{
+							"message": "unknown inner 2",
+							"kind":    "errdef/unmarshaler.unknown_error",
+							"fields": map[string]any{
+								"type": "AnotherError2",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(gotMap, want) {
+			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", gotMap, want)
+		}
+	})
+
+	t.Run("deeply nested unknown errors", func(t *testing.T) {
+		jsonData := `{
+			"message": "level 1",
+			"kind": "test_error",
+			"causes": [
+				{
+					"message": "level 2",
+					"kind": "unknown_kind_2",
+					"type": "Error2",
+					"causes": [
+						{
+							"message": "level 3",
+							"kind": "unknown_kind_3",
+							"type": "Error3",
+							"causes": [
+								{
+									"message": "level 4",
+									"kind": "unknown_kind_4",
+									"type": "Error4"
+								}
+							]
+						}
+					]
+				}
+			]
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, err := json.Marshal(unmarshaled)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		var gotMap map[string]any
+		if err := json.Unmarshal(got, &gotMap); err != nil {
+			t.Fatalf("failed to unmarshal result: %v", err)
+		}
+
+		want := map[string]any{
+			"message": "level 1",
+			"kind":    "test_error",
+			"causes": []any{
+				map[string]any{
+					"message": "level 2",
+					"kind":    "errdef/unmarshaler.unknown_error",
+					"fields": map[string]any{
+						"type": "Error2",
+					},
+					"causes": []any{
+						map[string]any{
+							"message": "level 3",
+							"kind":    "errdef/unmarshaler.unknown_error",
+							"fields": map[string]any{
+								"type": "Error3",
+							},
+							"causes": []any{
+								map[string]any{
+									"message": "level 4",
+									"kind":    "errdef/unmarshaler.unknown_error",
+									"fields": map[string]any{
+										"type": "Error4",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(gotMap, want) {
+			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", gotMap, want)
+		}
+	})
+
+	t.Run("mixed known and unknown nested errors", func(t *testing.T) {
+		knownDef := errdef.Define("known_error")
+		mixedResolver := errdef.NewResolver(def, knownDef)
+		mixedU := unmarshaler.NewJSON(mixedResolver)
+
+		jsonData := `{
+			"message": "outer",
+			"kind": "test_error",
+			"causes": [
+				{
+					"message": "unknown with known child",
+					"kind": "unknown_kind",
+					"type": "UnknownError",
+					"causes": [
+						{
+							"message": "known error",
+							"kind": "known_error"
+						}
+					]
+				}
+			]
+		}`
+
+		unmarshaled, err := mixedU.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, err := json.Marshal(unmarshaled)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		var gotMap map[string]any
+		if err := json.Unmarshal(got, &gotMap); err != nil {
+			t.Fatalf("failed to unmarshal result: %v", err)
+		}
+
+		want := map[string]any{
+			"message": "outer",
+			"kind":    "test_error",
+			"causes": []any{
+				map[string]any{
+					"message": "unknown with known child",
+					"kind":    "errdef/unmarshaler.unknown_error",
+					"fields": map[string]any{
+						"type": "UnknownError",
+					},
+					"causes": []any{
+						map[string]any{
+							"message": "known error",
+							"kind":    "known_error",
+						},
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(gotMap, want) {
+			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", gotMap, want)
+		}
+	})
 }

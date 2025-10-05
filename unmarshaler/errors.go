@@ -9,8 +9,6 @@ var (
 
 	UnknownError = errdef.Define("errdef/unmarshaler.unknown_error", errdef.NoTrace())
 
-	kindField, _    = errdef.DefineField[errdef.Kind]("kind")
-	typeField, _    = errdef.DefineField[string]("type")
-	dataField, _    = errdef.DefineField[string]("data")
-	rawDataField, _ = errdef.DefineField[string]("raw_data")
+	kindField, _ = errdef.DefineField[errdef.Kind]("kind")
+	typeField, _ = errdef.DefineField[string]("type")
 )
