@@ -99,8 +99,8 @@ func TestXMLDecoder_BasicUnmarshal(t *testing.T) {
 }
 
 func TestXMLDecoder_WithFields(t *testing.T) {
-	userIDCtor, userIDFrom := errdef.DefineField[int]("user_id")
-	def := errdef.Define("test_error", userIDCtor(0))
+	userID, userIDFrom := errdef.DefineField[int]("user_id")
+	def := errdef.Define("test_error", userID(0))
 	resolver := errdef.NewResolver(def)
 	u := unmarshaler.New(resolver, xmlDecoder)
 

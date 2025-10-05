@@ -69,47 +69,47 @@ func TestTryConvertFloat64(t *testing.T) {
 				t.Fatalf("failed to marshal: %v", err)
 			}
 
-			var defWithField *errdef.Definition
+			var def *errdef.Definition
 			switch tt.fieldType.(type) {
 			case int:
 				ctor, _ := errdef.DefineField[int]("test")
-				defWithField = errdef.Define("test_error", ctor(0))
+				def = errdef.Define("test_error", ctor(0))
 			case int8:
 				ctor, _ := errdef.DefineField[int8]("test")
-				defWithField = errdef.Define("test_error", ctor(0))
+				def = errdef.Define("test_error", ctor(0))
 			case int16:
 				ctor, _ := errdef.DefineField[int16]("test")
-				defWithField = errdef.Define("test_error", ctor(0))
+				def = errdef.Define("test_error", ctor(0))
 			case int32:
 				ctor, _ := errdef.DefineField[int32]("test")
-				defWithField = errdef.Define("test_error", ctor(0))
+				def = errdef.Define("test_error", ctor(0))
 			case int64:
 				ctor, _ := errdef.DefineField[int64]("test")
-				defWithField = errdef.Define("test_error", ctor(0))
+				def = errdef.Define("test_error", ctor(0))
 			case uint:
 				ctor, _ := errdef.DefineField[uint]("test")
-				defWithField = errdef.Define("test_error", ctor(0))
+				def = errdef.Define("test_error", ctor(0))
 			case uint8:
 				ctor, _ := errdef.DefineField[uint8]("test")
-				defWithField = errdef.Define("test_error", ctor(0))
+				def = errdef.Define("test_error", ctor(0))
 			case uint16:
 				ctor, _ := errdef.DefineField[uint16]("test")
-				defWithField = errdef.Define("test_error", ctor(0))
+				def = errdef.Define("test_error", ctor(0))
 			case uint32:
 				ctor, _ := errdef.DefineField[uint32]("test")
-				defWithField = errdef.Define("test_error", ctor(0))
+				def = errdef.Define("test_error", ctor(0))
 			case uint64:
 				ctor, _ := errdef.DefineField[uint64]("test")
-				defWithField = errdef.Define("test_error", ctor(0))
+				def = errdef.Define("test_error", ctor(0))
 			case float32:
 				ctor, _ := errdef.DefineField[float32]("test")
-				defWithField = errdef.Define("test_error", ctor(0))
+				def = errdef.Define("test_error", ctor(0))
 			case float64:
 				ctor, _ := errdef.DefineField[float64]("test")
-				defWithField = errdef.Define("test_error", ctor(0))
+				def = errdef.Define("test_error", ctor(0))
 			}
 
-			resolverWithField := errdef.NewResolver(defWithField)
+			resolverWithField := errdef.NewResolver(def)
 			u := unmarshaler.NewJSON(resolverWithField)
 
 			unmarshaled, err := u.Unmarshal(data)
@@ -165,8 +165,8 @@ func TestTryConvertMapToStruct(t *testing.T) {
 	}`
 
 	t.Run("not pointer", func(t *testing.T) {
-		addrCtor, addrFrom := errdef.DefineField[Address]("address")
-		def := errdef.Define("test_error", addrCtor(Address{}))
+		addressCtor, addressFrom := errdef.DefineField[Address]("address")
+		def := errdef.Define("test_error", addressCtor(Address{}))
 		resolver := errdef.NewResolver(def)
 		u := unmarshaler.NewJSON(resolver)
 
@@ -175,7 +175,7 @@ func TestTryConvertMapToStruct(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		addr, ok := addrFrom(unmarshaled)
+		addr, ok := addressFrom(unmarshaled)
 		if !ok {
 			t.Fatal("want address field to be found")
 		}
@@ -189,8 +189,8 @@ func TestTryConvertMapToStruct(t *testing.T) {
 	})
 
 	t.Run("pointer", func(t *testing.T) {
-		addrCtor, addrFrom := errdef.DefineField[*Address]("address")
-		def := errdef.Define("test_error", addrCtor(&Address{}))
+		addressCtor, addressFrom := errdef.DefineField[*Address]("address")
+		def := errdef.Define("test_error", addressCtor(&Address{}))
 		resolver := errdef.NewResolver(def)
 		u := unmarshaler.NewJSON(resolver)
 
@@ -199,7 +199,7 @@ func TestTryConvertMapToStruct(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		addr, ok := addrFrom(unmarshaled)
+		addr, ok := addressFrom(unmarshaled)
 		if !ok {
 			t.Fatal("want address field to be found")
 		}

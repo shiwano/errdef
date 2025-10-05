@@ -9,74 +9,69 @@ import (
 
 func TestDefine(t *testing.T) {
 	t.Run("basic kind", func(t *testing.T) {
-		kind := errdef.Kind("test_error")
-		def := errdef.Define(kind)
+		want := errdef.Kind("test_error")
+		def := errdef.Define(want)
 
-		if def.Kind() != kind {
-			t.Errorf("want kind %v, got %v", kind, def.Kind())
+		if got := def.Kind(); got != want {
+			t.Errorf("want kind %v, got %v", want, got)
 		}
 	})
 
 	t.Run("empty kind", func(t *testing.T) {
 		def := errdef.Define("")
 
-		if def.Kind() != "" {
-			t.Errorf("want empty kind, got %v", def.Kind())
+		if got := def.Kind(); got != "" {
+			t.Errorf("want empty kind, got %v", got)
 		}
 	})
 }
 
 func TestDefineField(t *testing.T) {
 	t.Run("constructor and extractor", func(t *testing.T) {
-		constructor, extractor := errdef.DefineField[string]("test_field")
-
-		def := errdef.Define("test_error", constructor("test_value"))
+		ctor, extr := errdef.DefineField[string]("test_field")
+		def := errdef.Define("test_error", ctor("test_value"))
 		err := def.New("test error")
 
-		value, found := extractor(err)
-		if !found {
+		got, ok := extr(err)
+		if !ok {
 			t.Error("want field to be found")
 		}
-		if value != "test_value" {
-			t.Errorf("want value %q, got %q", "test_value", value)
+		if want := "test_value"; got != want {
+			t.Errorf("want value %q, got %q", want, got)
 		}
 	})
 
 	t.Run("extractor with wrong value type", func(t *testing.T) {
 		type valueType string
 
-		constructor, _ := errdef.DefineField[string]("test_field")
-		_, extractor := errdef.DefineField[valueType]("test_field")
+		ctor, _ := errdef.DefineField[string]("test_field")
+		_, extr := errdef.DefineField[valueType]("test_field")
 
-		def := errdef.Define("test_error", constructor("test_value"))
+		def := errdef.Define("test_error", ctor("test_value"))
 		err := def.New("test error")
 
-		_, found := extractor(err)
-		if found {
+		if _, ok := extr(err); ok {
 			t.Error("want field not to be found with wrong type")
 		}
 	})
 
 	t.Run("extractor with wrong key type", func(t *testing.T) {
-		constructor, _ := errdef.DefineField[string]("test_field")
-		_, extractor := errdef.DefineField[string]("test_field")
+		ctor, _ := errdef.DefineField[string]("test_field")
+		_, extr := errdef.DefineField[string]("test_field")
 
-		def := errdef.Define("test_error", constructor("test_value"))
+		def := errdef.Define("test_error", ctor("test_value"))
 		err := def.New("test error")
 
-		_, found := extractor(err)
-		if found {
+		if _, ok := extr(err); ok {
 			t.Error("want field not to be found with wrong type")
 		}
 	})
 
 	t.Run("extractor on non-errdef error", func(t *testing.T) {
-		_, extractor := errdef.DefineField[string]("test_field")
-
+		_, extr := errdef.DefineField[string]("test_field")
 		err := errors.New("regular error")
 
-		_, found := extractor(err)
-		if found {
+		if _, ok := extr(err); ok {
 			t.Error("want field not to be found on non-errdef error")
 		}
 	})

@@ -15,8 +15,8 @@ func TestUnmarshaler_Unmarshal(t *testing.T) {
 		resolver := errdef.NewResolver(def)
 		u := unmarshaler.NewJSON(resolver)
 
-		original := def.New("test message")
-		data, err := json.Marshal(original)
+		orig := def.New("test message")
+		data, err := json.Marshal(orig)
 		if err != nil {
 			t.Fatalf("failed to marshal: %v", err)
 		}
@@ -40,8 +40,8 @@ func TestUnmarshaler_Unmarshal(t *testing.T) {
 		resolver := errdef.NewResolver(def1, def2)
 		u := unmarshaler.NewJSON(resolver)
 
-		original := def2.New("second error")
-		data, err := json.Marshal(original)
+		orig := def2.New("second error")
+		data, err := json.Marshal(orig)
 		if err != nil {
 			t.Fatalf("failed to marshal: %v", err)
 		}
@@ -439,8 +439,8 @@ func TestUnmarshaler_Fields_Redacted(t *testing.T) {
 	resolver := errdef.NewResolver(def)
 	u := unmarshaler.NewJSON(resolver)
 
-	original := def.New("authentication failed")
-	data, err := json.Marshal(original)
+	orig := def.New("authentication failed")
+	data, err := json.Marshal(orig)
 	if err != nil {
 		t.Fatalf("failed to marshal: %v", err)
 	}

@@ -29,8 +29,12 @@ func TestContextWithOptions(t *testing.T) {
 		def := errdef.Define("test-error")
 		err := def.With(ctx).New("error")
 
-		if status, ok := errdef.HTTPStatusFrom(err); !ok || status != 404 {
-			t.Errorf("want HTTP status 404, got %d", status)
+		got, ok := errdef.HTTPStatusFrom(err)
+		if !ok {
+			t.Fatal("want HTTP status to be found")
+		}
+		if want := 404; got != want {
+			t.Errorf("want HTTP status %d, got %d", want, got)
 		}
 	})
 
@@ -50,14 +54,28 @@ func TestContextWithOptions(t *testing.T) {
 		def := errdef.Define("test-error")
 		err := def.With(ctx).New("error")
 
-		if status, ok := errdef.HTTPStatusFrom(err); !ok || status != 400 {
-			t.Errorf("want HTTP status 400, got %d", status)
+		status, ok := errdef.HTTPStatusFrom(err)
+		if !ok {
+			t.Fatal("want HTTP status to be found")
 		}
-		if traceID, ok := errdef.TraceIDFrom(err); !ok || traceID != "trace-123" {
-			t.Errorf("want TraceID 'trace-123', got '%s'", traceID)
+		if want := 400; status != want {
+			t.Errorf("want HTTP status %d, got %d", want, status)
 		}
-		if level, ok := errdef.LogLevelFrom(err); !ok || level != slog.LevelError {
-			t.Errorf("want LogLevel Error, got %v", level)
+
+		traceID, ok := errdef.TraceIDFrom(err)
+		if !ok {
+			t.Fatal("want TraceID to be found")
+		}
+		if want := "trace-123"; traceID != want {
+			t.Errorf("want TraceID %q, got %q", want, traceID)
+		}
+
+		level, ok := errdef.LogLevelFrom(err)
+		if !ok {
+			t.Fatal("want LogLevel to be found")
+		}
+		if want := slog.LevelError; level != want {
+			t.Errorf("want LogLevel %v, got %v", want, level)
 		}
 	})
 
@@ -75,11 +93,20 @@ func TestContextWithOptions(t *testing.T) {
 		def := errdef.Define("test-error")
 		err := def.With(ctx3).New("error")
 
-		if status, ok := errdef.HTTPStatusFrom(err); !ok || status != 500 {
-			t.Errorf("want HTTP status 500, got %d", status)
+		status, ok := errdef.HTTPStatusFrom(err)
+		if !ok {
+			t.Fatal("want HTTP status to be found")
 		}
-		if traceID, ok := errdef.TraceIDFrom(err); !ok || traceID != "trace-456" {
-			t.Errorf("want TraceID 'trace-456', got '%s'", traceID)
+		if want := 500; status != want {
+			t.Errorf("want HTTP status %d, got %d", want, status)
+		}
+
+		traceID, ok := errdef.TraceIDFrom(err)
+		if !ok {
+			t.Fatal("want TraceID to be found")
+		}
+		if want := "trace-456"; traceID != want {
+			t.Errorf("want TraceID %q, got %q", want, traceID)
 		}
 	})
 }

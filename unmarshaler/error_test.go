@@ -19,8 +19,8 @@ func TestUnmarshaledError_Error(t *testing.T) {
 	resolver := errdef.NewResolver(def)
 	u := unmarshaler.NewJSON(resolver)
 
-	original := def.New("test message")
-	data, err := json.Marshal(original)
+	orig := def.New("test message")
+	data, err := json.Marshal(orig)
 	if err != nil {
 		t.Fatalf("failed to marshal: %v", err)
 	}
@@ -40,8 +40,8 @@ func TestUnmarshaledError_Kind(t *testing.T) {
 	resolver := errdef.NewResolver(def)
 	u := unmarshaler.NewJSON(resolver)
 
-	original := def.New("test message")
-	data, err := json.Marshal(original)
+	orig := def.New("test message")
+	data, err := json.Marshal(orig)
 	if err != nil {
 		t.Fatalf("failed to marshal: %v", err)
 	}
@@ -62,8 +62,8 @@ func TestUnmarshaledError_Fields(t *testing.T) {
 	resolver := errdef.NewResolver(def)
 	u := unmarshaler.NewJSON(resolver)
 
-	original := def.New("test message")
-	data, err := json.Marshal(original)
+	orig := def.New("test message")
+	data, err := json.Marshal(orig)
 	if err != nil {
 		t.Fatalf("failed to marshal: %v", err)
 	}
@@ -93,8 +93,8 @@ func TestUnmarshaledError_Stack(t *testing.T) {
 	resolver := errdef.NewResolver(def)
 	u := unmarshaler.NewJSON(resolver)
 
-	original := def.New("test message")
-	data, err := json.Marshal(original)
+	orig := def.New("test message")
+	data, err := json.Marshal(orig)
 	if err != nil {
 		t.Fatalf("failed to marshal: %v", err)
 	}
@@ -148,8 +148,8 @@ func TestUnmarshaledError_Is(t *testing.T) {
 	resolver := errdef.NewResolver(def)
 	u := unmarshaler.NewJSON(resolver)
 
-	original := def.New("test message")
-	data, err := json.Marshal(original)
+	orig := def.New("test message")
+	data, err := json.Marshal(orig)
 	if err != nil {
 		t.Fatalf("failed to marshal: %v", err)
 	}
@@ -175,8 +175,8 @@ func TestUnmarshaledError_MarshalJSON(t *testing.T) {
 		resolver := errdef.NewResolver(def)
 		u := unmarshaler.NewJSON(resolver)
 
-		original := def.New("test message")
-		data, err := json.Marshal(original)
+		orig := def.New("test message")
+		data, err := json.Marshal(orig)
 		if err != nil {
 			t.Fatalf("failed to marshal: %v", err)
 		}
@@ -217,8 +217,8 @@ func TestUnmarshaledError_MarshalJSON(t *testing.T) {
 		resolver := errdef.NewResolver(def)
 		u := unmarshaler.NewJSON(resolver)
 
-		original := def.New("test message")
-		data, err := json.Marshal(original)
+		orig := def.New("test message")
+		data, err := json.Marshal(orig)
 		if err != nil {
 			t.Fatalf("failed to marshal: %v", err)
 		}
@@ -354,8 +354,8 @@ func TestUnmarshaledError_Format(t *testing.T) {
 		resolver := errdef.NewResolver(def)
 		u := unmarshaler.NewJSON(resolver)
 
-		original := def.New("test message")
-		data, err := json.Marshal(original)
+		orig := def.New("test message")
+		data, err := json.Marshal(orig)
 		if err != nil {
 			t.Fatalf("failed to marshal: %v", err)
 		}
@@ -376,8 +376,8 @@ func TestUnmarshaledError_Format(t *testing.T) {
 		resolver := errdef.NewResolver(def)
 		u := unmarshaler.NewJSON(resolver)
 
-		original := def.New("test message")
-		data, err := json.Marshal(original)
+		orig := def.New("test message")
+		data, err := json.Marshal(orig)
 		if err != nil {
 			t.Fatalf("failed to marshal: %v", err)
 		}
@@ -394,13 +394,13 @@ func TestUnmarshaledError_Format(t *testing.T) {
 	})
 
 	t.Run("verbose format", func(t *testing.T) {
-		userIDCtor, _ := errdef.DefineField[string]("user_id")
-		def := errdef.Define("test_error", errdef.NoTrace(), userIDCtor("user123"))
+		userID, _ := errdef.DefineField[string]("user_id")
+		def := errdef.Define("test_error", errdef.NoTrace(), userID("user123"))
 		resolver := errdef.NewResolver(def)
 		u := unmarshaler.NewJSON(resolver)
 
-		original := def.New("test message")
-		data, err := json.Marshal(original)
+		orig := def.New("test message")
+		data, err := json.Marshal(orig)
 		if err != nil {
 			t.Fatalf("failed to marshal: %v", err)
 		}
@@ -503,8 +503,8 @@ func TestUnmarshaledError_Format(t *testing.T) {
 		resolver := errdef.NewResolver(def)
 		u := unmarshaler.NewJSON(resolver)
 
-		original := def.New("test message")
-		data, err := json.Marshal(original)
+		orig := def.New("test message")
+		data, err := json.Marshal(orig)
 		if err != nil {
 			t.Fatalf("failed to marshal: %v", err)
 		}

@@ -10,11 +10,11 @@ import (
 )
 
 func TestDefinition_Kind(t *testing.T) {
-	kind := errdef.Kind("test_error")
-	def := errdef.Define(kind)
+	want := errdef.Kind("test_error")
+	def := errdef.Define(want)
 
-	if def.Kind() != kind {
-		t.Errorf("want kind %v, got %v", kind, def.Kind())
+	if got := def.Kind(); got != want {
+		t.Errorf("want kind %v, got %v", want, got)
 	}
 }
 
@@ -39,46 +39,46 @@ func TestDefinition_Error(t *testing.T) {
 
 func TestDefinition_With(t *testing.T) {
 	t.Run("with context options", func(t *testing.T) {
-		constructor, extractor := errdef.DefineField[string]("context_field")
-		ctx := errdef.ContextWithOptions(context.Background(), constructor("ctx_value"))
+		ctor, extr := errdef.DefineField[string]("context_field")
+		ctx := errdef.ContextWithOptions(context.Background(), ctor("ctx_value"))
 
 		def := errdef.Define("test_error")
 		newDef := def.With(ctx)
 
 		err := newDef.New("test message")
-		value, found := extractor(err)
-		if !found {
+		got, ok := extr(err)
+		if !ok {
 			t.Error("want context field to be found")
 		}
-		if value != "ctx_value" {
-			t.Errorf("want context field value %q, got %q", "ctx_value", value)
+		if want := "ctx_value"; got != want {
+			t.Errorf("want context field value %q, got %q", want, got)
 		}
 	})
 
 	t.Run("with additional options", func(t *testing.T) {
-		constructor1, extractor1 := errdef.DefineField[string]("context_field")
-		constructor2, extractor2 := errdef.DefineField[string]("additional_field")
+		ctor1, extr1 := errdef.DefineField[string]("context_field")
+		ctor2, extr2 := errdef.DefineField[string]("additional_field")
 
-		ctx := errdef.ContextWithOptions(context.Background(), constructor1("ctx_value"))
+		ctx := errdef.ContextWithOptions(context.Background(), ctor1("ctx_value"))
 		def := errdef.Define("test_error")
-		newDef := def.With(ctx, constructor2("additional_value"))
+		newDef := def.With(ctx, ctor2("additional_value"))
 
 		err := newDef.New("test message")
 
-		value1, found1 := extractor1(err)
-		if !found1 {
+		got1, ok1 := extr1(err)
+		if !ok1 {
 			t.Error("want context field to be found")
 		}
-		if value1 != "ctx_value" {
-			t.Errorf("want context field value %q, got %q", "ctx_value", value1)
+		if want1 := "ctx_value"; got1 != want1 {
+			t.Errorf("want context field value %q, got %q", want1, got1)
 		}
 
-		value2, found2 := extractor2(err)
-		if !found2 {
+		got2, ok2 := extr2(err)
+		if !ok2 {
 			t.Error("want additional field to be found")
 		}
-		if value2 != "additional_value" {
-			t.Errorf("want additional field value %q, got %q", "additional_value", value2)
+		if want2 := "additional_value"; got2 != want2 {
+			t.Errorf("want additional field value %q, got %q", want2, got2)
 		}
 	})
 
@@ -94,44 +94,44 @@ func TestDefinition_With(t *testing.T) {
 
 func TestDefinition_WithOptions(t *testing.T) {
 	t.Run("with field option", func(t *testing.T) {
-		constructor, extractor := errdef.DefineField[string]("test_field")
+		ctor, extr := errdef.DefineField[string]("test_field")
 
 		def := errdef.Define("test_error")
-		newDef := def.WithOptions(constructor("test_value"))
+		newDef := def.WithOptions(ctor("test_value"))
 
 		err := newDef.New("test message")
-		value, found := extractor(err)
-		if !found {
+		got, ok := extr(err)
+		if !ok {
 			t.Error("want field to be found")
 		}
-		if value != "test_value" {
-			t.Errorf("want field value %q, got %q", "test_value", value)
+		if want := "test_value"; got != want {
+			t.Errorf("want field value %q, got %q", want, got)
 		}
 	})
 
 	t.Run("with multiple options", func(t *testing.T) {
-		constructor1, extractor1 := errdef.DefineField[string]("field1")
-		constructor2, extractor2 := errdef.DefineField[int]("field2")
+		ctor1, extr1 := errdef.DefineField[string]("field1")
+		ctor2, extr2 := errdef.DefineField[int]("field2")
 
 		def := errdef.Define("test_error")
-		newDef := def.WithOptions(constructor1("value1"), constructor2(42))
+		newDef := def.WithOptions(ctor1("value1"), ctor2(42))
 
 		err := newDef.New("test message")
 
-		value1, found1 := extractor1(err)
-		if !found1 {
+		got1, ok1 := extr1(err)
+		if !ok1 {
 			t.Error("want field1 to be found")
 		}
-		if value1 != "value1" {
-			t.Errorf("want field1 value %q, got %q", "value1", value1)
+		if want1 := "value1"; got1 != want1 {
+			t.Errorf("want field1 value %q, got %q", want1, got1)
 		}
 
-		value2, found2 := extractor2(err)
-		if !found2 {
+		got2, ok2 := extr2(err)
+		if !ok2 {
 			t.Error("want field2 to be found")
 		}
-		if value2 != 42 {
-			t.Errorf("want field2 value %d, got %d", 42, value2)
+		if want2 := 42; got2 != want2 {
+			t.Errorf("want field2 value %d, got %d", want2, got2)
 		}
 	})
 
@@ -156,21 +156,21 @@ func TestDefinition_New(t *testing.T) {
 	})
 
 	t.Run("with definition field", func(t *testing.T) {
-		constructor, extractor := errdef.DefineField[string]("user_id")
-		def := errdef.Define("test_error").WithOptions(constructor("user123"))
+		ctor, extr := errdef.DefineField[string]("user_id")
+		def := errdef.Define("test_error").WithOptions(ctor("user123"))
 
 		err := def.New("test message")
 
-		if err.Error() != "test message" {
-			t.Errorf("want message %q, got %q", "test message", err.Error())
+		if want, got := "test message", err.Error(); got != want {
+			t.Errorf("want message %q, got %q", want, got)
 		}
 
-		value, found := extractor(err)
-		if !found {
+		got, ok := extr(err)
+		if !ok {
 			t.Error("want field to be found")
 		}
-		if value != "user123" {
-			t.Errorf("want field value %q, got %q", "user123", value)
+		if want := "user123"; got != want {
+			t.Errorf("want field value %q, got %q", want, got)
 		}
 	})
 }
@@ -196,22 +196,21 @@ func TestDefinition_Errorf(t *testing.T) {
 	})
 
 	t.Run("with definition field", func(t *testing.T) {
-		constructor, extractor := errdef.DefineField[string]("operation")
-		def := errdef.Define("test_error").WithOptions(constructor("update"))
+		ctor, extr := errdef.DefineField[string]("operation")
+		def := errdef.Define("test_error").WithOptions(ctor("update"))
 
 		err := def.Errorf("failed to %s user %d", "update", 123)
 
-		want := "failed to update user 123"
-		if err.Error() != want {
-			t.Errorf("want message %q, got %q", want, err.Error())
+		if want, got := "failed to update user 123", err.Error(); got != want {
+			t.Errorf("want message %q, got %q", want, got)
 		}
 
-		value, found := extractor(err)
-		if !found {
+		got, ok := extr(err)
+		if !ok {
 			t.Error("want field to be found")
 		}
-		if value != "update" {
-			t.Errorf("want field value %q, got %q", "update", value)
+		if want := "update"; got != want {
+			t.Errorf("want field value %q, got %q", want, got)
 		}
 	})
 }
@@ -223,8 +222,8 @@ func TestDefinition_Wrap(t *testing.T) {
 
 		err := def.Wrap(cause)
 
-		if err.Error() != "original error" {
-			t.Errorf("want message %q, got %q", "original error", err.Error())
+		if want, got := "original error", err.Error(); got != want {
+			t.Errorf("want message %q, got %q", want, got)
 		}
 
 		if !errors.Is(err, cause) {
@@ -242,26 +241,26 @@ func TestDefinition_Wrap(t *testing.T) {
 	})
 
 	t.Run("with definition field", func(t *testing.T) {
-		constructor, extractor := errdef.DefineField[string]("context")
-		def := errdef.Define("test_error").WithOptions(constructor("database"))
+		ctor, extr := errdef.DefineField[string]("context")
+		def := errdef.Define("test_error").WithOptions(ctor("database"))
 		cause := errors.New("connection failed")
 
 		err := def.Wrap(cause)
 
-		if err.Error() != "connection failed" {
-			t.Errorf("want message %q, got %q", "connection failed", err.Error())
+		if want, got := "connection failed", err.Error(); got != want {
+			t.Errorf("want message %q, got %q", want, got)
 		}
 
 		if !errors.Is(err, cause) {
 			t.Error("want wrapped error to be the cause")
 		}
 
-		value, found := extractor(err)
-		if !found {
+		got, ok := extr(err)
+		if !ok {
 			t.Error("want field to be found")
 		}
-		if value != "database" {
-			t.Errorf("want field value %q, got %q", "database", value)
+		if want := "database"; got != want {
+			t.Errorf("want field value %q, got %q", want, got)
 		}
 	})
 }
@@ -293,27 +292,26 @@ func TestDefinition_Wrapf(t *testing.T) {
 	})
 
 	t.Run("with definition field", func(t *testing.T) {
-		constructor, extractor := errdef.DefineField[string]("service")
-		def := errdef.Define("test_error").WithOptions(constructor("auth"))
+		ctor, extr := errdef.DefineField[string]("service")
+		def := errdef.Define("test_error").WithOptions(ctor("auth"))
 		cause := fmt.Errorf("invalid token")
 
 		err := def.Wrapf(cause, "authentication failed for service")
 
-		want := "authentication failed for service"
-		if err.Error() != want {
-			t.Errorf("want message %q, got %q", want, err.Error())
+		if want, got := "authentication failed for service", err.Error(); got != want {
+			t.Errorf("want message %q, got %q", want, got)
 		}
 
 		if !errors.Is(err, cause) {
 			t.Error("want wrapped error to be the cause")
 		}
 
-		value, found := extractor(err)
-		if !found {
+		got, ok := extr(err)
+		if !ok {
 			t.Error("want field to be found")
 		}
-		if value != "auth" {
-			t.Errorf("want field value %q, got %q", "auth", value)
+		if want := "auth"; got != want {
+			t.Errorf("want field value %q, got %q", want, got)
 		}
 	})
 }
@@ -364,8 +362,8 @@ func TestDefinition_Join(t *testing.T) {
 	})
 
 	t.Run("with definition field", func(t *testing.T) {
-		constructor, extractor := errdef.DefineField[string]("batch_id")
-		def := errdef.Define("batch_error").WithOptions(constructor("batch_123"))
+		ctor, extr := errdef.DefineField[string]("batch_id")
+		def := errdef.Define("batch_error").WithOptions(ctor("batch_123"))
 		err1 := errors.New("validation failed")
 		err2 := errors.New("save failed")
 
@@ -378,12 +376,12 @@ func TestDefinition_Join(t *testing.T) {
 			t.Error("want joined error to contain err2")
 		}
 
-		value, found := extractor(joined)
-		if !found {
+		got, ok := extr(joined)
+		if !ok {
 			t.Error("want field to be found")
 		}
-		if value != "batch_123" {
-			t.Errorf("want field value %q, got %q", "batch_123", value)
+		if want := "batch_123"; got != want {
+			t.Errorf("want field value %q, got %q", want, got)
 		}
 	})
 }
@@ -474,8 +472,8 @@ func TestDefinition_CapturePanic(t *testing.T) {
 	})
 
 	t.Run("with definition fields", func(t *testing.T) {
-		constructor, extractor := errdef.DefineField[string]("context")
-		def := errdef.Define("panic_error").WithOptions(constructor("service_call"))
+		ctor, extr := errdef.DefineField[string]("context")
+		def := errdef.Define("panic_error").WithOptions(ctor("service_call"))
 		var err error
 		if val, ok := def.CapturePanic(&err, "service panic"); !ok {
 			t.Fatal("want panic to be captured")
@@ -487,12 +485,12 @@ func TestDefinition_CapturePanic(t *testing.T) {
 			t.Fatal("want error to be set")
 		}
 
-		value, found := extractor(err)
-		if !found {
+		got, ok := extr(err)
+		if !ok {
 			t.Error("want field to be found")
 		}
-		if value != "service_call" {
-			t.Errorf("want field value %q, got %q", "service_call", value)
+		if want := "service_call"; got != want {
+			t.Errorf("want field value %q, got %q", want, got)
 		}
 
 		var panicErr errdef.PanicError
@@ -605,13 +603,13 @@ func TestDefinition_Is(t *testing.T) {
 	})
 
 	t.Run("WithOptions preserves identity", func(t *testing.T) {
-		original := errdef.Define("test_error")
-		constructor, _ := errdef.DefineField[string]("test_field")
+		orig := errdef.Define("test_error")
+		ctor, _ := errdef.DefineField[string]("test_field")
 
-		withOptions := original.WithOptions(constructor("test_value"))
+		withOptions := orig.WithOptions(ctor("test_value"))
 		err := withOptions.New("test message")
 
-		if !original.Is(err) {
+		if !orig.Is(err) {
 			t.Error("want original definition to match error from WithOptions definition")
 		}
 
@@ -621,14 +619,14 @@ func TestDefinition_Is(t *testing.T) {
 	})
 
 	t.Run("With preserves identity", func(t *testing.T) {
-		original := errdef.Define("test_error")
-		constructor, _ := errdef.DefineField[string]("test_field")
+		orig := errdef.Define("test_error")
+		ctor, _ := errdef.DefineField[string]("test_field")
 
 		ctx := context.Background()
-		withCtx := original.With(ctx, constructor("test_value"))
+		withCtx := orig.With(ctx, ctor("test_value"))
 		err := withCtx.New("test message")
 
-		if !original.Is(err) {
+		if !orig.Is(err) {
 			t.Error("want original definition to match error from With definition")
 		}
 

@@ -20,18 +20,18 @@ func TestError_Error(t *testing.T) {
 		def := errdef.Define("test_error")
 		err := def.New("test message")
 
-		if err.Error() != "test message" {
-			t.Errorf("want message %q, got %q", "test message", err.Error())
+		if want, got := "test message", err.Error(); got != want {
+			t.Errorf("want message %q, got %q", want, got)
 		}
 	})
 
 	t.Run("wrapped error message", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		original := errors.New("original error")
-		wrapped := def.Wrap(original)
+		cause := errors.New("original error")
+		wrapped := def.Wrap(cause)
 
-		if wrapped.Error() != "original error" {
-			t.Errorf("want message %q, got %q", "original error", wrapped.Error())
+		if want, got := "original error", wrapped.Error(); got != want {
+			t.Errorf("want message %q, got %q", want, got)
 		}
 	})
 }
@@ -40,9 +40,8 @@ func TestError_Kind(t *testing.T) {
 	def := errdef.Define("test_error")
 	err := def.New("test message").(errdef.Error)
 
-	kind := err.Kind()
-	if kind != "test_error" {
-		t.Errorf("want kind %q, got %q", "test_error", kind)
+	if got, want := err.Kind(), errdef.Kind("test_error"); got != want {
+		t.Errorf("want kind %q, got %q", want, got)
 	}
 }
 
@@ -52,23 +51,23 @@ func TestError_Fields(t *testing.T) {
 		err := def.New("test message").(errdef.Error)
 
 		fields := err.Fields()
-
 		collected := maps.Collect(fields.Seq())
-		if len(collected) != 0 {
-			t.Errorf("want empty fields, got %d fields", len(collected))
+
+		if want, got := 0, len(collected); got != want {
+			t.Errorf("want %d fields, got %d", want, got)
 		}
 	})
 
 	t.Run("with fields", func(t *testing.T) {
-		constructor, _ := errdef.DefineField[string]("user_id")
-		def := errdef.Define("test_error", constructor("user123"))
+		ctor, _ := errdef.DefineField[string]("user_id")
+		def := errdef.Define("test_error", ctor("user123"))
 		err := def.New("test message").(errdef.Error)
 
 		fields := err.Fields()
-
 		collected := maps.Collect(fields.Seq())
-		if len(collected) != 1 {
-			t.Errorf("want 1 field, got %d", len(collected))
+
+		if want, got := 1, len(collected); got != want {
+			t.Errorf("want %d field, got %d", want, got)
 		}
 		keys := fields.FindKeys("user_id")
 		if got, ok := collected[keys[0]]; ok && got.Value() != "user123" {
@@ -109,22 +108,21 @@ func TestError_Unwrap(t *testing.T) {
 		def := errdef.Define("test_error")
 		err := def.New("test message").(errdef.Error)
 
-		unwrapped := err.Unwrap()
-		if len(unwrapped) != 0 {
-			t.Errorf("want empty, got %v", unwrapped)
+		if want, got := 0, len(err.Unwrap()); got != want {
+			t.Errorf("want %d errors, got %d", want, got)
 		}
 	})
 
 	t.Run("with cause", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		original := errors.New("original error")
-		wrapped := def.Wrap(original).(errdef.Error)
+		cause := errors.New("original error")
+		wrapped := def.Wrap(cause).(errdef.Error)
 
 		unwrapped := wrapped.Unwrap()
-		if len(unwrapped) != 1 {
-			t.Errorf("want 1 error, got %d", len(unwrapped))
+		if want, got := 1, len(unwrapped); got != want {
+			t.Errorf("want %d error, got %d", want, got)
 		}
-		if unwrapped[0] != original {
+		if unwrapped[0] != cause {
 			t.Error("want unwrapped error to be original error")
 		}
 	})
@@ -136,8 +134,8 @@ func TestError_Unwrap(t *testing.T) {
 		joined := def.Join(err1, err2).(errdef.Error)
 
 		unwrapped := joined.Unwrap()
-		if len(unwrapped) != 2 {
-			t.Errorf("want 2 error, got %d", len(unwrapped))
+		if want, got := 2, len(unwrapped); got != want {
+			t.Errorf("want %d errors, got %d", want, got)
 		}
 		if unwrapped[0] != err1 {
 			t.Error("want first unwrapped error to be error 1")
@@ -155,8 +153,8 @@ func TestError_Unwrap(t *testing.T) {
 		nestedJoined := def.Wrap(joined).(errdef.Error)
 
 		unwrapped := nestedJoined.Unwrap()
-		if len(unwrapped) != 1 {
-			t.Errorf("want 1 error, got %d", len(unwrapped))
+		if want, got := 1, len(unwrapped); got != want {
+			t.Errorf("want %d error, got %d", want, got)
 		}
 		if unwrapped[0] != joined {
 			t.Error("want unwrapped error to be the joined error")
@@ -164,13 +162,12 @@ func TestError_Unwrap(t *testing.T) {
 	})
 
 	t.Run("boundary breaks chain", func(t *testing.T) {
-		original := errors.New("original error")
+		orig := errors.New("original error")
 		def := errdef.Define("boundary_error", errdef.Boundary())
-		wrapped := def.Wrap(original).(errdef.Error)
+		wrapped := def.Wrap(orig).(errdef.Error)
 
-		unwrapped := wrapped.Unwrap()
-		if len(unwrapped) != 0 {
-			t.Errorf("want empty due to boundary, got %v", unwrapped)
+		if want, got := 0, len(wrapped.Unwrap()); got != want {
+			t.Errorf("want %d errors due to boundary, got %d", want, got)
 		}
 	})
 }
@@ -275,31 +272,28 @@ func TestCauser_Cause(t *testing.T) {
 		def := errdef.Define("test_error")
 		err := def.New("test message").(causer)
 
-		cause := err.Cause()
-		if cause != nil {
-			t.Errorf("want no cause, got %v", cause)
+		if got := err.Cause(); got != nil {
+			t.Errorf("want no cause, got %v", got)
 		}
 	})
 
 	t.Run("with cause", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		original := errors.New("original error")
-		wrapped := def.Wrap(original).(causer)
+		orig := errors.New("original error")
+		wrapped := def.Wrap(orig).(causer)
 
-		cause := wrapped.Cause()
-		if cause != original {
+		if got := wrapped.Cause(); got != orig {
 			t.Error("want cause to be original error")
 		}
 	})
 
 	t.Run("boundary breaks chain", func(t *testing.T) {
-		original := errors.New("original error")
+		cause := errors.New("original error")
 		def := errdef.Define("boundary_error", errdef.Boundary())
-		wrapped := def.Wrap(original).(causer)
+		wrapped := def.Wrap(cause).(causer)
 
-		cause := wrapped.Cause()
-		if cause != nil {
-			t.Errorf("want no cause due to boundary, got %v", cause)
+		if got := wrapped.Cause(); got != nil {
+			t.Errorf("want no cause due to boundary, got %v", got)
 		}
 	})
 }
@@ -326,9 +320,9 @@ func TestFormatter_Format(t *testing.T) {
 	})
 
 	t.Run("verbose format", func(t *testing.T) {
-		userIDCtor, _ := errdef.DefineField[string]("user_id")
-		passwordCtor, _ := errdef.DefineField[errdef.Redacted[string]]("password")
-		def := errdef.Define("test_error", userIDCtor("user123"), passwordCtor(errdef.Redact("secret")))
+		userID, _ := errdef.DefineField[string]("user_id")
+		password, _ := errdef.DefineField[errdef.Redacted[string]]("password")
+		def := errdef.Define("test_error", userID("user123"), password(errdef.Redact("secret")))
 		err := def.New("test message")
 
 		result := fmt.Sprintf("%+v", err)
@@ -349,10 +343,10 @@ func TestFormatter_Format(t *testing.T) {
 	})
 
 	t.Run("verbose format with cause", func(t *testing.T) {
-		constructor, _ := errdef.DefineField[string]("user_id")
-		original := errors.New("original error")
-		def := errdef.Define("test_error", errdef.NoTrace(), constructor("user123"))
-		wrapped := def.Wrap(original)
+		ctor, _ := errdef.DefineField[string]("user_id")
+		cause := errors.New("original error")
+		def := errdef.Define("test_error", errdef.NoTrace(), ctor("user123"))
+		wrapped := def.Wrap(cause)
 
 		result := fmt.Sprintf("%+v", wrapped)
 		want := "original error\n" +
@@ -448,8 +442,8 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 	})
 
 	t.Run("with kind and fields", func(t *testing.T) {
-		constructor, _ := errdef.DefineField[string]("user_id")
-		def := errdef.Define("test_error", constructor("user123"))
+		ctor, _ := errdef.DefineField[string]("user_id")
+		def := errdef.Define("test_error", ctor("user123"))
 		err := def.New("test message")
 
 		data, jsonErr := json.Marshal(err)
@@ -467,8 +461,8 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 		}
 
 		fields := result["fields"].(map[string]any)
-		if len(fields) != 1 {
-			t.Errorf("want 1 field, got %d", len(fields))
+		if want, got := 1, len(fields); got != want {
+			t.Errorf("want %d field, got %d", want, got)
 		}
 		if fields["user_id"] != "user123" {
 			t.Errorf("want field %q, got %q", "user123", fields["user_id"])
@@ -477,8 +471,8 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 
 	t.Run("with causes", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		original := errors.New("original error")
-		wrapped := def.Wrap(original)
+		orig := errors.New("original error")
+		wrapped := def.Wrap(orig)
 
 		data, jsonErr := json.Marshal(wrapped)
 		if jsonErr != nil {
@@ -547,12 +541,12 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 	})
 
 	t.Run("comprehensive json structure", func(t *testing.T) {
-		userIDCtor, _ := errdef.DefineField[string]("user_id")
-		passwordCtor, _ := errdef.DefineField[errdef.Redacted[string]]("password")
+		userID, _ := errdef.DefineField[string]("user_id")
+		password, _ := errdef.DefineField[errdef.Redacted[string]]("password")
 
-		def := errdef.Define("auth_error", userIDCtor("user123"), passwordCtor(errdef.Redact("secret")))
-		original := errors.New("connection failed")
-		err := def.Wrap(original)
+		def := errdef.Define("auth_error", userID("user123"), password(errdef.Redact("secret")))
+		orig := errors.New("connection failed")
+		err := def.Wrap(orig)
 
 		data, jsonErr := json.Marshal(err)
 		if jsonErr != nil {
@@ -771,8 +765,8 @@ func TestError_LogValue(t *testing.T) {
 	})
 
 	t.Run("with kind and fields", func(t *testing.T) {
-		constructor, _ := errdef.DefineField[string]("user_id")
-		def := errdef.Define("test_error", constructor("user123"), errdef.NoTrace())
+		ctor, _ := errdef.DefineField[string]("user_id")
+		def := errdef.Define("test_error", ctor("user123"), errdef.NoTrace())
 		err := def.New("test message")
 
 		value := err.(slog.LogValuer).LogValue()
@@ -840,8 +834,8 @@ func TestError_LogValue(t *testing.T) {
 
 	t.Run("with causes", func(t *testing.T) {
 		def := errdef.Define("test_error", errdef.NoTrace())
-		original := errors.New("original error")
-		wrapped := def.Wrap(original)
+		cause := errors.New("original error")
+		wrapped := def.Wrap(cause)
 
 		value := wrapped.(slog.LogValuer).LogValue()
 
@@ -932,16 +926,16 @@ func TestError_LogValue(t *testing.T) {
 		var buf bytes.Buffer
 		logger := slog.New(slog.NewJSONHandler(&buf, nil))
 
-		userIDConstructor, _ := errdef.DefineField[string]("user_id")
-		passwordConstructor, _ := errdef.DefineField[errdef.Redacted[string]]("password")
+		userID, _ := errdef.DefineField[string]("user_id")
+		password, _ := errdef.DefineField[errdef.Redacted[string]]("password")
 		def := errdef.Define(
 			"auth_error",
-			userIDConstructor("user123"),
-			passwordConstructor(errdef.Redact("my-secret-password")),
+			userID("user123"),
+			password(errdef.Redact("my-secret-password")),
 		)
 
-		original := errors.New("connection failed")
-		err := def.Wrap(original)
+		cause := errors.New("connection failed")
+		err := def.Wrap(cause)
 
 		logger.Error("authentication error", "error", err)
 

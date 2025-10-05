@@ -10,12 +10,12 @@ import (
 )
 
 func TestFieldConstructor_FieldKey(t *testing.T) {
-	constructor1, _ := errdef.DefineField[string]("test_field_1")
-	rawConstructor2, _ := errdef.DefineField[int]("test_field_2")
-	constructor2 := rawConstructor2.WithValue(100)
+	ctor1, _ := errdef.DefineField[string]("test_field_1")
+	rawCtor2, _ := errdef.DefineField[int]("test_field_2")
+	ctor2 := rawCtor2.WithValue(100)
 
-	key1 := constructor1.FieldKey()
-	key2 := constructor2.FieldKey()
+	key1 := ctor1.FieldKey()
+	key2 := ctor2.FieldKey()
 
 	if key1.String() != "test_field_1" {
 		t.Errorf("want field key %q, got %q", "test_field_1", key1.String())
@@ -30,56 +30,56 @@ func TestFieldConstructor_FieldKey(t *testing.T) {
 }
 
 func TestFieldConstructor_WithValue(t *testing.T) {
-	constructor, extractor := errdef.DefineField[string]("test_field")
-	withValueConstructor := constructor.WithValue("default_value")
+	ctor, extr := errdef.DefineField[string]("test_field")
+	withValueCtor := ctor.WithValue("default_value")
 
-	def := errdef.Define("test_error", withValueConstructor())
+	def := errdef.Define("test_error", withValueCtor())
 	err := def.New("test error")
 
-	value, found := extractor(err)
-	if !found {
+	got, ok := extr(err)
+	if !ok {
 		t.Error("want field to be found")
 	}
-	if value != "default_value" {
-		t.Errorf("want value %q, got %q", "default_value", value)
+	if want := "default_value"; got != want {
+		t.Errorf("want value %q, got %q", want, got)
 	}
 }
 
 func TestFieldConstructor_WithValueFunc(t *testing.T) {
-	constructor, extractor := errdef.DefineField[string]("test_field")
-	withValueFuncConstructor := constructor.WithValueFunc(func() string {
+	ctor, extr := errdef.DefineField[string]("test_field")
+	withValueFuncCtor := ctor.WithValueFunc(func() string {
 		return "default_value"
 	})
 
-	def := errdef.Define("test_error", withValueFuncConstructor())
+	def := errdef.Define("test_error", withValueFuncCtor())
 	err := def.New("test error")
 
-	value, found := extractor(err)
-	if !found {
+	got, ok := extr(err)
+	if !ok {
 		t.Error("want field to be found")
 	}
-	if value != "default_value" {
-		t.Errorf("want value %q, got %q", "default_value", value)
+	if want := "default_value"; got != want {
+		t.Errorf("want value %q, got %q", want, got)
 	}
 }
 
 func TestFieldConstructor_WithErrorFunc(t *testing.T) {
 	baseErr := errors.New("base error")
 
-	constructor, extractor := errdef.DefineField[string]("test_field")
-	withErrorFuncConstructor := constructor.WithErrorFunc(func(err error) string {
+	ctor, extr := errdef.DefineField[string]("test_field")
+	withErrorFuncCtor := ctor.WithErrorFunc(func(err error) string {
 		return err.Error() + " processed"
 	})
 
 	def := errdef.Define("test_error")
-	err := def.WithOptions(withErrorFuncConstructor(baseErr)).New("test error")
+	err := def.WithOptions(withErrorFuncCtor(baseErr)).New("test error")
 
-	value, found := extractor(err)
-	if !found {
+	got, ok := extr(err)
+	if !ok {
 		t.Error("want field to be found")
 	}
-	if value != "base error processed" {
-		t.Errorf("want value %q, got %q", "base error processed", value)
+	if want := "base error processed"; got != want {
+		t.Errorf("want value %q, got %q", want, got)
 	}
 }
 
@@ -88,20 +88,20 @@ func TestFieldConstructor_WithContextFunc(t *testing.T) {
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, contextKey{}, "context_value")
 
-	constructor, extractor := errdef.DefineField[string]("test_field")
-	withContextFuncConstructor := constructor.WithContextFunc(func(ctx context.Context) string {
+	ctor, extr := errdef.DefineField[string]("test_field")
+	withContextFuncCtor := ctor.WithContextFunc(func(ctx context.Context) string {
 		return ctx.Value(contextKey{}).(string)
 	})
 
 	def := errdef.Define("test_error")
-	err := def.WithOptions(withContextFuncConstructor(ctx)).New("test error")
+	err := def.WithOptions(withContextFuncCtor(ctx)).New("test error")
 
-	value, found := extractor(err)
-	if !found {
+	got, ok := extr(err)
+	if !ok {
 		t.Error("want field to be found")
 	}
-	if value != "context_value" {
-		t.Errorf("want value %q, got %q", "context_value", value)
+	if want := "context_value"; got != want {
+		t.Errorf("want value %q, got %q", want, got)
 	}
 }
 
@@ -109,136 +109,136 @@ func TestFieldConstructor_WithHTTPRequestFunc(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/test/path", nil)
 	req.Header.Set("X-Request-ID", "request-123")
 
-	constructor, extractor := errdef.DefineField[string]("test_field")
-	withHTTPRequestConstructor := constructor.WithHTTPRequestFunc(func(r *http.Request) string {
+	ctor, extr := errdef.DefineField[string]("test_field")
+	withHTTPRequestCtor := ctor.WithHTTPRequestFunc(func(r *http.Request) string {
 		return r.Header.Get("X-Request-ID")
 	})
 
 	def := errdef.Define("test_error")
-	err := def.WithOptions(withHTTPRequestConstructor(req)).New("test error")
+	err := def.WithOptions(withHTTPRequestCtor(req)).New("test error")
 
-	value, found := extractor(err)
-	if !found {
+	got, ok := extr(err)
+	if !ok {
 		t.Error("want field to be found")
 	}
-	if value != "request-123" {
-		t.Errorf("want value %q, got %q", "request-123", value)
+	if want := "request-123"; got != want {
+		t.Errorf("want value %q, got %q", want, got)
 	}
 }
 
 func TestFieldExtractor_WithZero(t *testing.T) {
-	constructor, extractor := errdef.DefineField[string]("test_field")
-	zeroExtractor := extractor.WithZero()
+	ctor, extr := errdef.DefineField[string]("test_field")
+	zeroExtr := extr.WithZero()
 
-	def := errdef.Define("test_error", constructor("test_value"))
+	def := errdef.Define("test_error", ctor("test_value"))
 	err := def.New("test error")
 
-	value := zeroExtractor(err)
-	if value != "test_value" {
-		t.Errorf("want value %q, got %q", "test_value", value)
+	got := zeroExtr(err)
+	if want := "test_value"; got != want {
+		t.Errorf("want value %q, got %q", want, got)
 	}
 
 	stdErr := errors.New("standard error")
-	zeroValue := zeroExtractor(stdErr)
+	zeroValue := zeroExtr(stdErr)
 	if zeroValue != "" {
 		t.Errorf("want zero value for string, got %q", zeroValue)
 	}
 }
 
 func TestFieldExtractor_WithDefault(t *testing.T) {
-	constructor, extractor := errdef.DefineField[string]("test_field")
-	defaultExtractor := extractor.WithDefault("default")
+	ctor, extr := errdef.DefineField[string]("test_field")
+	defaultExtr := extr.WithDefault("default")
 
-	def := errdef.Define("test_error", constructor("test_value"))
+	def := errdef.Define("test_error", ctor("test_value"))
 	err := def.New("test error")
 
-	value := defaultExtractor(err)
-	if value != "test_value" {
-		t.Errorf("want value %q, got %q", "test_value", value)
+	got := defaultExtr(err)
+	if want := "test_value"; got != want {
+		t.Errorf("want value %q, got %q", want, got)
 	}
 
 	stdErr := errors.New("standard error")
-	defaultValue := defaultExtractor(stdErr)
-	if defaultValue != "default" {
-		t.Errorf("want default value %q, got %q", "default", defaultValue)
+	defaultValue := defaultExtr(stdErr)
+	if want := "default"; defaultValue != want {
+		t.Errorf("want default value %q, got %q", want, defaultValue)
 	}
 }
 
 func TestFieldExtractor_WithFallback(t *testing.T) {
-	constructor, extractor := errdef.DefineField[string]("test_field")
-	fallbackExtractor := extractor.WithFallback(func(err error) string {
+	ctor, extr := errdef.DefineField[string]("test_field")
+	fallbackExtr := extr.WithFallback(func(err error) string {
 		return err.Error() + " fallback"
 	})
 
-	def := errdef.Define("test_error", constructor("test_value"))
+	def := errdef.Define("test_error", ctor("test_value"))
 	err := def.New("test error")
 
-	value := fallbackExtractor(err)
-	if value != "test_value" {
-		t.Errorf("want value %q, got %q", "test_value", value)
+	got := fallbackExtr(err)
+	if want := "test_value"; got != want {
+		t.Errorf("want value %q, got %q", want, got)
 	}
 
 	stdErr := errors.New("standard error")
-	defaultValue := fallbackExtractor(stdErr)
-	if defaultValue != "standard error fallback" {
-		t.Errorf("want default value %q, got %q", "standard error default", defaultValue)
+	defaultValue := fallbackExtr(stdErr)
+	if want := "standard error fallback"; defaultValue != want {
+		t.Errorf("want default value %q, got %q", want, defaultValue)
 	}
 }
 
 func TestFieldExtractor_OrZero(t *testing.T) {
-	constructor, extractor := errdef.DefineField[string]("test_field")
+	ctor, extr := errdef.DefineField[string]("test_field")
 
-	def := errdef.Define("test_error", constructor("test_value"))
+	def := errdef.Define("test_error", ctor("test_value"))
 	err := def.New("test error")
 
-	value := extractor.OrZero(err)
-	if value != "test_value" {
-		t.Errorf("want value %q, got %q", "test_value", value)
+	got := extr.OrZero(err)
+	if want := "test_value"; got != want {
+		t.Errorf("want value %q, got %q", want, got)
 	}
 
 	stdErr := errors.New("standard error")
-	zeroValue := extractor.OrZero(stdErr)
+	zeroValue := extr.OrZero(stdErr)
 	if zeroValue != "" {
 		t.Errorf("want zero value for string, got %q", zeroValue)
 	}
 }
 
 func TestFieldExtractor_OrDefault(t *testing.T) {
-	constructor, extractor := errdef.DefineField[string]("test_field")
+	ctor, extr := errdef.DefineField[string]("test_field")
 
-	def := errdef.Define("test_error", constructor("test_value"))
+	def := errdef.Define("test_error", ctor("test_value"))
 	err := def.New("test error")
 
-	value := extractor.OrDefault(err, "default")
-	if value != "test_value" {
-		t.Errorf("want value %q, got %q", "test_value", value)
+	got := extr.OrDefault(err, "default")
+	if want := "test_value"; got != want {
+		t.Errorf("want value %q, got %q", want, got)
 	}
 
 	stdErr := errors.New("standard error")
-	defaultValue := extractor.OrDefault(stdErr, "default")
-	if defaultValue != "default" {
-		t.Errorf("want default value %q, got %q", "default", defaultValue)
+	defaultValue := extr.OrDefault(stdErr, "default")
+	if want := "default"; defaultValue != want {
+		t.Errorf("want default value %q, got %q", want, defaultValue)
 	}
 }
 
 func TestFieldExtractor_OrFallback(t *testing.T) {
-	constructor, extractor := errdef.DefineField[string]("test_field")
+	ctor, extr := errdef.DefineField[string]("test_field")
 
-	def := errdef.Define("test_error", constructor("test_value"))
+	def := errdef.Define("test_error", ctor("test_value"))
 	err := def.New("test error")
 
-	value := extractor.OrFallback(err, func(err error) string {
+	got := extr.OrFallback(err, func(err error) string {
 		return err.Error() + " default"
 	})
-	if value != "test_value" {
-		t.Errorf("want value %q, got %q", "test_value", value)
+	if want := "test_value"; got != want {
+		t.Errorf("want value %q, got %q", want, got)
 	}
 
 	stdErr := errors.New("standard error")
-	defaultValue := extractor.OrFallback(stdErr, func(err error) string {
+	defaultValue := extr.OrFallback(stdErr, func(err error) string {
 		return err.Error() + " fallback"
 	})
-	if defaultValue != "standard error fallback" {
-		t.Errorf("want default value %q, got %q", "standard error default", defaultValue)
+	if want := "standard error fallback"; defaultValue != want {
+		t.Errorf("want default value %q, got %q", want, defaultValue)
 	}
 }

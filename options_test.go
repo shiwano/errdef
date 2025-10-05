@@ -15,12 +15,12 @@ func TestHTTPStatus(t *testing.T) {
 	def := errdef.Define("test_error", errdef.HTTPStatus(404))
 	err := def.New("test error")
 
-	status, found := errdef.HTTPStatusFrom(err)
-	if !found {
+	got, ok := errdef.HTTPStatusFrom(err)
+	if !ok {
 		t.Error("want HTTP status to be found")
 	}
-	if status != 404 {
-		t.Errorf("want status 404, got %d", status)
+	if want := 404; got != want {
+		t.Errorf("want status %d, got %d", want, got)
 	}
 }
 
@@ -28,54 +28,54 @@ func TestLogLevel(t *testing.T) {
 	def := errdef.Define("test_error", errdef.LogLevel(slog.LevelError))
 	err := def.New("test error")
 
-	level, found := errdef.LogLevelFrom(err)
-	if !found {
+	got, ok := errdef.LogLevelFrom(err)
+	if !ok {
 		t.Error("want log level to be found")
 	}
-	if level != slog.LevelError {
-		t.Errorf("want level %v, got %v", slog.LevelError, level)
+	if want := slog.LevelError; got != want {
+		t.Errorf("want level %v, got %v", want, got)
 	}
 }
 
 func TestTraceID(t *testing.T) {
-	traceID := "abc123-def456"
-	def := errdef.Define("test_error", errdef.TraceID(traceID))
+	want := "abc123-def456"
+	def := errdef.Define("test_error", errdef.TraceID(want))
 	err := def.New("test error")
 
-	id, found := errdef.TraceIDFrom(err)
-	if !found {
+	got, ok := errdef.TraceIDFrom(err)
+	if !ok {
 		t.Error("want trace ID to be found")
 	}
-	if id != traceID {
-		t.Errorf("want trace ID %q, got %q", traceID, id)
+	if got != want {
+		t.Errorf("want trace ID %q, got %q", want, got)
 	}
 }
 
 func TestDomain(t *testing.T) {
-	domain := "auth_service"
-	def := errdef.Define("test_error", errdef.Domain(domain))
+	want := "auth_service"
+	def := errdef.Define("test_error", errdef.Domain(want))
 	err := def.New("test error")
 
-	d, found := errdef.DomainFrom(err)
-	if !found {
+	got, ok := errdef.DomainFrom(err)
+	if !ok {
 		t.Error("want domain to be found")
 	}
-	if d != domain {
-		t.Errorf("want domain %q, got %q", domain, d)
+	if got != want {
+		t.Errorf("want domain %q, got %q", want, got)
 	}
 }
 
 func TestUserHint(t *testing.T) {
-	hint := "Please check your credentials"
-	def := errdef.Define("test_error", errdef.UserHint(hint))
+	want := "Please check your credentials"
+	def := errdef.Define("test_error", errdef.UserHint(want))
 	err := def.New("test error")
 
-	h, found := errdef.UserHintFrom(err)
-	if !found {
+	got, ok := errdef.UserHintFrom(err)
+	if !ok {
 		t.Error("want user hint to be found")
 	}
-	if h != hint {
-		t.Errorf("want hint %q, got %q", hint, h)
+	if got != want {
+		t.Errorf("want hint %q, got %q", want, got)
 	}
 }
 
@@ -98,16 +98,16 @@ func TestRetryable(t *testing.T) {
 }
 
 func TestRetryAfter(t *testing.T) {
-	duration := 5 * time.Second
-	def := errdef.Define("test_error", errdef.RetryAfter(duration))
+	want := 5 * time.Second
+	def := errdef.Define("test_error", errdef.RetryAfter(want))
 	err := def.New("test error")
 
-	d, found := errdef.RetryAfterFrom(err)
-	if !found {
+	got, ok := errdef.RetryAfterFrom(err)
+	if !ok {
 		t.Error("want retry after to be found")
 	}
-	if d != duration {
-		t.Errorf("want duration %v, got %v", duration, d)
+	if got != want {
+		t.Errorf("want duration %v, got %v", want, got)
 	}
 }
 
@@ -121,30 +121,30 @@ func TestUnreportable(t *testing.T) {
 }
 
 func TestExitCode(t *testing.T) {
-	code := 42
-	def := errdef.Define("test_error", errdef.ExitCode(code))
+	want := 42
+	def := errdef.Define("test_error", errdef.ExitCode(want))
 	err := def.New("test error")
 
-	c, found := errdef.ExitCodeFrom(err)
-	if !found {
+	got, ok := errdef.ExitCodeFrom(err)
+	if !ok {
 		t.Error("want exit code to be found")
 	}
-	if c != code {
-		t.Errorf("want code %d, got %d", code, c)
+	if got != want {
+		t.Errorf("want code %d, got %d", want, got)
 	}
 }
 
 func TestHelpURL(t *testing.T) {
-	url := "https://example.com/help"
-	def := errdef.Define("test_error", errdef.HelpURL(url))
+	want := "https://example.com/help"
+	def := errdef.Define("test_error", errdef.HelpURL(want))
 	err := def.New("test error")
 
-	u, found := errdef.HelpURLFrom(err)
-	if !found {
+	got, ok := errdef.HelpURLFrom(err)
+	if !ok {
 		t.Error("want help URL to be found")
 	}
-	if u != url {
-		t.Errorf("want URL %q, got %q", url, u)
+	if got != want {
+		t.Errorf("want URL %q, got %q", want, got)
 	}
 }
 
@@ -233,20 +233,20 @@ func TestStackDepth(t *testing.T) {
 }
 
 func TestBoundary(t *testing.T) {
-	original := errors.New("original error")
+	orig := errors.New("original error")
 	def := errdef.Define("test", errdef.Boundary())
-	wrapped := def.Wrap(original)
+	wrapped := def.Wrap(orig)
 
 	if errors.Unwrap(wrapped) != nil {
 		t.Error("want Unwrap to return nil when Boundary is set")
 	}
 
-	if errors.Is(wrapped, original) {
+	if errors.Is(wrapped, orig) {
 		t.Error("want Is relationship to be broken by boundary")
 	}
 
-	if wrapped.Error() != original.Error() {
-		t.Errorf("want message %q, got %q", original.Error(), wrapped.Error())
+	if wrapped.Error() != orig.Error() {
+		t.Errorf("want message %q, got %q", orig.Error(), wrapped.Error())
 	}
 }
 
@@ -361,8 +361,8 @@ func TestDetails(t *testing.T) {
 		def := errdef.Define("test", errdef.Details("key1", "value1", "key2", 123))
 		err := def.New("test error")
 
-		details, found := errdef.DetailsFrom(err)
-		if !found {
+		details, ok := errdef.DetailsFrom(err)
+		if !ok {
 			t.Fatal("want details to be found")
 		}
 
@@ -384,8 +384,8 @@ func TestDetails(t *testing.T) {
 		def := errdef.Define("test", errdef.Details(kv))
 		err := def.New("test error")
 
-		details, found := errdef.DetailsFrom(err)
-		if !found {
+		details, ok := errdef.DetailsFrom(err)
+		if !ok {
 			t.Fatal("want details to be found")
 		}
 
@@ -406,8 +406,8 @@ func TestDetails(t *testing.T) {
 		def := errdef.Define("test", errdef.Details(kvs))
 		err := def.New("test error")
 
-		details, found := errdef.DetailsFrom(err)
-		if !found {
+		details, ok := errdef.DetailsFrom(err)
+		if !ok {
 			t.Fatal("want details to be found")
 		}
 
@@ -428,8 +428,8 @@ func TestDetails(t *testing.T) {
 		def := errdef.Define("test", errdef.Details())
 		err := def.New("test error")
 
-		details, found := errdef.DetailsFrom(err)
-		if !found {
+		details, ok := errdef.DetailsFrom(err)
+		if !ok {
 			t.Fatal("want details to be found")
 		}
 
@@ -442,8 +442,8 @@ func TestDetails(t *testing.T) {
 		def := errdef.Define("test", errdef.Details("key1", "value1", "trailing"))
 		err := def.New("test error")
 
-		details, found := errdef.DetailsFrom(err)
-		if !found {
+		details, ok := errdef.DetailsFrom(err)
+		if !ok {
 			t.Fatal("want details to be found")
 		}
 
@@ -464,8 +464,8 @@ func TestDetails(t *testing.T) {
 		def := errdef.Define("test", errdef.Details(123, "ignored"))
 		err := def.New("test error")
 
-		details, found := errdef.DetailsFrom(err)
-		if !found {
+		details, ok := errdef.DetailsFrom(err)
+		if !ok {
 			t.Fatal("want details to be found")
 		}
 
@@ -488,8 +488,8 @@ func TestDetails(t *testing.T) {
 		def := errdef.Define("test", errdef.Details("string_key", "string_value", kv, kvs))
 		err := def.New("test error")
 
-		details, found := errdef.DetailsFrom(err)
-		if !found {
+		details, ok := errdef.DetailsFrom(err)
+		if !ok {
 			t.Fatal("want details to be found")
 		}
 
@@ -514,8 +514,8 @@ func TestDetails(t *testing.T) {
 		def := errdef.Define("test")
 		err := def.New("test error")
 
-		_, found := errdef.DetailsFrom(err)
-		if found {
+		_, ok := errdef.DetailsFrom(err)
+		if ok {
 			t.Error("want details not to be found")
 		}
 	})

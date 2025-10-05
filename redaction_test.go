@@ -126,8 +126,8 @@ func TestRedacted_LogValue(t *testing.T) {
 		var buf bytes.Buffer
 		logger := slog.New(slog.NewJSONHandler(&buf, nil))
 
-		constructor, _ := DefineField[Redacted[string]]("password")
-		def := Define("auth_error", constructor(Redact("my-secret-password")))
+		ctor, _ := DefineField[Redacted[string]]("password")
+		def := Define("auth_error", ctor(Redact("my-secret-password")))
 		err := def.New("authentication failed")
 
 		logger.Error("error occurred", "error", err)

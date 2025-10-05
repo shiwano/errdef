@@ -26,14 +26,14 @@ type (
 
 func TestFields_Get(t *testing.T) {
 	t.Run("existing key", func(t *testing.T) {
-		constructor, _ := errdef.DefineField[string]("test_field")
-		def := errdef.Define("test_error", constructor("test_value"))
+		ctor, _ := errdef.DefineField[string]("test_field")
+		def := errdef.Define("test_error", ctor("test_value"))
 		err := def.New("test message")
 
 		fields := err.(errdef.Error).Fields()
 
-		value, found := fields.Get(constructor.FieldKey())
-		if !found {
+		value, ok := fields.Get(ctor.FieldKey())
+		if !ok {
 			t.Fatal("want field to be found via Fields.Get")
 		}
 		if value.Value() != "test_value" {
@@ -74,33 +74,33 @@ func TestFields_Get(t *testing.T) {
 }
 
 func TestFields_FindKeys(t *testing.T) {
-	constructor1, _ := errdef.DefineField[string]("common_field")
-	constructor2, _ := errdef.DefineField[int]("common_field")
-	constructor3, _ := errdef.DefineField[bool]("unique_field")
+	ctor1, _ := errdef.DefineField[string]("common_field")
+	ctor2, _ := errdef.DefineField[int]("common_field")
+	ctor3, _ := errdef.DefineField[bool]("unique_field")
 
 	def := errdef.Define("test_error",
-		constructor1("string_value"),
-		constructor2(42),
-		constructor3(true),
+		ctor1("string_value"),
+		ctor2(42),
+		ctor3(true),
 	)
 	err := def.New("test message")
 
 	fields := err.(errdef.Error).Fields()
 	keys := fields.FindKeys("common_field")
-	if len(keys) != 2 {
-		t.Fatalf("want 2 keys, got %d", len(keys))
+	if want, got := 2, len(keys); got != want {
+		t.Fatalf("want %d keys, got %d", want, got)
 	}
 
-	value1, found1 := fields.Get(keys[0])
-	if !found1 {
+	value1, ok1 := fields.Get(keys[0])
+	if !ok1 {
 		t.Fatal("want first common_field to be found")
 	}
 	if value1.Value() != "string_value" && value1.Value() != 42 {
 		t.Errorf("incorrect first common_field value, got %v", value1)
 	}
 
-	value2, found2 := fields.Get(keys[1])
-	if !found2 {
+	value2, ok2 := fields.Get(keys[1])
+	if !ok2 {
 		t.Fatal("want second common_field to be found")
 	}
 	if value1.Value() != "string_value" && value1.Value() != 42 {
@@ -109,12 +109,12 @@ func TestFields_FindKeys(t *testing.T) {
 }
 
 func TestFields_Seq(t *testing.T) {
-	constructor1, _ := errdef.DefineField[string]("field1")
-	constructor2, _ := errdef.DefineField[int]("field2")
+	ctor1, _ := errdef.DefineField[string]("field1")
+	ctor2, _ := errdef.DefineField[int]("field2")
 
 	def := errdef.Define("test_error",
-		constructor1("value1"),
-		constructor2(123),
+		ctor1("value1"),
+		ctor2(123),
 		customField{
 			key:   customFieldKey("field3"),
 			value: false,
@@ -142,12 +142,12 @@ func TestFields_Seq(t *testing.T) {
 
 func TestFields_SortedSeq(t *testing.T) {
 	t.Run("basic sorting", func(t *testing.T) {
-		constructor1, _ := errdef.DefineField[string]("c_field")
-		constructor2, _ := errdef.DefineField[int]("a_field")
+		ctor1, _ := errdef.DefineField[string]("c_field")
+		ctor2, _ := errdef.DefineField[int]("a_field")
 
 		def := errdef.Define("test_error",
-			constructor1("value_c"),
-			constructor2(123),
+			ctor1("value_c"),
+			ctor2(123),
 			customField{
 				key:   customFieldKey("b_field"),
 				value: true,
@@ -176,14 +176,14 @@ func TestFields_SortedSeq(t *testing.T) {
 	})
 
 	t.Run("same name keys", func(t *testing.T) {
-		constructor1, _ := errdef.DefineField[string]("same_name")
-		constructor2, _ := errdef.DefineField[int]("same_name")
-		constructor3, _ := errdef.DefineField[bool]("same_name")
+		ctor1, _ := errdef.DefineField[string]("same_name")
+		ctor2, _ := errdef.DefineField[int]("same_name")
+		ctor3, _ := errdef.DefineField[bool]("same_name")
 
 		def := errdef.Define("test_error",
-			constructor1("string_value"),
-			constructor2(42),
-			constructor3(true),
+			ctor1("string_value"),
+			ctor2(42),
+			ctor3(true),
 			customField{
 				key:   customFieldKey("same_name"),
 				value: 3.14,
@@ -231,16 +231,16 @@ func TestFields_Len(t *testing.T) {
 	})
 
 	t.Run("multiple fields", func(t *testing.T) {
-		constructor1, _ := errdef.DefineField[string]("field1")
-		constructor2, _ := errdef.DefineField[int]("field2")
-		constructor3, _ := errdef.DefineField[bool]("same_name_field")
-		constructor4, _ := errdef.DefineField[float64]("same_name_field")
+		ctor1, _ := errdef.DefineField[string]("field1")
+		ctor2, _ := errdef.DefineField[int]("field2")
+		ctor3, _ := errdef.DefineField[bool]("same_name_field")
+		ctor4, _ := errdef.DefineField[float64]("same_name_field")
 
 		def := errdef.Define("test_error",
-			constructor1("value1"),
-			constructor2(123),
-			constructor3(true),
-			constructor4(3.14),
+			ctor1("value1"),
+			ctor2(123),
+			ctor3(true),
+			ctor4(3.14),
 		)
 		err := def.New("test message")
 
@@ -254,12 +254,12 @@ func TestFields_Len(t *testing.T) {
 
 func TestFields_MarshalJSON(t *testing.T) {
 	t.Run("marshal to JSON", func(t *testing.T) {
-		constructor1, _ := errdef.DefineField[string]("b_field")
-		constructor2, _ := errdef.DefineField[int]("a_field")
+		ctor1, _ := errdef.DefineField[string]("b_field")
+		ctor2, _ := errdef.DefineField[int]("a_field")
 
 		def := errdef.Define("test_error",
-			constructor1("string_value"),
-			constructor2(42),
+			ctor1("string_value"),
+			ctor2(42),
 			customField{
 				key:   customFieldKey("c_field"),
 				value: true,
@@ -314,14 +314,14 @@ func TestFields_MarshalJSON(t *testing.T) {
 	})
 
 	t.Run("overwrite same name fields", func(t *testing.T) {
-		constructor1, _ := errdef.DefineField[string]("field")
-		constructor2, _ := errdef.DefineField[int]("field")
-		constructor3, _ := errdef.DefineField[bool]("field")
+		ctor1, _ := errdef.DefineField[string]("field")
+		ctor2, _ := errdef.DefineField[int]("field")
+		ctor3, _ := errdef.DefineField[bool]("field")
 
 		def := errdef.Define("test_error",
-			constructor1("first"),
-			constructor2(42),
-			constructor3(true),
+			ctor1("first"),
+			ctor2(42),
+			ctor3(true),
 		)
 		err := def.New("test message")
 
@@ -349,9 +349,9 @@ func TestFields_MarshalJSON(t *testing.T) {
 
 func TestFields_LogValue(t *testing.T) {
 	t.Run("with fields", func(t *testing.T) {
-		constructor1, _ := errdef.DefineField[string]("user_id")
-		constructor2, _ := errdef.DefineField[int]("status_code")
-		def := errdef.Define("test_error", constructor1("user123"), constructor2(404))
+		ctor1, _ := errdef.DefineField[string]("user_id")
+		ctor2, _ := errdef.DefineField[int]("status_code")
+		def := errdef.Define("test_error", ctor1("user123"), ctor2(404))
 		err := def.New("test message")
 
 		fields := err.(errdef.Error).Fields()
@@ -398,14 +398,14 @@ func TestFields_LogValue(t *testing.T) {
 	})
 
 	t.Run("overwrite same name fields", func(t *testing.T) {
-		constructor1, _ := errdef.DefineField[string]("field")
-		constructor2, _ := errdef.DefineField[int]("field")
-		constructor3, _ := errdef.DefineField[bool]("field")
+		ctor1, _ := errdef.DefineField[string]("field")
+		ctor2, _ := errdef.DefineField[int]("field")
+		ctor3, _ := errdef.DefineField[bool]("field")
 
 		def := errdef.Define("test_error",
-			constructor1("first"),
-			constructor2(42),
-			constructor3(true),
+			ctor1("first"),
+			ctor2(42),
+			ctor3(true),
 		)
 		err := def.New("test message")
 
