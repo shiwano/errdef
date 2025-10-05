@@ -234,8 +234,8 @@ func TestXMLDecoder_UnknownCause(t *testing.T) {
 	}
 
 	if causeErr, ok := causes[0].(errdef.Error); ok {
-		if causeErr.Kind() != unmarshaler.ForeignCause.Kind() {
-			t.Errorf("want kind %q, got %q", unmarshaler.ForeignCause.Kind(), causeErr.Kind())
+		if causeErr.Kind() != unmarshaler.UnknownError.Kind() {
+			t.Errorf("want kind %q, got %q", unmarshaler.UnknownError.Kind(), causeErr.Kind())
 		}
 	}
 }

@@ -172,7 +172,7 @@ func (d *Unmarshaler) unmarshal(decoded *DecodedData) (UnmarshaledError, error) 
 					return nil, ErrInternal.Wrapf(err, "failed to marshal cause data field")
 				}
 
-				cause := ForeignCause.
+				cause := UnknownError.
 					WithOptions(
 						typeField(typeName),
 						dataField(string(dataJSON)),
@@ -185,7 +185,7 @@ func (d *Unmarshaler) unmarshal(decoded *DecodedData) (UnmarshaledError, error) 
 					return nil, ErrInternal.Wrapf(err, "failed to marshal cause data")
 				}
 
-				cause := ForeignCause.
+				cause := UnknownError.
 					WithOptions(
 						typeField(typeName),
 						rawDataField(string(causeJSON)),

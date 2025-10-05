@@ -248,8 +248,8 @@ func TestUnmarshaler_Causes_Unmarshalable(t *testing.T) {
 		}
 
 		if causeErr, ok := causes[0].(errdef.Error); ok {
-			if causeErr.Kind() != unmarshaler.ForeignCause.Kind() {
-				t.Errorf("want kind %q, got %q", unmarshaler.ForeignCause.Kind(), causeErr.Kind())
+			if causeErr.Kind() != unmarshaler.UnknownError.Kind() {
+				t.Errorf("want kind %q, got %q", unmarshaler.UnknownError.Kind(), causeErr.Kind())
 			}
 		}
 	})
@@ -348,8 +348,8 @@ func TestUnmarshaler_Causes_Mixed(t *testing.T) {
 	}
 
 	if unknownErr, ok := causes[1].(errdef.Error); ok {
-		if unknownErr.Kind() != unmarshaler.ForeignCause.Kind() {
-			t.Errorf("want second cause kind %q, got %q", unmarshaler.ForeignCause.Kind(), unknownErr.Kind())
+		if unknownErr.Kind() != unmarshaler.UnknownError.Kind() {
+			t.Errorf("want second cause kind %q, got %q", unmarshaler.UnknownError.Kind(), unknownErr.Kind())
 		}
 	}
 }
@@ -612,7 +612,7 @@ func TestUnmarshaler_SentinelErrors_WithoutOption(t *testing.T) {
 
 	if causeErr, ok := causes[0].(errdef.Error); !ok {
 		t.Errorf("want cause to be ForeignCause, got %T", causes[0])
-	} else if causeErr.Kind() != unmarshaler.ForeignCause.Kind() {
-		t.Errorf("want kind %q, got %q", unmarshaler.ForeignCause.Kind(), causeErr.Kind())
+	} else if causeErr.Kind() != unmarshaler.UnknownError.Kind() {
+		t.Errorf("want kind %q, got %q", unmarshaler.UnknownError.Kind(), causeErr.Kind())
 	}
 }
