@@ -1,8 +1,11 @@
 package unmarshaler_test
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/shiwano/errdef"
@@ -484,4 +487,132 @@ func TestUnmarshaler_Fields_Redacted(t *testing.T) {
 			t.Error("want password field to be inaccessible via typed getter")
 		}
 	})
+}
+
+func TestUnmarshaler_WithStandardSentinelErrors(t *testing.T) {
+	def := errdef.Define("test_error")
+	resolver := errdef.NewResolver(def)
+	u := unmarshaler.NewJSON(resolver, unmarshaler.WithStandardSentinelErrors())
+
+	t.Run("io.EOF", func(t *testing.T) {
+		orig := def.Wrap(io.EOF)
+		data, err := json.Marshal(orig)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		unmarshaled, err := u.Unmarshal(data)
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		causes := unmarshaled.Unwrap()
+		if len(causes) != 1 {
+			t.Fatalf("want 1 cause, got %d", len(causes))
+		}
+
+		if !errors.Is(causes[0], io.EOF) {
+			t.Errorf("want cause to be io.EOF, got %v", causes[0])
+		}
+	})
+
+	t.Run("context.Canceled", func(t *testing.T) {
+		orig := def.Wrap(context.Canceled)
+		data, err := json.Marshal(orig)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		unmarshaled, err := u.Unmarshal(data)
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		causes := unmarshaled.Unwrap()
+		if len(causes) != 1 {
+			t.Fatalf("want 1 cause, got %d", len(causes))
+		}
+
+		if !errors.Is(causes[0], context.Canceled) {
+			t.Errorf("want cause to be context.Canceled, got %v", causes[0])
+		}
+	})
+
+	t.Run("os.ErrNotExist", func(t *testing.T) {
+		orig := def.Wrap(os.ErrNotExist)
+		data, err := json.Marshal(orig)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		unmarshaled, err := u.Unmarshal(data)
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		causes := unmarshaled.Unwrap()
+		if len(causes) != 1 {
+			t.Fatalf("want 1 cause, got %d", len(causes))
+		}
+
+		if !errors.Is(causes[0], os.ErrNotExist) {
+			t.Errorf("want cause to be os.ErrNotExist, got %v", causes[0])
+		}
+	})
+}
+
+func TestUnmarshaler_SentinelErrors_Custom(t *testing.T) {
+	customSentinel := errors.New("custom sentinel error")
+
+	def := errdef.Define("test_error")
+	resolver := errdef.NewResolver(def)
+	u := unmarshaler.NewJSON(resolver, unmarshaler.WithSentinelErrors(customSentinel))
+
+	orig := def.Wrap(customSentinel)
+	data, err := json.Marshal(orig)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	unmarshaled, err := u.Unmarshal(data)
+	if err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+
+	causes := unmarshaled.Unwrap()
+	if len(causes) != 1 {
+		t.Fatalf("want 1 cause, got %d", len(causes))
+	}
+
+	if !errors.Is(causes[0], customSentinel) {
+		t.Errorf("want cause to be customSentinel, got %v", causes[0])
+	}
+}
+
+func TestUnmarshaler_SentinelErrors_WithoutOption(t *testing.T) {
+	def := errdef.Define("test_error")
+	resolver := errdef.NewResolver(def)
+	u := unmarshaler.NewJSON(resolver)
+
+	orig := def.Wrap(io.EOF)
+	data, err := json.Marshal(orig)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	unmarshaled, err := u.Unmarshal(data)
+	if err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+
+	causes := unmarshaled.Unwrap()
+	if len(causes) != 1 {
+		t.Fatalf("want 1 cause, got %d", len(causes))
+	}
+
+	if causeErr, ok := causes[0].(errdef.Error); !ok {
+		t.Errorf("want cause to be ForeignCause, got %T", causes[0])
+	} else if causeErr.Kind() != unmarshaler.ForeignCause.Kind() {
+		t.Errorf("want kind %q, got %q", unmarshaler.ForeignCause.Kind(), causeErr.Kind())
+	}
 }

@@ -9,29 +9,45 @@ import (
 
 type (
 	Unmarshaler struct {
-		resolver Resolver
-		decoder  Decoder
+		resolver       Resolver
+		decoder        Decoder
+		sentinelErrors map[sentinelKey]error
 	}
 
 	Resolver interface {
 		Definitions() []*errdef.Definition
 	}
+
+	Option func(*Unmarshaler)
+
+	sentinelKey struct {
+		typeName string
+		message  string
+	}
 )
 
 const redactedStr = "[REDACTED]"
 
-func New(resolver Resolver, decoder Decoder) *Unmarshaler {
-	return &Unmarshaler{
+func New(resolver Resolver, decoder Decoder, opts ...Option) *Unmarshaler {
+	u := &Unmarshaler{
 		resolver: resolver,
 		decoder:  decoder,
 	}
+	for _, opt := range opts {
+		opt(u)
+	}
+	return u
 }
 
-func NewJSON(resolver Resolver) *Unmarshaler {
-	return &Unmarshaler{
+func NewJSON(resolver Resolver, opts ...Option) *Unmarshaler {
+	u := &Unmarshaler{
 		resolver: resolver,
 		decoder:  jsonDecoder,
 	}
+	for _, opt := range opts {
+		opt(u)
+	}
+	return u
 }
 
 func (d *Unmarshaler) Unmarshal(data []byte) (UnmarshaledError, error) {
@@ -143,6 +159,11 @@ func (d *Unmarshaler) unmarshal(decoded *DecodedData) (UnmarshaledError, error) 
 			typeName, hasTypeName := causeData["type"].(string)
 			if !hasTypeName {
 				typeName = "<unknown>"
+			}
+
+			if sentinelErr, ok := d.sentinelErrors[sentinelKey{typeName: typeName, message: msg}]; ok {
+				causes = append(causes, sentinelErr)
+				continue
 			}
 
 			if dataRaw, ok := causeData["data"]; ok {
