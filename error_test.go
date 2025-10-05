@@ -241,11 +241,11 @@ func TestDebugStacker_DebugStack(t *testing.T) {
 }
 
 func TestStackTracer_StackTrace(t *testing.T) {
-	t.Run("stack exists", func(t *testing.T) {
-		type stackTracer interface {
-			StackTrace() []uintptr
-		}
+	type stackTracer interface {
+		StackTrace() []uintptr
+	}
 
+	t.Run("stack exists", func(t *testing.T) {
 		def := errdef.Define("test_error")
 		err := def.New("test message").(stackTracer)
 
@@ -256,10 +256,6 @@ func TestStackTracer_StackTrace(t *testing.T) {
 	})
 
 	t.Run("no trace", func(t *testing.T) {
-		type stackTracer interface {
-			StackTrace() []uintptr
-		}
-
 		def := errdef.Define("test_error", errdef.NoTrace())
 		err := def.New("test message").(stackTracer)
 
@@ -271,11 +267,11 @@ func TestStackTracer_StackTrace(t *testing.T) {
 }
 
 func TestCauser_Cause(t *testing.T) {
-	t.Run("no cause", func(t *testing.T) {
-		type causer interface {
-			Cause() error
-		}
+	type causer interface {
+		Cause() error
+	}
 
+	t.Run("no cause", func(t *testing.T) {
 		def := errdef.Define("test_error")
 		err := def.New("test message").(causer)
 
@@ -286,10 +282,6 @@ func TestCauser_Cause(t *testing.T) {
 	})
 
 	t.Run("with cause", func(t *testing.T) {
-		type causer interface {
-			Cause() error
-		}
-
 		def := errdef.Define("test_error")
 		original := errors.New("original error")
 		wrapped := def.Wrap(original).(causer)
@@ -297,6 +289,17 @@ func TestCauser_Cause(t *testing.T) {
 		cause := wrapped.Cause()
 		if cause != original {
 			t.Error("want cause to be original error")
+		}
+	})
+
+	t.Run("boundary breaks chain", func(t *testing.T) {
+		original := errors.New("original error")
+		def := errdef.Define("boundary_error", errdef.Boundary())
+		wrapped := def.Wrap(original).(causer)
+
+		cause := wrapped.Cause()
+		if cause != nil {
+			t.Errorf("want no cause due to boundary, got %v", cause)
 		}
 	})
 }

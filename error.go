@@ -154,6 +154,9 @@ func (e *definedError) StackTrace() []uintptr {
 }
 
 func (e *definedError) Cause() error {
+	if e.def.boundary {
+		return nil // Break the error chain.
+	}
 	return e.cause
 }
 
