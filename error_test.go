@@ -420,7 +420,7 @@ func TestFormatter_Format(t *testing.T) {
 
 func TestMarshaler_MarshalJSON(t *testing.T) {
 	t.Run("basic json", func(t *testing.T) {
-		def := errdef.Define("test_error")
+		def := errdef.Define("test_error", errdef.NoTrace())
 		err := def.New("test message")
 
 		data, jsonErr := json.Marshal(err)
@@ -428,22 +428,23 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 			t.Fatalf("want no error, got %v", jsonErr)
 		}
 
-		var result map[string]any
-		if err := json.Unmarshal(data, &result); err != nil {
+		var got map[string]any
+		if err := json.Unmarshal(data, &got); err != nil {
 			t.Fatalf("want valid JSON, got %v", err)
 		}
 
-		if result["message"] != "test message" {
-			t.Errorf("want message %q, got %q", "test message", result["message"])
+		want := map[string]any{
+			"message": "test message",
+			"kind":    "test_error",
 		}
-		if result["kind"] != "test_error" {
-			t.Errorf("want kind %q, got %q", "test_error", result["kind"])
+		if !reflect.DeepEqual(want, got) {
+			t.Errorf("want %v, got %v", want, got)
 		}
 	})
 
 	t.Run("with kind and fields", func(t *testing.T) {
 		ctor, _ := errdef.DefineField[string]("user_id")
-		def := errdef.Define("test_error", ctor("user123"))
+		def := errdef.Define("test_error", ctor("user123"), errdef.NoTrace())
 		err := def.New("test message")
 
 		data, jsonErr := json.Marshal(err)
@@ -451,26 +452,25 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 			t.Fatalf("want no error, got %v", jsonErr)
 		}
 
-		var result map[string]any
-		if err := json.Unmarshal(data, &result); err != nil {
+		var got map[string]any
+		if err := json.Unmarshal(data, &got); err != nil {
 			t.Fatalf("want valid JSON, got %v", err)
 		}
 
-		if result["kind"] != "test_error" {
-			t.Errorf("want kind %q, got %q", "test_error", result["kind"])
+		want := map[string]any{
+			"message": "test message",
+			"kind":    "test_error",
+			"fields": map[string]any{
+				"user_id": "user123",
+			},
 		}
-
-		fields := result["fields"].(map[string]any)
-		if want, got := 1, len(fields); got != want {
-			t.Errorf("want %d field, got %d", want, got)
-		}
-		if fields["user_id"] != "user123" {
-			t.Errorf("want field %q, got %q", "user123", fields["user_id"])
+		if !reflect.DeepEqual(want, got) {
+			t.Errorf("want %v, got %v", want, got)
 		}
 	})
 
 	t.Run("with causes", func(t *testing.T) {
-		def := errdef.Define("test_error")
+		def := errdef.Define("test_error", errdef.NoTrace())
 		orig := errors.New("original error")
 		wrapped := def.Wrap(orig)
 
@@ -479,19 +479,23 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 			t.Fatalf("want no error, got %v", jsonErr)
 		}
 
-		var result map[string]any
-		if err := json.Unmarshal(data, &result); err != nil {
+		var got map[string]any
+		if err := json.Unmarshal(data, &got); err != nil {
 			t.Fatalf("want valid JSON, got %v", err)
 		}
 
-		causes := result["causes"].([]any)
-		if len(causes) != 1 {
-			t.Fatalf("want 1 cause, got %d", len(causes))
+		want := map[string]any{
+			"message": "original error",
+			"kind":    "test_error",
+			"causes": []any{
+				map[string]any{
+					"message": "original error",
+					"type":    "*errors.errorString",
+				},
+			},
 		}
-
-		cause := causes[0].(map[string]any)
-		if cause["message"] != "original error" {
-			t.Errorf("want cause message %q, got %q", "original error", cause["message"])
+		if !reflect.DeepEqual(want, got) {
+			t.Errorf("want %v, got %v", want, got)
 		}
 	})
 
@@ -501,7 +505,7 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 		ce2 = &circularError{msg: "error 2", cause: ce1}
 		ce1.cause = ce2
 
-		def := errdef.Define("test_error")
+		def := errdef.Define("test_error", errdef.NoTrace())
 		wrapped := def.Wrap(ce1)
 
 		data, jsonErr := json.Marshal(wrapped)
@@ -509,43 +513,35 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 			t.Fatalf("want no error, got %v", jsonErr)
 		}
 
-		var result map[string]any
-		if err := json.Unmarshal(data, &result); err != nil {
+		var got map[string]any
+		if err := json.Unmarshal(data, &got); err != nil {
 			t.Fatalf("want valid JSON, got %v", err)
 		}
 
-		causes := result["causes"].([]any)
-		if len(causes) != 1 {
-			t.Fatalf("want 1 cause, got %d", len(causes))
+		want := map[string]any{
+			"message": "error 1",
+			"kind":    "test_error",
+			"causes": []any{
+				map[string]any{
+					"message": "error 1",
+					"type":    "*errdef_test.circularError",
+					"causes": []any{
+						map[string]any{
+							"message": "error 2",
+							"type":    "*errdef_test.circularError",
+							"causes": []any{
+								map[string]any{
+									"message": "error 1",
+									"type":    "*errdef_test.circularError",
+								},
+							},
+						},
+					},
+				},
+			},
 		}
-
-		cause1 := causes[0].(map[string]any)
-		if cause1["message"] != "error 1" {
-			t.Errorf("want cause message %q, got %q", "error 1", cause1["message"])
-		}
-
-		nestedCauses := cause1["causes"].([]any)
-		if len(nestedCauses) != 1 {
-			t.Fatalf("want 1 nested cause, got %d", len(nestedCauses))
-		}
-
-		cause2 := nestedCauses[0].(map[string]any)
-		if cause2["message"] != "error 2" {
-			t.Errorf("want nested cause message %q, got %q", "error 2", cause2["message"])
-		}
-
-		cause2Causes := cause2["causes"].([]any)
-		if len(cause2Causes) != 1 {
-			t.Fatalf("want 1 cause in cause2, got %d", len(cause2Causes))
-		}
-
-		cause3 := cause2Causes[0].(map[string]any)
-		if cause3["message"] != "error 1" {
-			t.Errorf("want circular cause message %q, got %q", "error 1", cause3["message"])
-		}
-
-		if _, hasCauses := cause3["causes"]; hasCauses {
-			t.Error("circular reference should be detected and causes omitted")
+		if !reflect.DeepEqual(want, got) {
+			t.Errorf("want %v, got %v", want, got)
 		}
 	})
 
@@ -558,13 +554,13 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 			t.Fatalf("want no error, got %v", jsonErr)
 		}
 
-		var result map[string]any
-		if jsonErr := json.Unmarshal(data, &result); jsonErr != nil {
+		var got map[string]any
+		if jsonErr := json.Unmarshal(data, &got); jsonErr != nil {
 			t.Fatalf("want valid JSON, got %v", jsonErr)
 		}
 
-		stack := result["stack"].([]any)
-		if len(stack) == 0 {
+		stack, ok := got["stack"].([]any)
+		if !ok || len(stack) == 0 {
 			t.Error("want stack frames to exist")
 		}
 	})
@@ -584,13 +580,16 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 			t.Fatalf("want no error, got %v", jsonErr)
 		}
 
-		var result map[string]any
-		if err := json.Unmarshal(data, &result); err != nil {
+		var got map[string]any
+		if err := json.Unmarshal(data, &got); err != nil {
 			t.Fatalf("want valid JSON, got %v", err)
 		}
 
-		if result["custom_message"] != "test message" {
-			t.Errorf("want custom_message %q, got %q", "test message", result["custom_message"])
+		want := map[string]any{
+			"custom_message": "test message",
+		}
+		if !reflect.DeepEqual(want, got) {
+			t.Errorf("want %v, got %v", want, got)
 		}
 	})
 
