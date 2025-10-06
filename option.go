@@ -2,6 +2,8 @@ package errdef
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"net/http"
 )
 
@@ -25,11 +27,11 @@ type (
 		// SetBoundary marks this error as a boundary in the error chain.
 		SetBoundary()
 		// SetFormatter sets a custom error formatter.
-		SetFormatter(formatter ErrorFormatter)
+		SetFormatter(formatter func(err Error, s fmt.State, verb rune))
 		// SetJSONMarshaler sets a custom JSON marshaler.
-		SetJSONMarshaler(marshaler ErrorJSONMarshaler)
+		SetJSONMarshaler(marshaler func(err Error) ([]byte, error))
 		// SetLogValuer sets a custom slog.Value converter.
-		SetLogValuer(valuer ErrorLogValuer)
+		SetLogValuer(valuer func(err Error) slog.Value)
 	}
 
 	// FieldConstructor creates an Option that sets a field value.
@@ -66,15 +68,15 @@ type (
 	boundary struct{}
 
 	formatter struct {
-		formatter ErrorFormatter
+		formatter func(err Error, s fmt.State, verb rune)
 	}
 
 	jsonMarshaler struct {
-		marshaler ErrorJSONMarshaler
+		marshaler func(err Error) ([]byte, error)
 	}
 
 	logValuer struct {
-		valuer ErrorLogValuer
+		valuer func(err Error) slog.Value
 	}
 )
 
@@ -190,15 +192,15 @@ func (a *optionApplier) SetBoundary() {
 	a.def.boundary = true
 }
 
-func (a *optionApplier) SetFormatter(formatter ErrorFormatter) {
+func (a *optionApplier) SetFormatter(formatter func(err Error, s fmt.State, verb rune)) {
 	a.def.formatter = formatter
 }
 
-func (a *optionApplier) SetJSONMarshaler(marshaler ErrorJSONMarshaler) {
+func (a *optionApplier) SetJSONMarshaler(marshaler func(err Error) ([]byte, error)) {
 	a.def.jsonMarshaler = marshaler
 }
 
-func (a *optionApplier) SetLogValuer(valuer ErrorLogValuer) {
+func (a *optionApplier) SetLogValuer(valuer func(err Error) slog.Value) {
 	a.def.logValuer = valuer
 }
 

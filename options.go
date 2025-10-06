@@ -1,6 +1,7 @@
 package errdef
 
 import (
+	"fmt"
 	"log/slog"
 	"maps"
 	"time"
@@ -73,17 +74,17 @@ func Boundary() Option {
 }
 
 // Formatter overrides the default `fmt.Formatter` behavior.
-func Formatter(f ErrorFormatter) Option {
+func Formatter(f func(err Error, s fmt.State, verb rune)) Option {
 	return &formatter{formatter: f}
 }
 
 // JSONMarshaler overrides the default `json.Marshaler` behavior.
-func JSONMarshaler(f ErrorJSONMarshaler) Option {
+func JSONMarshaler(f func(err Error) ([]byte, error)) Option {
 	return &jsonMarshaler{marshaler: f}
 }
 
 // LogValuer overrides the default `slog.LogValuer` behavior.
-func LogValuer(f ErrorLogValuer) Option {
+func LogValuer(f func(err Error) slog.Value) Option {
 	return &logValuer{valuer: f}
 }
 

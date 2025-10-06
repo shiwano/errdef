@@ -27,15 +27,6 @@ type (
 		Unwrap() []error
 	}
 
-	// ErrorFormatter is a function type for custom error formatting.
-	ErrorFormatter func(err Error, s fmt.State, verb rune)
-
-	// ErrorJSONMarshaler is a function type for custom JSON marshaling of errors.
-	ErrorJSONMarshaler func(err Error) ([]byte, error)
-
-	// ErrorLogValuer is a function type for custom slog.Value conversion of errors.
-	ErrorLogValuer func(err Error) slog.Value
-
 	// DebugStacker returns a string that resembles the output of debug.Stack().
 	// This is useful for integrating with Google Cloud Error Reporting.
 	// NOTE: The goroutine ID and state may differ from the actual one.

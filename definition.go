@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 )
 
 // Definition represents an error definition with customizable options.
@@ -15,9 +16,9 @@ type Definition struct {
 	stackSkip     int
 	stackDepth    int
 	boundary      bool
-	formatter     ErrorFormatter
-	jsonMarshaler ErrorJSONMarshaler
-	logValuer     ErrorLogValuer
+	formatter     func(err Error, s fmt.State, verb rune)
+	jsonMarshaler func(err Error) ([]byte, error)
+	logValuer     func(err Error) slog.Value
 }
 
 // Kind returns the kind of this error definition.
