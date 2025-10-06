@@ -90,6 +90,7 @@ Choose how to construct an error depending on whether you create a new one or ke
 - `Errorf(fmt, ...)`: Create with a formatted message.
 - `Wrap(cause)`: Wrap and keep the cause (`errors.Is(err, cause)` stays true).
 - `Wrapf(cause, fmt, ...)`: Wrap with a cause and a formatted message.
+- `Join(causes...)`: Join multiple causes (`errors.Is(err, cause)` stays true).
 
 ```go
 // New / Errorf
@@ -97,12 +98,17 @@ e1 := ErrNotFound.New("user not found")
 e2 := ErrNotFound.Errorf("user %s not found", "u123")
 
 // Wrap / Wrapf (keep the cause)
-cause := sql.ErrNoRows
-e3 := ErrNotFound.Wrap(cause)
-e4 := ErrNotFound.Wrapf(cause, "lookup failed: %s", "u123")
+e3 := ErrNotFound.Wrap(sql.ErrNoRows)
+e4 := ErrNotFound.Wrapf(sql.ErrNoRows, "lookup failed: %s", "u123")
 
-errors.Is(e3, cause) // true
-errors.Is(e4, cause) // true
+errors.Is(e3, sql.ErrNoRows) // true
+errors.Is(e4, sql.ErrNoRows) // true
+
+// Join (keep multiple causes)
+e5 := ErrNotFound.Join(sql.ErrNoRows, sql.ErrConnDone)
+
+errors.Is(e5, sql.ErrNoRows)   // true
+errors.Is(e5, sql.ErrConnDone) // true
 ```
 
 #### Attaching Additional Options
