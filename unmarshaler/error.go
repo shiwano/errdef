@@ -26,6 +26,12 @@ type (
 		causes        []error
 	}
 
+	unknownCauseError struct {
+		message  string
+		typeName string
+		causes   []error
+	}
+
 	errorEncoder interface {
 		ErrorFormatter(err errdef.Error, s fmt.State, verb rune)
 		ErrorJSONMarshaler(err errdef.Error) ([]byte, error)
@@ -122,4 +128,16 @@ func (e *unmarshaledError) Cause() error {
 		return nil
 	}
 	return e.causes[0] // return the first cause only
+}
+
+func (e *unknownCauseError) Error() string {
+	return e.message
+}
+
+func (e *unknownCauseError) Type() string {
+	return e.typeName
+}
+
+func (e *unknownCauseError) Unwrap() []error {
+	return e.causes
 }

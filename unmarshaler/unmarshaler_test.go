@@ -225,11 +225,7 @@ func TestUnmarshaler_Causes_Unmarshalable(t *testing.T) {
 			"causes": [
 				{
 					"message": "unknown error",
-					"kind": "unknown_kind",
-					"type": "CustomError",
-					"data": {
-						"code": 500
-					}
+					"type": "CustomError"
 				}
 			]
 		}`
@@ -248,10 +244,12 @@ func TestUnmarshaler_Causes_Unmarshalable(t *testing.T) {
 			t.Errorf("want cause message %q, got %q", "unknown error", causes[0].Error())
 		}
 
-		if causeErr, ok := causes[0].(errdef.Error); ok {
-			if causeErr.Kind() != unmarshaler.UnknownError.Kind() {
-				t.Errorf("want kind %q, got %q", unmarshaler.UnknownError.Kind(), causeErr.Kind())
+		if causeErr, ok := causes[0].(interface{ Type() string }); ok {
+			if causeErr.Type() != "CustomError" {
+				t.Errorf("want type %q, got %q", "CustomError", causeErr.Type())
 			}
+		} else {
+			t.Errorf("want cause to be interface with Type(), got %T", causes[0])
 		}
 	})
 
@@ -348,10 +346,10 @@ func TestUnmarshaler_Causes_Mixed(t *testing.T) {
 		t.Error("want first cause to be errdef.Error")
 	}
 
-	if unknownErr, ok := causes[1].(errdef.Error); ok {
-		if unknownErr.Kind() != unmarshaler.UnknownError.Kind() {
-			t.Errorf("want second cause kind %q, got %q", unmarshaler.UnknownError.Kind(), unknownErr.Kind())
-		}
+	if _, ok := causes[1].(errdef.Error); ok {
+		t.Error("want second cause not to be errdef.Error")
+	} else if causes[1].Error() != "unknown error" {
+		t.Errorf("want second cause message %q, got %q", "unknown error", causes[1].Error())
 	}
 }
 
@@ -611,10 +609,10 @@ func TestUnmarshaler_SentinelErrors_WithoutOption(t *testing.T) {
 		t.Fatalf("want 1 cause, got %d", len(causes))
 	}
 
-	if causeErr, ok := causes[0].(errdef.Error); !ok {
-		t.Errorf("want cause to be ForeignCause, got %T", causes[0])
-	} else if causeErr.Kind() != unmarshaler.UnknownError.Kind() {
-		t.Errorf("want kind %q, got %q", unmarshaler.UnknownError.Kind(), causeErr.Kind())
+	if _, ok := causes[0].(errdef.Error); ok {
+		t.Error("want cause not to be errdef.Error")
+	} else if causes[0].Error() != io.EOF.Error() {
+		t.Errorf("want cause message %q, got %q", io.EOF.Error(), causes[0].Error())
 	}
 }
 
@@ -664,17 +662,11 @@ func TestUnmarshaler_Causes_UnknownError_Recursive(t *testing.T) {
 			"causes": []any{
 				map[string]any{
 					"message": "unknown outer",
-					"kind":    "errdef/unmarshaler.unknown_error",
-					"fields": map[string]any{
-						"type": "CustomError",
-					},
+					"type":    "CustomError",
 					"causes": []any{
 						map[string]any{
 							"message": "unknown inner",
-							"kind":    "errdef/unmarshaler.unknown_error",
-							"fields": map[string]any{
-								"type": "AnotherError",
-							},
+							"type":    "AnotherError",
 						},
 					},
 				},
@@ -731,25 +723,16 @@ func TestUnmarshaler_Causes_UnknownError_Recursive(t *testing.T) {
 			"kind":    "test_error",
 			"causes": []any{
 				map[string]any{
-					"message": "unknown inner 1\nunknown inner 2",
-					"kind":    "errdef/unmarshaler.unknown_error",
-					"fields": map[string]any{
-						"type": "CustomError",
-					},
+					"message": "unknown outer",
+					"type":    "CustomError",
 					"causes": []any{
 						map[string]any{
 							"message": "unknown inner 1",
-							"kind":    "errdef/unmarshaler.unknown_error",
-							"fields": map[string]any{
-								"type": "AnotherError1",
-							},
+							"type":    "AnotherError1",
 						},
 						map[string]any{
 							"message": "unknown inner 2",
-							"kind":    "errdef/unmarshaler.unknown_error",
-							"fields": map[string]any{
-								"type": "AnotherError2",
-							},
+							"type":    "AnotherError2",
 						},
 					},
 				},
@@ -809,24 +792,15 @@ func TestUnmarshaler_Causes_UnknownError_Recursive(t *testing.T) {
 			"causes": []any{
 				map[string]any{
 					"message": "level 2",
-					"kind":    "errdef/unmarshaler.unknown_error",
-					"fields": map[string]any{
-						"type": "Error2",
-					},
+					"type":    "Error2",
 					"causes": []any{
 						map[string]any{
 							"message": "level 3",
-							"kind":    "errdef/unmarshaler.unknown_error",
-							"fields": map[string]any{
-								"type": "Error3",
-							},
+							"type":    "Error3",
 							"causes": []any{
 								map[string]any{
 									"message": "level 4",
-									"kind":    "errdef/unmarshaler.unknown_error",
-									"fields": map[string]any{
-										"type": "Error4",
-									},
+									"type":    "Error4",
 								},
 							},
 						},
@@ -884,10 +858,7 @@ func TestUnmarshaler_Causes_UnknownError_Recursive(t *testing.T) {
 			"causes": []any{
 				map[string]any{
 					"message": "unknown with known child",
-					"kind":    "errdef/unmarshaler.unknown_error",
-					"fields": map[string]any{
-						"type": "UnknownError",
-					},
+					"type":    "UnknownError",
 					"causes": []any{
 						map[string]any{
 							"message": "known error",

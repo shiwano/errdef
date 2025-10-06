@@ -171,19 +171,10 @@ func (d *Unmarshaler) unmarshalCause(causeData map[string]any) (error, error) {
 			}
 		}
 
-		var unknownErr error
-		if len(nestedCauses) == 0 {
-			unknownErr = UnknownError.
-				WithOptions(typeField(typeName)).
-				New(msg)
-		} else if len(nestedCauses) == 1 {
-			unknownErr = UnknownError.
-				WithOptions(typeField(typeName)).
-				Wrapf(nestedCauses[0], "%s", msg)
-		} else {
-			unknownErr = UnknownError.
-				WithOptions(typeField(typeName)).
-				Join(nestedCauses...)
+		unknownErr := &unknownCauseError{
+			message:  msg,
+			typeName: typeName,
+			causes:   nestedCauses,
 		}
 		return unknownErr, nil
 	}

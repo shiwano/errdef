@@ -203,7 +203,7 @@ func TestXMLDecoder_WithMultipleCauses(t *testing.T) {
 	}
 }
 
-func TestXMLDecoder_UnknownCause(t *testing.T) {
+func TestXMLDecoder_UnknownCauseError(t *testing.T) {
 	def := errdef.Define("test_error")
 	resolver := errdef.NewResolver(def)
 	u := unmarshaler.New(resolver, xmlDecoder)
@@ -231,11 +231,5 @@ func TestXMLDecoder_UnknownCause(t *testing.T) {
 
 	if causes[0].Error() != "unknown error" {
 		t.Errorf("want cause message %q, got %q", "unknown error", causes[0].Error())
-	}
-
-	if causeErr, ok := causes[0].(errdef.Error); ok {
-		if causeErr.Kind() != unmarshaler.UnknownError.Kind() {
-			t.Errorf("want kind %q, got %q", unmarshaler.UnknownError.Kind(), causeErr.Kind())
-		}
 	}
 }

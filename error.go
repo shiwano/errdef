@@ -376,6 +376,13 @@ func marshalCauseJSONWithVisited(c error, visited map[uintptr]bool) (json.RawMes
 		}
 		visited[ptr] = true
 
+		var typeName string
+		if t, ok := c.(interface{ Type() string }); ok {
+			typeName = t.Type()
+		} else {
+			typeName = fmt.Sprintf("%T", c)
+		}
+
 		var nestedCauses []json.RawMessage
 		if unwrapper, ok := c.(interface{ Unwrap() error }); ok {
 			if nested := unwrapper.Unwrap(); nested != nil {
@@ -401,7 +408,7 @@ func marshalCauseJSONWithVisited(c error, visited map[uintptr]bool) (json.RawMes
 			Causes  []json.RawMessage `json:"causes,omitempty"`
 		}{
 			Message: c.Error(),
-			Type:    fmt.Sprintf("%T", c),
+			Type:    typeName,
 			Causes:  nestedCauses,
 		})
 	}
