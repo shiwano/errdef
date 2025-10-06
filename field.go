@@ -1,6 +1,7 @@
 package errdef
 
 import (
+	"bytes"
 	"cmp"
 	"encoding/json"
 	"errors"
@@ -8,8 +9,10 @@ import (
 	"iter"
 	"log/slog"
 	"maps"
+	"net/url"
 	"reflect"
 	"slices"
+	"time"
 )
 
 type (
@@ -214,6 +217,14 @@ func (v *fieldValue[T]) Equals(other any) bool {
 			return tv == other.(complex64)
 		case complex128:
 			return tv == other.(complex128)
+		case time.Time:
+			return tv.Equal(other.(time.Time))
+		case time.Duration:
+			return tv == other.(time.Duration)
+		case []byte:
+			return bytes.Equal(tv, other.([]byte))
+		case *url.URL:
+			return tv.String() == other.(*url.URL).String()
 		default:
 			vVal := reflect.ValueOf(v.value)
 			otherVal := reflect.ValueOf(tOther)
