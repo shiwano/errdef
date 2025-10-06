@@ -243,15 +243,15 @@ This is useful for creating options with predefined or dynamically generated val
 var (
     ErrorCodeAmountTooLarge = ErrorCode.WithValue(2002)
 
-    errorGroupID, _ = errdef.DefineField[string]("error_group_id")
-    ErrorGroupID    = errorGroupID.WithValueFunc(func() string {
+    errorUniqueID, _ = errdef.DefineField[string]("error_unique_id")
+    ErrorUniqueID    = errorUniqueID.WithValueFunc(func() string {
         return generateRandomID()
     })
 )
 
 err := ErrPaymentFailed.With(
     ErrorCodeAmountTooLarge(),
-    ErrorGroupID(),
+    ErrorUniqueID(),
 ).New("amount too large")
 ```
 
