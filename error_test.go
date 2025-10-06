@@ -495,6 +495,60 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 		}
 	})
 
+	t.Run("with circular reference", func(t *testing.T) {
+		var ce1, ce2 *circularError
+		ce1 = &circularError{msg: "error 1"}
+		ce2 = &circularError{msg: "error 2", cause: ce1}
+		ce1.cause = ce2
+
+		def := errdef.Define("test_error")
+		wrapped := def.Wrap(ce1)
+
+		data, jsonErr := json.Marshal(wrapped)
+		if jsonErr != nil {
+			t.Fatalf("want no error, got %v", jsonErr)
+		}
+
+		var result map[string]any
+		if err := json.Unmarshal(data, &result); err != nil {
+			t.Fatalf("want valid JSON, got %v", err)
+		}
+
+		causes := result["causes"].([]any)
+		if len(causes) != 1 {
+			t.Fatalf("want 1 cause, got %d", len(causes))
+		}
+
+		cause1 := causes[0].(map[string]any)
+		if cause1["message"] != "error 1" {
+			t.Errorf("want cause message %q, got %q", "error 1", cause1["message"])
+		}
+
+		nestedCauses := cause1["causes"].([]any)
+		if len(nestedCauses) != 1 {
+			t.Fatalf("want 1 nested cause, got %d", len(nestedCauses))
+		}
+
+		cause2 := nestedCauses[0].(map[string]any)
+		if cause2["message"] != "error 2" {
+			t.Errorf("want nested cause message %q, got %q", "error 2", cause2["message"])
+		}
+
+		cause2Causes := cause2["causes"].([]any)
+		if len(cause2Causes) != 1 {
+			t.Fatalf("want 1 cause in cause2, got %d", len(cause2Causes))
+		}
+
+		cause3 := cause2Causes[0].(map[string]any)
+		if cause3["message"] != "error 1" {
+			t.Errorf("want circular cause message %q, got %q", "error 1", cause3["message"])
+		}
+
+		if _, hasCauses := cause3["causes"]; hasCauses {
+			t.Error("circular reference should be detected and causes omitted")
+		}
+	})
+
 	t.Run("with stack", func(t *testing.T) {
 		def := errdef.Define("test_error")
 		err := def.New("test message")
@@ -1032,4 +1086,17 @@ func TestError_LogValue(t *testing.T) {
 			t.Errorf("want function name to contain TestError_LogValue, got %q", funcName)
 		}
 	})
+}
+
+type circularError struct {
+	msg   string
+	cause error
+}
+
+func (e *circularError) Error() string {
+	return e.msg
+}
+
+func (e *circularError) Unwrap() error {
+	return e.cause
 }

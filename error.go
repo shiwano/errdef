@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
@@ -297,9 +298,9 @@ func (e *definedError) ErrorJSONMarshaler(err Error) ([]byte, error) {
 
 	var causes []json.RawMessage
 	for _, c := range err.Unwrap() {
-		b, marshalErr := marshalCauseJSON(c)
-		if marshalErr != nil {
-			return nil, marshalErr
+		b, err := marshalCauseJSON(c)
+		if err != nil {
+			return nil, err
 		}
 		causes = append(causes, b)
 	}
@@ -354,14 +355,31 @@ func (e *definedError) ErrorLogValuer(err Error) slog.Value {
 }
 
 func marshalCauseJSON(c error) (json.RawMessage, error) {
+	visited := make(map[uintptr]bool)
+	return marshalCauseJSONWithVisited(c, visited)
+}
+
+func marshalCauseJSONWithVisited(c error, visited map[uintptr]bool) (json.RawMessage, error) {
 	switch t := c.(type) {
 	case Error:
 		return t.(json.Marshaler).MarshalJSON()
 	default:
+		ptr := reflect.ValueOf(c).Pointer()
+		if visited[ptr] {
+			return json.Marshal(struct {
+				Message string `json:"message"`
+				Type    string `json:"type"`
+			}{
+				Message: c.Error(),
+				Type:    fmt.Sprintf("%T", c),
+			})
+		}
+		visited[ptr] = true
+
 		var nestedCauses []json.RawMessage
 		if unwrapper, ok := c.(interface{ Unwrap() error }); ok {
 			if nested := unwrapper.Unwrap(); nested != nil {
-				nestedCause, err := marshalCauseJSON(nested)
+				nestedCause, err := marshalCauseJSONWithVisited(nested, visited)
 				if err != nil {
 					return nil, err
 				}
@@ -369,7 +387,7 @@ func marshalCauseJSON(c error) (json.RawMessage, error) {
 			}
 		} else if unwrapper, ok := c.(interface{ Unwrap() []error }); ok {
 			for _, nested := range unwrapper.Unwrap() {
-				nestedCause, err := marshalCauseJSON(nested)
+				nestedCause, err := marshalCauseJSONWithVisited(nested, visited)
 				if err != nil {
 					return nil, err
 				}
