@@ -145,6 +145,68 @@ func TestTryConvertFloat64(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("int derived type", func(t *testing.T) {
+		type Age int
+
+		ageCtor, ageFrom := errdef.DefineField[Age]("age")
+		def := errdef.Define("test_error", ageCtor(0))
+		resolver := errdef.NewResolver(def)
+		u := unmarshaler.NewJSON(resolver)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"age": 30
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := ageFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		if got != 30 {
+			t.Errorf("want %d, got %d", 30, got)
+		}
+	})
+
+	t.Run("float64 derived type", func(t *testing.T) {
+		type Score float64
+
+		scoreCtor, scoreFrom := errdef.DefineField[Score]("score")
+		def := errdef.Define("test_error", scoreCtor(0))
+		resolver := errdef.NewResolver(def)
+		u := unmarshaler.NewJSON(resolver)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"score": 98.5
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := scoreFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		if got != 98.5 {
+			t.Errorf("want %v, got %v", 98.5, got)
+		}
+	})
 }
 
 func TestTryConvertMapToStruct(t *testing.T) {
@@ -209,6 +271,43 @@ func TestTryConvertMapToStruct(t *testing.T) {
 		}
 		if addr.City != "New York" {
 			t.Errorf("want city %q, got %q", "New York", addr.City)
+		}
+	})
+}
+
+func TestTryConvertMap(t *testing.T) {
+	t.Run("map derived type", func(t *testing.T) {
+		type Metadata map[string]string
+
+		metadataCtor, metadataFrom := errdef.DefineField[Metadata]("metadata")
+		def := errdef.Define("test_error", metadataCtor(Metadata{}))
+		resolver := errdef.NewResolver(def)
+		u := unmarshaler.NewJSON(resolver)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"metadata": {
+					"key1": "value1",
+					"key2": "value2"
+				}
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := metadataFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		want := Metadata{"key1": "value1", "key2": "value2"}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("want %v, got %v", want, got)
 		}
 	})
 }
@@ -316,6 +415,102 @@ func TestTryConvertSlice(t *testing.T) {
 				t.Errorf("want items[1] {ID: 2, Name: \"item2\"}, got %+v", items[1])
 			}
 		})
+	})
+
+	t.Run("slice derived type", func(t *testing.T) {
+		type IDs []int
+
+		idsCtor, idsFrom := errdef.DefineField[IDs]("ids")
+		def := errdef.Define("test_error", idsCtor(IDs{}))
+		resolver := errdef.NewResolver(def)
+		u := unmarshaler.NewJSON(resolver)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"ids": [1, 2, 3]
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := idsFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		want := IDs{1, 2, 3}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("want %v, got %v", want, got)
+		}
+	})
+}
+
+func TestTryConvertByUnderlyingType(t *testing.T) {
+	t.Run("string derived type", func(t *testing.T) {
+		type UserID string
+
+		userIDCtor, userIDFrom := errdef.DefineField[UserID]("user_id")
+		def := errdef.Define("test_error", userIDCtor(""))
+		resolver := errdef.NewResolver(def)
+		u := unmarshaler.NewJSON(resolver)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"user_id": "user123"
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := userIDFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		if got != "user123" {
+			t.Errorf("want %q, got %q", "user123", got)
+		}
+	})
+
+	t.Run("bool derived type", func(t *testing.T) {
+		type Flag bool
+
+		flagCtor, flagFrom := errdef.DefineField[Flag]("flag")
+		def := errdef.Define("test_error", flagCtor(false))
+		resolver := errdef.NewResolver(def)
+		u := unmarshaler.NewJSON(resolver)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"flag": true
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := flagFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		if got != true {
+			t.Errorf("want %v, got %v", true, got)
+		}
 	})
 }
 
@@ -471,6 +666,114 @@ func TestTryConvertFieldValue(t *testing.T) {
 
 		if got != 99 {
 			t.Errorf("want default value %d, got %d", 99, got)
+		}
+	})
+}
+
+func TestTryConvertPointer(t *testing.T) {
+	t.Run("pointer to string derived type", func(t *testing.T) {
+		type UserID string
+
+		userIDCtor, userIDFrom := errdef.DefineField[*UserID]("user_id")
+		def := errdef.Define("test_error", userIDCtor(nil))
+		resolver := errdef.NewResolver(def)
+		u := unmarshaler.NewJSON(resolver)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"user_id": "user123"
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := userIDFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		if got == nil {
+			t.Fatal("want non-nil pointer")
+		}
+
+		if *got != "user123" {
+			t.Errorf("want %q, got %q", "user123", *got)
+		}
+	})
+
+	t.Run("pointer to bool derived type", func(t *testing.T) {
+		type Flag bool
+
+		flagCtor, flagFrom := errdef.DefineField[*Flag]("flag")
+		def := errdef.Define("test_error", flagCtor(nil))
+		resolver := errdef.NewResolver(def)
+		u := unmarshaler.NewJSON(resolver)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"flag": true
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := flagFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		if got == nil {
+			t.Fatal("want non-nil pointer")
+		}
+
+		wantFlag := Flag(true)
+		if *got != wantFlag {
+			t.Errorf("want %v, got %v", wantFlag, *got)
+		}
+	})
+
+	t.Run("pointer to struct is converted via tryConvertMapToStruct", func(t *testing.T) {
+		type Address struct {
+			Street string `json:"street"`
+		}
+
+		addressCtor, addressFrom := errdef.DefineField[*Address]("address")
+		def := errdef.Define("test_error", addressCtor(nil))
+		resolver := errdef.NewResolver(def)
+		u := unmarshaler.NewJSON(resolver)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"address": {
+					"street": "123 Main St"
+				}
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := addressFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		if got.Street != "123 Main St" {
+			t.Errorf("want converted struct, got %+v", got)
 		}
 	})
 }
