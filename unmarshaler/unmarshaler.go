@@ -40,14 +40,7 @@ func New(resolver Resolver, decoder Decoder, opts ...Option) *Unmarshaler {
 }
 
 func NewJSON(resolver Resolver, opts ...Option) *Unmarshaler {
-	u := &Unmarshaler{
-		resolver: resolver,
-		decoder:  jsonDecoder,
-	}
-	for _, opt := range opts {
-		opt(u)
-	}
-	return u
+	return New(resolver, jsonDecoder, opts...)
 }
 
 func (d *Unmarshaler) Unmarshal(data []byte) (UnmarshaledError, error) {
@@ -81,7 +74,9 @@ func (d *Unmarshaler) unmarshal(decoded *DecodedData) (UnmarshaledError, error) 
 		}
 
 		for _, key := range keys {
-			if v, ok := tryConvertFieldValue(key, fieldValue); ok {
+			if v, ok, err := tryConvertFieldValue(key, fieldValue); err != nil {
+				return nil, err
+			} else if ok {
 				fields[key] = v
 				matched = true
 				break
@@ -98,7 +93,9 @@ func (d *Unmarshaler) unmarshal(decoded *DecodedData) (UnmarshaledError, error) 
 
 			for _, additionalKey := range d.additionalFieldKeys {
 				if additionalKey.String() == fieldName {
-					if v, ok := tryConvertFieldValue(additionalKey, fieldValue); ok {
+					if v, ok, err := tryConvertFieldValue(additionalKey, fieldValue); err != nil {
+						return nil, err
+					} else if ok {
 						fields[additionalKey] = v
 						matched = true
 						break
@@ -129,10 +126,7 @@ func (d *Unmarshaler) unmarshal(decoded *DecodedData) (UnmarshaledError, error) 
 }
 
 func (d *Unmarshaler) unmarshalCause(causeData map[string]any) (error, error) {
-	causeDecoded, err := mapToDecodedData(causeData)
-	if err != nil {
-		return nil, ErrInternal.Wrapf(err, "failed to convert cause data")
-	}
+	causeDecoded := mapToDecodedData(causeData)
 
 	cause, err := d.unmarshal(causeDecoded)
 	if err != nil {

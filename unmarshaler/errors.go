@@ -3,9 +3,15 @@ package unmarshaler
 import "github.com/shiwano/errdef"
 
 var (
+	// ErrDecodeFailure is returned when the decoder fails to decode byte data.
 	ErrDecodeFailure = errdef.Define("errdef/unmarshaler.decode_failure", errdef.NoTrace())
-	ErrKindNotFound  = errdef.Define("errdef/unmarshaler.kind_not_found", errdef.NoTrace())
-	ErrInternal      = errdef.Define("errdef/unmarshaler.internal", errdef.NoTrace())
+	// ErrKindNotFound is returned when the resolver cannot resolve the error kind.
+	ErrKindNotFound = errdef.Define("errdef/unmarshaler.kind_not_found", errdef.NoTrace())
+	// ErrFieldUnmarshalFailure is returned when the unmarshaler fails to unmarshal a field value.
+	ErrFieldUnmarshalFailure = errdef.Define("errdef/unmarshaler.field_unmarshal_failure", errdef.NoTrace())
+	// ErrInternal is returned when an unexpected error occurs within the unmarshaler.
+	ErrInternal = errdef.Define("errdef/unmarshaler.internal", errdef.NoTrace())
 
-	kindField, _ = errdef.DefineField[errdef.Kind]("kind")
+	// KindFromError extracts the failed kind from errors.
+	kindField, KindFromError = errdef.DefineField[errdef.Kind]("kind")
 )

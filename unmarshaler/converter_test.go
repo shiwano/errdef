@@ -51,6 +51,8 @@ func TestTryConvertFloat64(t *testing.T) {
 		{"uint16 overflow", uint16(0), 65536.0, false},
 
 		{"float32 valid", float32(0), 3.14, true},
+		{"float32 overflow positive", float32(0), 3.5e38, false},
+		{"float32 overflow negative", float32(0), -3.5e38, false},
 		{"float64 valid", float64(0), 3.14159, true},
 	}
 
