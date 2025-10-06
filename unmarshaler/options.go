@@ -7,6 +7,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
@@ -31,7 +32,11 @@ func WithSentinelErrors(errors ...error) Option {
 			u.sentinelErrors = make(map[sentinelKey]error)
 		}
 		for _, err := range errors {
-			key := makeSentinelKey(err)
+			key := sentinelKey{
+				typeName: fmt.Sprintf("%T", err),
+				message:  err.Error(),
+			}
+
 			if _, exists := u.sentinelErrors[key]; exists {
 				panic("duplicate sentinel error: " + key.typeName + " - " + key.message)
 			}
@@ -48,6 +53,11 @@ func standardSentinelErrors() []error {
 		csv.ErrFieldCount,
 		csv.ErrQuote,
 		exec.ErrNotFound,
+		fs.ErrClosed,     // Same as os.ErrClosed
+		fs.ErrExist,      // Same as os.ErrExist
+		fs.ErrInvalid,    // Same as os.ErrInvalid
+		fs.ErrNotExist,   // Same as os.ErrNotExist
+		fs.ErrPermission, // Same as os.ErrPermission
 		http.ErrBodyNotAllowed,
 		http.ErrBodyReadAfterClose,
 		http.ErrContentLength,
@@ -72,13 +82,8 @@ func standardSentinelErrors() []error {
 		io.ErrUnexpectedEOF,
 		net.ErrClosed,
 		net.ErrWriteToConnected,
-		os.ErrClosed, // fs.ErrClosed is aliased to os.ErrClosed
 		os.ErrDeadlineExceeded,
-		os.ErrExist,   // fs.ErrExist is aliased to os.ErrExist
-		os.ErrInvalid, // fs.ErrInvalid is aliased to os.ErrInvalid
 		os.ErrNoDeadline,
-		os.ErrNotExist,   // fs.ErrNotExist is aliased to os.ErrNotExist
-		os.ErrPermission, // fs.ErrPermission is aliased to os.ErrPermission
 		os.ErrProcessDone,
 		sql.ErrConnDone,
 		sql.ErrNoRows,
@@ -86,12 +91,5 @@ func standardSentinelErrors() []error {
 		zip.ErrAlgorithm,
 		zip.ErrChecksum,
 		zip.ErrFormat,
-	}
-}
-
-func makeSentinelKey(err error) sentinelKey {
-	return sentinelKey{
-		typeName: fmt.Sprintf("%T", err),
-		message:  err.Error(),
 	}
 }

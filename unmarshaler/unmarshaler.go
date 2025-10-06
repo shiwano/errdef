@@ -150,10 +150,6 @@ func (d *Unmarshaler) unmarshalCause(causeData map[string]any) (error, error) {
 			typeName = "<unknown>"
 		}
 
-		if sentinelErr, ok := d.sentinelErrors[sentinelKey{typeName: typeName, message: msg}]; ok {
-			return sentinelErr, nil
-		}
-
 		var nestedCauses []error
 		if causesData, hasCauses := causeData["causes"].([]any); hasCauses {
 			for _, nestedCauseData := range causesData {
@@ -166,6 +162,12 @@ func (d *Unmarshaler) unmarshalCause(causeData map[string]any) (error, error) {
 					return nil, err
 				}
 				nestedCauses = append(nestedCauses, nestedCause)
+			}
+		}
+
+		if len(nestedCauses) == 0 {
+			if sentinelErr, ok := d.sentinelErrors[sentinelKey{typeName: typeName, message: msg}]; ok {
+				return sentinelErr, nil
 			}
 		}
 
