@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -357,8 +358,11 @@ func TestLogValuer(t *testing.T) {
 }
 
 func TestDetails(t *testing.T) {
-	t.Run("string key-value pairs", func(t *testing.T) {
-		def := errdef.Define("test", errdef.Details("key1", "value1", "key2", 123))
+	t.Run("map with multiple values", func(t *testing.T) {
+		def := errdef.Define("test", errdef.Details{
+			"key1": "value1",
+			"key2": 123,
+		})
 		err := def.New("test error")
 
 		details, ok := errdef.DetailsFrom(err)
@@ -366,22 +370,17 @@ func TestDetails(t *testing.T) {
 			t.Fatal("want details to be found")
 		}
 
-		if len(details) != 2 {
-			t.Fatalf("want 2 details, got %d", len(details))
+		want := errdef.Details{
+			"key1": "value1",
+			"key2": 123,
 		}
-
-		if details[0].Key != "key1" || details[0].Value != "value1" {
-			t.Errorf("want key1=value1, got %s=%v", details[0].Key, details[0].Value)
-		}
-
-		if details[1].Key != "key2" || details[1].Value != 123 {
-			t.Errorf("want key2=123, got %s=%v", details[1].Key, details[1].Value)
+		if !reflect.DeepEqual(details, want) {
+			t.Errorf("want details=%v, got details=%v", want, details)
 		}
 	})
 
-	t.Run("DetailKV struct", func(t *testing.T) {
-		kv := errdef.Detail{Key: "custom_key", Value: "custom_value"}
-		def := errdef.Define("test", errdef.Details(kv))
+	t.Run("empty map", func(t *testing.T) {
+		def := errdef.Define("test", errdef.Details{})
 		err := def.New("test error")
 
 		details, ok := errdef.DetailsFrom(err)
@@ -389,21 +388,18 @@ func TestDetails(t *testing.T) {
 			t.Fatal("want details to be found")
 		}
 
-		if len(details) != 1 {
-			t.Fatalf("want 1 detail, got %d", len(details))
-		}
-
-		if details[0].Key != "custom_key" || details[0].Value != "custom_value" {
-			t.Errorf("want custom_key=custom_value, got %s=%v", details[0].Key, details[0].Value)
+		want := errdef.Details{}
+		if !reflect.DeepEqual(details, want) {
+			t.Errorf("want details=%v, got details=%v", want, details)
 		}
 	})
 
-	t.Run("DetailKV slice", func(t *testing.T) {
-		kvs := []errdef.Detail{
-			{Key: "k1", Value: "v1"},
-			{Key: "k2", Value: "v2"},
-		}
-		def := errdef.Define("test", errdef.Details(kvs))
+	t.Run("complex values", func(t *testing.T) {
+		def := errdef.Define("test", errdef.Details{
+			"string_key": "string_value",
+			"int_key":    42,
+			"slice_key":  []int{1, 2, 3},
+		})
 		err := def.New("test error")
 
 		details, ok := errdef.DetailsFrom(err)
@@ -411,102 +407,13 @@ func TestDetails(t *testing.T) {
 			t.Fatal("want details to be found")
 		}
 
-		if len(details) != 2 {
-			t.Fatalf("want 2 details, got %d", len(details))
+		want := errdef.Details{
+			"string_key": "string_value",
+			"int_key":    42,
+			"slice_key":  []int{1, 2, 3},
 		}
-
-		if details[0].Key != "k1" || details[0].Value != "v1" {
-			t.Errorf("want k1=v1, got %s=%v", details[0].Key, details[0].Value)
-		}
-
-		if details[1].Key != "k2" || details[1].Value != "v2" {
-			t.Errorf("want k2=v2, got %s=%v", details[1].Key, details[1].Value)
-		}
-	})
-
-	t.Run("empty args", func(t *testing.T) {
-		def := errdef.Define("test", errdef.Details())
-		err := def.New("test error")
-
-		details, ok := errdef.DetailsFrom(err)
-		if !ok {
-			t.Fatal("want details to be found")
-		}
-
-		if len(details) != 0 {
-			t.Errorf("want empty details, got %d items", len(details))
-		}
-	})
-
-	t.Run("trailing string without value", func(t *testing.T) {
-		def := errdef.Define("test", errdef.Details("key1", "value1", "trailing"))
-		err := def.New("test error")
-
-		details, ok := errdef.DetailsFrom(err)
-		if !ok {
-			t.Fatal("want details to be found")
-		}
-
-		if len(details) != 2 {
-			t.Fatalf("want 2 details, got %d", len(details))
-		}
-
-		if details[0].Key != "key1" || details[0].Value != "value1" {
-			t.Errorf("want key1=value1, got %s=%v", details[0].Key, details[0].Value)
-		}
-
-		if details[1].Key != "__INVALID_TAIL__" || details[1].Value != "trailing" {
-			t.Errorf("want __INVALID_TAIL__=trailing, got %s=%v", details[1].Key, details[1].Value)
-		}
-	})
-
-	t.Run("non-string key element", func(t *testing.T) {
-		def := errdef.Define("test", errdef.Details(123, "ignored"))
-		err := def.New("test error")
-
-		details, ok := errdef.DetailsFrom(err)
-		if !ok {
-			t.Fatal("want details to be found")
-		}
-
-		if len(details) != 2 {
-			t.Fatalf("want 2 details, got %d", len(details))
-		}
-
-		if details[0].Key != "__INVALID_STANDALONE__" || details[0].Value != 123 {
-			t.Errorf("want __INVALID_STANDALONE__=123, got %s=%v", details[0].Key, details[0].Value)
-		}
-
-		if details[1].Key != "__INVALID_TAIL__" || details[1].Value != "ignored" {
-			t.Errorf("want __INVALID_TAIL__=ignored, got %s=%v", details[1].Key, details[1].Value)
-		}
-	})
-
-	t.Run("mixed formats", func(t *testing.T) {
-		kv := errdef.Detail{Key: "struct_key", Value: "struct_value"}
-		kvs := []errdef.Detail{{Key: "slice_key", Value: "slice_value"}}
-		def := errdef.Define("test", errdef.Details("string_key", "string_value", kv, kvs))
-		err := def.New("test error")
-
-		details, ok := errdef.DetailsFrom(err)
-		if !ok {
-			t.Fatal("want details to be found")
-		}
-
-		if len(details) != 3 {
-			t.Fatalf("want 3 details, got %d", len(details))
-		}
-
-		if details[0].Key != "string_key" || details[0].Value != "string_value" {
-			t.Errorf("want string_key=string_value, got %s=%v", details[0].Key, details[0].Value)
-		}
-
-		if details[1].Key != "struct_key" || details[1].Value != "struct_value" {
-			t.Errorf("want struct_key=struct_value, got %s=%v", details[1].Key, details[1].Value)
-		}
-
-		if details[2].Key != "slice_key" || details[2].Value != "slice_value" {
-			t.Errorf("want slice_key=slice_value, got %s=%v", details[2].Key, details[2].Value)
+		if !reflect.DeepEqual(details, want) {
+			t.Errorf("want details=%v, got details=%v", want, details)
 		}
 	})
 

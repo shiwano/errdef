@@ -2,20 +2,19 @@ package errdef
 
 import (
 	"log/slog"
+	"maps"
 	"time"
 )
 
-// Detail represents a single key-value pair of diagnostic information.
-type Detail struct {
-	Key   string `json:"key"`
-	Value any    `json:"value"`
-}
-
 var (
+	detailsFieldKey = &fieldKey[Details]{name: "details"}
+
 	public, publicFrom             = DefineField[bool]("public")
 	retryable, retryableFrom       = DefineField[bool]("retryable")
 	unreportable, unreportableFrom = DefineField[bool]("unreportable")
+)
 
+var (
 	// HTTPStatus attaches an HTTP status code.
 	HTTPStatus, HTTPStatusFrom = DefineField[int]("http_status")
 
@@ -49,9 +48,8 @@ var (
 	// HelpURL provides a URL for documentation or help guides.
 	HelpURL, HelpURLFrom = DefineField[string]("help_url")
 
-	// DetailsFrom extracts the free-form diagnostic details from an error chain.
-	// See Details function for how the field is attached.
-	detailsField, DetailsFrom = DefineField[[]Detail]("details")
+	// DetailsFrom extracts diagnostic details from an error.
+	DetailsFrom FieldExtractor[Details] = detailsFrom
 )
 
 // NoTrace disables stack trace collection for the error.
@@ -89,45 +87,14 @@ func LogValuer(f ErrorLogValuer) Option {
 	return &logValuer{valuer: f}
 }
 
-// Details attaches free-form diagnostic details to an error under the "details" field.
-// Arguments are normalized according to the following rules (never panics):
-//   - string + any           : treated as a (key,value) pair
-//   - Detail / []Detail  : added directly
-//   - trailing string        : stored as {Key:"__INVALID_TAIL__", Value:string}
-//   - non-string key element : stored as {Key:"__INVALID_STANDALONE__", Value:value}
-func Details(args ...any) Option {
-	if len(args) == 0 {
-		return detailsField([]Detail{})
-	}
+// Details represents a map of diagnostic details that can be attached to an error.
+type Details map[string]any
 
-	const (
-		invalidTailKey       = "__INVALID_TAIL__"
-		invalidStandaloneKey = "__INVALID_STANDALONE__"
-	)
+// ApplyOption implements the Option interface.
+func (d Details) ApplyOption(a OptionApplier) {
+	a.SetField(detailsFieldKey, &fieldValue[Details]{value: maps.Clone(d)})
+}
 
-	out := make([]Detail, 0, len(args)/2+2)
-	for i := 0; i < len(args); {
-		switch v := args[i].(type) {
-		case Detail:
-			out = append(out, v)
-			i++
-			continue
-		case []Detail:
-			out = append(out, v...)
-			i++
-			continue
-		case string:
-			if i+1 < len(args) {
-				out = append(out, Detail{Key: v, Value: args[i+1]})
-				i += 2
-			} else {
-				out = append(out, Detail{Key: invalidTailKey, Value: v})
-				i++
-			}
-		default:
-			out = append(out, Detail{Key: invalidStandaloneKey, Value: v})
-			i++
-		}
-	}
-	return detailsField(out)
+func detailsFrom(err error) (Details, bool) {
+	return fieldValueFrom[Details](err, detailsFieldKey)
 }

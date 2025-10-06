@@ -286,17 +286,17 @@ You can attach free-form diagnostic details to an error under the `"details"` fi
 
 ```go
 err := ErrNotFound.With(
-  errdef.Details("tenant_id", 1, "user_ids", []int{1,2,4}),
+  errdef.Details{"tenant_id": 1, "user_ids": []int{1,2,4}},
 ).Wrap(err)
 
 details := errdef.DetailsFrom.OrZero(err)
-// details: []Detail{
-//   { Key: "tenant_id", Value: 1 },
-//   { Key: "user_ids", Value: []int{1,2,4} },
+// details: errdef.Details{
+//   "tenant_id": 1,
+//   "user_ids": []int{1,2,4},
 // }
 ```
 
-> **Note:** Arguments are provided as key-value pairs, similar to `slog.Info()`. You can also pass `Detail` or `[]Detail` directly. Invalid formats (e.g., trailing string, non-string key) are stored gracefully instead of panicking.
+> **Note:** `Details` is a `map[string]any` type, allowing you to attach arbitrary key-value pairs.
 
 ### Context Integration
 
@@ -477,7 +477,7 @@ func main() {
 | `Unreportable()`            | Prevents the error from being sent to error tracking.    | `IsUnreportable` |
 | `ExitCode(int)`             | Sets the exit code for a CLI application.                | `ExitCodeFrom`   |
 | `HelpURL(string)`           | Provides a URL for documentation or help guides.         | `HelpURLFrom`    |
-| `Details(...any)`           | Attaches free-form diagnostic details to an error.       | `DetailsFrom`    |
+| `Details{}`                 | Attaches free-form diagnostic details to an error.       | `DetailsFrom`    |
 | `NoTrace()`                 | Disables stack trace collection for the error.           | -                |
 | `StackSkip(int)`            | Skips a specified number of frames during stack capture. | -                |
 | `StackDepth(int)`           | Sets the depth of the stack capture (default: 32).       | -                |
