@@ -414,11 +414,10 @@ func TestUnmarshaledError_Format(t *testing.T) {
 
 		result := fmt.Sprintf("%+v", unmarshaled)
 		want := "test message\n" +
-			"\n" +
-			"Kind:\n" +
-			"\ttest_error\n" +
-			"Fields:\n" +
-			"\tuser_id: user123"
+			"---\n" +
+			"kind: test_error\n" +
+			"fields:\n" +
+			"  user_id: user123"
 		if want != result {
 			t.Errorf("want format to equal:\n%q\ngot:\n%q", want, result)
 		}
@@ -445,14 +444,12 @@ func TestUnmarshaledError_Format(t *testing.T) {
 
 		result := fmt.Sprintf("%+v", unmarshaled)
 		want := "inner message\n" +
-			"\n" +
-			"Kind:\n" +
-			"\ttest_error\n" +
-			"Causes:\n" +
-			"\tinner message\n" +
-			"\t\n" +
-			"\tKind:\n" +
-			"\t\tinner_error"
+			"---\n" +
+			"kind: test_error\n" +
+			"causes: (1 error)\n" +
+			"  [1] inner message\n" +
+			"      ---\n" +
+			"      kind: inner_error"
 		if want != result {
 			t.Errorf("want format to equal:\n%q\ngot:\n%q", want, result)
 		}
@@ -482,19 +479,15 @@ func TestUnmarshaledError_Format(t *testing.T) {
 		result := fmt.Sprintf("%+v", unmarshaled)
 		want := "error 1\n" +
 			"error 2\n" +
-			"\n" +
-			"Kind:\n" +
-			"\ttest_error\n" +
-			"Causes:\n" +
-			"\terror 1\n" +
-			"\t\n" +
-			"\tKind:\n" +
-			"\t\terror_1\n" +
-			"\t---\n" +
-			"\terror 2\n" +
-			"\t\n" +
-			"\tKind:\n" +
-			"\t\terror_2"
+			"---\n" +
+			"kind: test_error\n" +
+			"causes: (2 errors)\n" +
+			"  [1] error 1\n" +
+			"      ---\n" +
+			"      kind: error_1\n" +
+			"  [2] error 2\n" +
+			"      ---\n" +
+			"      kind: error_2"
 		if want != result {
 			t.Errorf("want format to equal:\n%q\ngot:\n%q", want, result)
 		}

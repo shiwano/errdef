@@ -138,8 +138,8 @@ func TestPanicError_Format(t *testing.T) {
 			t.Errorf("%%s: want %q, got %q", "panic error", got)
 		}
 
-		if got := fmt.Sprintf("%+v", panicErr); got != "panic error\n\nKind:\n\ttest_error\nFields:\n\thttp_status: 400" {
-			t.Errorf("%%+v: want %q, got %q", "panic error", got)
+		if got := fmt.Sprintf("%+v", panicErr); got != "panic error\n---\nkind: test_error\nfields:\n  http_status: 400" {
+			t.Errorf("%%+v: want %q, got %q", "panic error\n---\nkind: test_error\nfields:\n  http_status: 400", got)
 		}
 	})
 }

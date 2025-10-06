@@ -131,24 +131,23 @@ fmt.Printf("%+v\n", err)
 
 ```
 user not found
-
-Kind:
-	not_found
-Fields:
-	http_status: 404
-	user_id: u-123
-Stack:
-	main.findUser
-		/path/to/your/project/main.go:23
-	main.main
-		/path/to/your/project/main.go:35
-	runtime.main
-		/usr/local/go/src/runtime/proc.go:250
-Causes:
-	record not found
-
-	Stack:
-		...
+---
+kind: not_found
+fields:
+  http_status: 404
+  user_id: u-123
+stack:
+  main.findUser
+    /path/to/your/project/main.go:23
+  main.main
+    /path/to/your/project/main.go:35
+  runtime.main
+    /usr/local/go/src/runtime/proc.go:250
+causes: (1 error)
+  [1] record not found
+      ---
+      stack:
+        ...
 ```
 
 ### JSON Marshaling

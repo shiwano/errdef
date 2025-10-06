@@ -332,14 +332,13 @@ func TestFormatter_Format(t *testing.T) {
 		result := fmt.Sprintf("%+v", err)
 		if matched, _ := regexp.MatchString(
 			`test message\n`+
-				`\n`+
-				`Kind:\n`+
-				`\ttest_error\n`+
-				`Fields:\n`+
-				`\tuser_id: user123\n`+
-				`\tpassword: \[REDACTED\]\n`+
-				`\tdetails: map\[additional:info count:42\]\n`+
-				`Stack:\n`+
+				`---\n`+
+				`kind: test_error\n`+
+				`fields:\n`+
+				`  user_id: user123\n`+
+				`  password: \[REDACTED\]\n`+
+				`  details: map\[additional:info count:42\]\n`+
+				`stack:\n`+
 				`[\s\S]*`,
 			result,
 		); !matched {
@@ -355,13 +354,12 @@ func TestFormatter_Format(t *testing.T) {
 
 		result := fmt.Sprintf("%+v", wrapped)
 		want := "original error\n" +
-			"\n" +
-			"Kind:\n" +
-			"\ttest_error\n" +
-			"Fields:\n" +
-			"\tuser_id: user123\n" +
-			"Causes:\n" +
-			"\toriginal error"
+			"---\n" +
+			"kind: test_error\n" +
+			"fields:\n" +
+			"  user_id: user123\n" +
+			"causes: (1 error)\n" +
+			"  [1] original error"
 		if want != result {
 			t.Errorf("want format to equal, got: %q", result)
 		}
@@ -377,13 +375,11 @@ func TestFormatter_Format(t *testing.T) {
 
 		want := "error 1\n" +
 			"error 2\n" +
-			"\n" +
-			"Kind:\n" +
-			"\ttest_error\n" +
-			"Causes:\n" +
-			"\terror 1\n" +
-			"\t---\n" +
-			"\terror 2"
+			"---\n" +
+			"kind: test_error\n" +
+			"causes: (2 errors)\n" +
+			"  [1] error 1\n" +
+			"  [2] error 2"
 		if want != result {
 			t.Errorf("want format to equal, got: %q", result)
 		}

@@ -207,65 +207,74 @@ func (e *definedError) ErrorFormatter(err Error, s fmt.State, verb rune) {
 			causes := err.Unwrap()
 
 			if err.Kind() != "" || err.Fields().Len() > 0 || err.Stack().Len() > 0 || len(causes) > 0 {
-				_, _ = io.WriteString(s, "\n")
+				_, _ = io.WriteString(s, "\n---")
 			}
 
 			if err.Kind() != "" {
-				_, _ = io.WriteString(s, "\nKind:\n")
-				_, _ = io.WriteString(s, "\t")
+				_, _ = io.WriteString(s, "\nkind: ")
 				_, _ = io.WriteString(s, string(err.Kind()))
 			}
 
 			if err.Fields().Len() > 0 {
-				_, _ = io.WriteString(s, "\nFields:\n")
-				i := 0
+				_, _ = io.WriteString(s, "\nfields:")
 				for k, v := range err.Fields().SortedSeq() {
-					if i > 0 {
-						_, _ = io.WriteString(s, "\n")
-					}
-					_, _ = io.WriteString(s, "\t")
+					_, _ = io.WriteString(s, "\n  ")
 					_, _ = io.WriteString(s, k.String())
 					_, _ = io.WriteString(s, ": ")
-					_, _ = fmt.Fprintf(s, "%+v", v.Value())
-					i++
+
+					valueStr := fmt.Sprintf("%+v", v.Value())
+					if strings.Contains(valueStr, "\n") {
+						_, _ = io.WriteString(s, "|\n")
+						for line := range strings.SplitSeq(valueStr, "\n") {
+							_, _ = io.WriteString(s, "    ")
+							_, _ = io.WriteString(s, line)
+							_, _ = io.WriteString(s, "\n")
+						}
+					} else {
+						_, _ = io.WriteString(s, valueStr)
+					}
 				}
 			}
 
 			if err.Stack().Len() > 0 {
-				_, _ = io.WriteString(s, "\nStack:\n")
-				i := 0
+				_, _ = io.WriteString(s, "\nstack:")
 				for _, f := range err.Stack().Frames() {
 					if f.File != "" {
-						if i > 0 {
-							_, _ = io.WriteString(s, "\n")
-						}
-						_, _ = io.WriteString(s, "\t")
+						_, _ = io.WriteString(s, "\n  ")
 						_, _ = io.WriteString(s, f.Func)
-						_, _ = io.WriteString(s, "\n\t\t")
+						_, _ = io.WriteString(s, "\n    ")
 						_, _ = io.WriteString(s, f.File)
+						_, _ = io.WriteString(s, ":")
 						_, _ = io.WriteString(s, strconv.Itoa(f.Line))
-						i++
 					}
 				}
 			}
 
-			for i, cause := range causes {
-				if i == 0 {
-					_, _ = io.WriteString(s, "\nCauses:\n")
+			if len(causes) > 0 {
+				_, _ = io.WriteString(s, "\ncauses: (")
+				if len(causes) == 1 {
+					_, _ = io.WriteString(s, "1 error")
 				} else {
-					_, _ = io.WriteString(s, "\n\t---\n")
+					_, _ = io.WriteString(s, strconv.Itoa(len(causes)))
+					_, _ = io.WriteString(s, " errors")
 				}
+				_, _ = io.WriteString(s, ")")
 
-				causeStr := strings.Trim(fmt.Sprintf("%+v", cause), "\n")
+				for i, cause := range causes {
+					_, _ = io.WriteString(s, "\n  [")
+					_, _ = io.WriteString(s, strconv.Itoa(i+1))
+					_, _ = io.WriteString(s, "] ")
 
-				j := 0
-				for line := range strings.SplitSeq(causeStr, "\n") {
-					if j > 0 {
-						_, _ = io.WriteString(s, "\n")
+					causeStr := strings.Trim(fmt.Sprintf("%+v", cause), "\n")
+
+					j := 0
+					for line := range strings.SplitSeq(causeStr, "\n") {
+						if j > 0 {
+							_, _ = io.WriteString(s, "\n      ")
+						}
+						_, _ = io.WriteString(s, line)
+						j++
 					}
-					_, _ = io.WriteString(s, "\t")
-					_, _ = io.WriteString(s, line)
-					j++
 				}
 			}
 		case s.Flag('#'):
