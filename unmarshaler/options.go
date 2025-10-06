@@ -9,7 +9,15 @@ import (
 	"net"
 	"net/http"
 	"os"
+
+	"github.com/shiwano/errdef"
 )
+
+func WithAdditionalFields(keys ...errdef.FieldKey) Option {
+	return func(u *Unmarshaler) {
+		u.additionalFieldKeys = append(u.additionalFieldKeys, keys...)
+	}
+}
 
 func WithStandardSentinelErrors() Option {
 	return WithSentinelErrors(standardSentinelErrors()...)

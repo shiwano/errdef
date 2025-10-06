@@ -903,3 +903,277 @@ func TestUnmarshaler_Causes_UnknownError_Recursive(t *testing.T) {
 		}
 	})
 }
+
+func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
+	t.Run("basic additional field key", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		resolver := errdef.NewResolver(def)
+
+		extraField, extraFieldFrom := errdef.DefineField[string]("extra")
+		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(extraField.FieldKey()))
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "test_error",
+			"fields": {
+				"extra": "extra value"
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := extraFieldFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want extra field to be found")
+		}
+
+		if got != "extra value" {
+			t.Errorf("want %q, got %q", "extra value", got)
+		}
+	})
+
+	t.Run("multiple additional field keys", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		resolver := errdef.NewResolver(def)
+
+		field1, field1From := errdef.DefineField[string]("field1")
+		field2, field2From := errdef.DefineField[int]("field2")
+		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(
+			field1.FieldKey(),
+			field2.FieldKey(),
+		))
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "test_error",
+			"fields": {
+				"field1": "value1",
+				"field2": 42
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got1, ok1 := field1From(unmarshaled)
+		if !ok1 {
+			t.Fatal("want field1 to be found")
+		}
+		if got1 != "value1" {
+			t.Errorf("want field1 %q, got %q", "value1", got1)
+		}
+
+		got2, ok2 := field2From(unmarshaled)
+		if !ok2 {
+			t.Fatal("want field2 to be found")
+		}
+		if got2 != 42 {
+			t.Errorf("want field2 %d, got %d", 42, got2)
+		}
+	})
+
+	t.Run("type conversion with float64", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		resolver := errdef.NewResolver(def)
+
+		intField, intFieldFrom := errdef.DefineField[int]("number")
+		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(intField.FieldKey()))
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "test_error",
+			"fields": {
+				"number": 100.0
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := intFieldFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want number field to be found")
+		}
+
+		if got != 100 {
+			t.Errorf("want %d, got %d", 100, got)
+		}
+	})
+
+	t.Run("struct conversion", func(t *testing.T) {
+		type Address struct {
+			Street string `json:"street"`
+			City   string `json:"city"`
+		}
+
+		def := errdef.Define("test_error")
+		resolver := errdef.NewResolver(def)
+
+		addressField, addressFieldFrom := errdef.DefineField[Address]("address")
+		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(addressField.FieldKey()))
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "test_error",
+			"fields": {
+				"address": {
+					"street": "123 Main St",
+					"city": "Tokyo"
+				}
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := addressFieldFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want address field to be found")
+		}
+
+		if got.Street != "123 Main St" || got.City != "Tokyo" {
+			t.Errorf("want {Street: \"123 Main St\", City: \"Tokyo\"}, got %+v", got)
+		}
+	})
+
+	t.Run("slice conversion", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		resolver := errdef.NewResolver(def)
+
+		idsField, idsFieldFrom := errdef.DefineField[[]int]("ids")
+		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(idsField.FieldKey()))
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "test_error",
+			"fields": {
+				"ids": [1, 2, 3, 4, 5]
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := idsFieldFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want ids field to be found")
+		}
+
+		want := []int{1, 2, 3, 4, 5}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("want %v, got %v", want, got)
+		}
+	})
+
+	t.Run("conversion failure falls to unknownFields", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		resolver := errdef.NewResolver(def)
+
+		intField, intFieldFrom := errdef.DefineField[int]("number")
+		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(intField.FieldKey()))
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "test_error",
+			"fields": {
+				"number": "not a number"
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		if _, ok := intFieldFrom(unmarshaled); ok {
+			t.Error("want number field not to be converted")
+		}
+
+		fields := unmarshaled.Fields()
+		keys := fields.FindKeys("number")
+		if len(keys) == 0 {
+			t.Error("want number field to be in unknownFields")
+		}
+		if v, ok := fields.Get(keys[0]); !ok || v.Value() != "not a number" {
+			t.Errorf("want unknown field %q, got %v", "not a number", v.Value())
+		}
+	})
+
+	t.Run("field not in additional keys goes to unknownFields", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		resolver := errdef.NewResolver(def)
+
+		field1, _ := errdef.DefineField[string]("field1")
+		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(field1.FieldKey()))
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "test_error",
+			"fields": {
+				"field1": "value1",
+				"field2": "value2"
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		fields := unmarshaled.Fields()
+		keys := fields.FindKeys("field2")
+		if len(keys) == 0 {
+			t.Error("want field2 to be in unknownFields")
+		}
+	})
+
+	t.Run("mix of defined and additional fields", func(t *testing.T) {
+		definedField, definedFieldFrom := errdef.DefineField[string]("defined")
+		def := errdef.Define("test_error", definedField("default"))
+		resolver := errdef.NewResolver(def)
+
+		additionalField, additionalFieldFrom := errdef.DefineField[string]("additional")
+		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(additionalField.FieldKey()))
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "test_error",
+			"fields": {
+				"defined": "defined value",
+				"additional": "additional value"
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		gotDefined, ok := definedFieldFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want defined field to be found")
+		}
+		if gotDefined != "defined value" {
+			t.Errorf("want defined field %q, got %q", "defined value", gotDefined)
+		}
+
+		gotAdditional, ok := additionalFieldFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want additional field to be found")
+		}
+		if gotAdditional != "additional value" {
+			t.Errorf("want additional field %q, got %q", "additional value", gotAdditional)
+		}
+	})
+}

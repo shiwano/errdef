@@ -8,9 +8,10 @@ import (
 
 type (
 	Unmarshaler struct {
-		resolver       Resolver
-		decoder        Decoder
-		sentinelErrors map[sentinelKey]error
+		resolver            Resolver
+		decoder             Decoder
+		sentinelErrors      map[sentinelKey]error
+		additionalFieldKeys []errdef.FieldKey
 	}
 
 	Resolver interface {
@@ -57,19 +58,6 @@ func (d *Unmarshaler) Unmarshal(data []byte) (UnmarshaledError, error) {
 	return d.unmarshal(decoded)
 }
 
-func (d *Unmarshaler) resolveKind(kind errdef.Kind) (*errdef.Definition, error) {
-	if strict, ok := d.resolver.(*errdef.Resolver); ok {
-		def, ok := strict.ResolveKind(kind)
-		if !ok {
-			return nil, ErrKindNotFound.WithOptions(kindField(kind)).New("kind not found")
-		}
-		return def, nil
-	} else if fallback, ok := d.resolver.(*errdef.FallbackResolver); ok {
-		return fallback.ResolveKind(kind), nil
-	}
-	return nil, ErrInternal.New("resolver does not support kind resolution")
-}
-
 func (d *Unmarshaler) unmarshal(decoded *DecodedData) (UnmarshaledError, error) {
 	def, err := d.resolveKind(errdef.Kind(decoded.Kind))
 	if err != nil {
@@ -83,57 +71,42 @@ func (d *Unmarshaler) unmarshal(decoded *DecodedData) (UnmarshaledError, error) 
 	fields := make(map[errdef.FieldKey]errdef.FieldValue)
 	unknownFields := make(map[string]any)
 
-	if decoded.Fields != nil {
-		for fieldName, fieldValue := range decoded.Fields {
-			keys := def.Fields().FindKeys(fieldName)
-			matched := false
+	for fieldName, fieldValue := range decoded.Fields {
+		keys := def.Fields().FindKeys(fieldName)
+		matched := false
 
-			if s, ok := fieldValue.(string); ok && s == redactedStr {
-				unknownFields[fieldName] = fieldValue
-				continue
+		if s, ok := fieldValue.(string); ok && s == redactedStr {
+			unknownFields[fieldName] = fieldValue
+			continue
+		}
+
+		for _, key := range keys {
+			if v, ok := tryConvertFieldValue(key, fieldValue); ok {
+				fields[key] = v
+				matched = true
+				break
+			}
+		}
+
+		if !matched {
+			if len(keys) > 0 {
+				if value, ok := def.Fields().Get(keys[0]); ok {
+					fields[keys[0]] = value
+					continue
+				}
 			}
 
-			for _, key := range keys {
-				if newFieldValue, ok := key.NewValue(fieldValue); ok {
-					fields[key] = newFieldValue
-					matched = true
-					break
-				}
-
-				if f64, ok := fieldValue.(float64); ok {
-					if v, ok := tryConvertFloat64(key, f64); ok {
-						fields[key] = v
-						matched = true
-						break
-					}
-				}
-
-				if m, ok := fieldValue.(map[string]any); ok {
-					if v, ok := tryConvertMapToStruct(key, m); ok {
-						fields[key] = v
-						matched = true
-						break
-					}
-				}
-
-				if s, ok := fieldValue.([]any); ok {
-					if v, ok := tryConvertSlice(key, s); ok {
-						fields[key] = v
+			for _, additionalKey := range d.additionalFieldKeys {
+				if additionalKey.String() == fieldName {
+					if v, ok := tryConvertFieldValue(additionalKey, fieldValue); ok {
+						fields[additionalKey] = v
 						matched = true
 						break
 					}
 				}
 			}
 
-			if !matched {
-				if len(keys) > 0 {
-					if value, ok := def.Fields().Get(keys[0]); ok {
-						fields[keys[0]] = value
-						continue
-					}
-				}
-				unknownFields[fieldName] = fieldValue
-			}
+			unknownFields[fieldName] = fieldValue
 		}
 	}
 
@@ -214,4 +187,17 @@ func (d *Unmarshaler) unmarshalCause(causeData map[string]any) (error, error) {
 	}
 
 	return cause, nil
+}
+
+func (d *Unmarshaler) resolveKind(kind errdef.Kind) (*errdef.Definition, error) {
+	if strict, ok := d.resolver.(*errdef.Resolver); ok {
+		def, ok := strict.ResolveKind(kind)
+		if !ok {
+			return nil, ErrKindNotFound.WithOptions(kindField(kind)).New("kind not found")
+		}
+		return def, nil
+	} else if fallback, ok := d.resolver.(*errdef.FallbackResolver); ok {
+		return fallback.ResolveKind(kind), nil
+	}
+	return nil, ErrInternal.New("resolver does not support kind resolution")
 }

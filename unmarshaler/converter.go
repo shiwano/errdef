@@ -8,6 +8,32 @@ import (
 	"github.com/shiwano/errdef"
 )
 
+func tryConvertFieldValue(fk errdef.FieldKey, value any) (errdef.FieldValue, bool) {
+	if v, ok := fk.NewValue(value); ok {
+		return v, true
+	}
+
+	if f64, ok := value.(float64); ok {
+		if v, ok := tryConvertFloat64(fk, f64); ok {
+			return v, true
+		}
+	}
+
+	if m, ok := value.(map[string]any); ok {
+		if v, ok := tryConvertMapToStruct(fk, m); ok {
+			return v, true
+		}
+	}
+
+	if s, ok := value.([]any); ok {
+		if v, ok := tryConvertSlice(fk, s); ok {
+			return v, true
+		}
+	}
+
+	return nil, false
+}
+
 func tryConvertFloat64(fk errdef.FieldKey, f64 float64) (errdef.FieldValue, bool) {
 	switch fk.ZeroValue().Value().(type) {
 	case int:

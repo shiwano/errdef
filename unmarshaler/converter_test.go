@@ -318,3 +318,159 @@ func TestTryConvertSlice(t *testing.T) {
 		})
 	})
 }
+
+func TestTryConvertFieldValue(t *testing.T) {
+	t.Run("direct conversion success", func(t *testing.T) {
+		stringCtor, stringFrom := errdef.DefineField[string]("test")
+		def := errdef.Define("test_error", stringCtor(""))
+		resolver := errdef.NewResolver(def)
+		u := unmarshaler.NewJSON(resolver)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"test": "hello"
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := stringFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		if got != "hello" {
+			t.Errorf("want %q, got %q", "hello", got)
+		}
+	})
+
+	t.Run("float64 conversion", func(t *testing.T) {
+		intCtor, intFrom := errdef.DefineField[int]("test")
+		def := errdef.Define("test_error", intCtor(0))
+		resolver := errdef.NewResolver(def)
+		u := unmarshaler.NewJSON(resolver)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"test": 42.0
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := intFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		if got != 42 {
+			t.Errorf("want %d, got %d", 42, got)
+		}
+	})
+
+	t.Run("map to struct conversion", func(t *testing.T) {
+		type Address struct {
+			Street string `json:"street"`
+			City   string `json:"city"`
+		}
+
+		addressCtor, addressFrom := errdef.DefineField[Address]("test")
+		def := errdef.Define("test_error", addressCtor(Address{}))
+		resolver := errdef.NewResolver(def)
+		u := unmarshaler.NewJSON(resolver)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"test": {
+					"street": "123 Main St",
+					"city": "Tokyo"
+				}
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := addressFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		if got.Street != "123 Main St" || got.City != "Tokyo" {
+			t.Errorf("want {Street: \"123 Main St\", City: \"Tokyo\"}, got %+v", got)
+		}
+	})
+
+	t.Run("slice conversion", func(t *testing.T) {
+		sliceCtor, sliceFrom := errdef.DefineField[[]int]("test")
+		def := errdef.Define("test_error", sliceCtor([]int{}))
+		resolver := errdef.NewResolver(def)
+		u := unmarshaler.NewJSON(resolver)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"test": [1, 2, 3]
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := sliceFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		want := []int{1, 2, 3}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("want %v, got %v", want, got)
+		}
+	})
+
+	t.Run("conversion failure", func(t *testing.T) {
+		intCtor, intFrom := errdef.DefineField[int]("test")
+		def := errdef.Define("test_error", intCtor(99))
+		resolver := errdef.NewResolver(def)
+		u := unmarshaler.NewJSON(resolver)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"test": "not a number"
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := intFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		if got != 99 {
+			t.Errorf("want default value %d, got %d", 99, got)
+		}
+	})
+}
