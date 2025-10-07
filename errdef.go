@@ -20,7 +20,7 @@ func Define(kind Kind, opts ...Option) *Definition {
 		kind:   kind,
 		fields: newFields(),
 	}
-	def.root = def
+	def.rootDef = nil
 	def.applyOptions(opts)
 	return def
 }

@@ -130,7 +130,7 @@ func (e *definedError) Is(target error) bool {
 		return true
 	}
 	if d, ok := target.(*Definition); ok {
-		return e.def.root == d.root
+		return e.def.root() == d.root()
 	}
 	return false
 }

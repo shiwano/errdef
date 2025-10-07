@@ -9,7 +9,7 @@ import (
 
 // Definition represents an error definition with customizable options.
 type Definition struct {
-	root          *Definition
+	rootDef       *Definition
 	kind          Kind
 	fields        *fields
 	noTrace       bool
@@ -120,9 +120,23 @@ func (d *Definition) Fields() Fields {
 	return d.fields
 }
 
+func (d *Definition) isRoot() bool {
+	return d.rootDef == nil
+}
+
+func (d *Definition) root() *Definition {
+	if d.isRoot() {
+		return d
+	}
+	return d.rootDef
+}
+
 func (d *Definition) clone() *Definition {
 	clone := *d
 	clone.fields = d.fields.clone()
+	if d.isRoot() {
+		clone.rootDef = d
+	}
 	return &clone
 }
 
