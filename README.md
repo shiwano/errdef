@@ -30,8 +30,8 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
   - [Error Deserialization](#error-deserialization)
   - [Ecosystem Integration](#ecosystem-integration)
   - [Built-in Options](#built-in-options)
-- [Contributing](#contributing)
 - [Appendix: Library Comparison](#appendix-library-comparison)
+- [Contributing](#contributing)
 - [License](#license)
 
 ## Getting Started
