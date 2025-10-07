@@ -8,8 +8,6 @@ import (
 type (
 	// Stack represents a stack trace captured when an error was created.
 	Stack interface {
-		// StackTrace returns the raw stack trace as program counters.
-		StackTrace() []uintptr
 		// Frames returns the stack trace as structured frame information.
 		Frames() []Frame
 		// HeadFrame returns the top frame of the stack trace.
@@ -30,6 +28,7 @@ type (
 
 var (
 	_ Stack          = stack{}
+	_ stackTracer    = stack{}
 	_ slog.LogValuer = stack{}
 	_ slog.LogValuer = Frame{}
 )
@@ -46,13 +45,6 @@ func newStack(depth int, skip int) stack {
 	pcs := make([]uintptr, depth)
 	n := runtime.Callers(skip, pcs[:])
 	return pcs[:n]
-}
-
-func (s stack) StackTrace() []uintptr {
-	if len(s) == 0 {
-		return nil
-	}
-	return s[:]
 }
 
 func (s stack) Frames() []Frame {
@@ -91,6 +83,13 @@ func (s stack) HeadFrame() (Frame, bool) {
 
 func (s stack) Len() int {
 	return len(s)
+}
+
+func (s stack) StackTrace() []uintptr {
+	if len(s) == 0 {
+		return nil
+	}
+	return s[:]
 }
 
 func (s stack) LogValue() slog.Value {

@@ -13,10 +13,6 @@ var (
 	_ slog.LogValuer = stack{}
 )
 
-func (s stack) StackTrace() []uintptr {
-	return nil
-}
-
 func (s stack) Frames() []errdef.Frame {
 	return s[:]
 }

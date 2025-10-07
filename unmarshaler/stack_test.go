@@ -125,29 +125,6 @@ func TestStack_HeadFrame(t *testing.T) {
 	}
 }
 
-func TestStack_StackTrace(t *testing.T) {
-	def := errdef.Define("test_error")
-	r := resolver.New(def)
-	u := unmarshaler.NewJSON(r)
-
-	original := def.New("test message")
-	data, err := json.Marshal(original)
-	if err != nil {
-		t.Fatalf("failed to marshal: %v", err)
-	}
-
-	unmarshaled, err := u.Unmarshal(data)
-	if err != nil {
-		t.Fatalf("failed to unmarshal: %v", err)
-	}
-
-	stack := unmarshaled.Stack()
-	trace := stack.StackTrace()
-	if trace != nil {
-		t.Error("want stack trace to be nil for unmarshaled stack")
-	}
-}
-
 func TestStack_LogValue(t *testing.T) {
 	def := errdef.Define("test_error")
 	r := resolver.New(def)
