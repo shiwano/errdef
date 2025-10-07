@@ -233,3 +233,37 @@ func TestXMLDecoder_UnknownCauseError(t *testing.T) {
 		t.Errorf("want cause message %q, got %q", "unknown error", causes[0].Error())
 	}
 }
+
+func TestXMLDecoder_UnknownCauseError_WithoutMessage(t *testing.T) {
+	def := errdef.Define("test_error")
+	resolver := errdef.NewResolver(def)
+
+	decoder := func(data []byte) (*unmarshaler.DecodedData, error) {
+		return &unmarshaler.DecodedData{
+			Message: "outer message",
+			Kind:    "test_error",
+			Causes: []map[string]any{
+				{
+					"type": "CustomError",
+				},
+			},
+		}, nil
+	}
+	u := unmarshaler.New(resolver, decoder)
+
+	unmarshaled, err := u.Unmarshal([]byte("dummy"))
+	if err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+
+	causes := unmarshaled.Unwrap()
+	if len(causes) != 1 {
+		t.Fatalf("want 1 cause, got %d", len(causes))
+	}
+
+	got := causes[0].Error()
+	want := "<unknown: map[type:CustomError]>"
+	if got != want {
+		t.Errorf("want cause message %q, got %q", want, got)
+	}
+}

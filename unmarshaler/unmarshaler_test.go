@@ -301,8 +301,9 @@ func TestUnmarshaler_Causes_Unmarshalable(t *testing.T) {
 			t.Fatalf("want 1 cause, got %d", len(causes))
 		}
 
-		if causes[0].Error() != "<unknown>" {
-			t.Errorf("want cause message %q, got %q", "<unknown>", causes[0].Error())
+		causeMsg := causes[0].Error()
+		if causeMsg != "<unknown: map[kind:unknown_kind]>" {
+			t.Errorf("want cause message %q, got %q", "<unknown: map[kind:unknown_kind]>", causeMsg)
 		}
 	})
 }

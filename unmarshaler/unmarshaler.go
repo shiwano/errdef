@@ -2,6 +2,7 @@ package unmarshaler
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/shiwano/errdef"
 )
@@ -136,7 +137,7 @@ func (d *Unmarshaler) unmarshalCause(causeData map[string]any) (error, error) {
 
 		msg, hasMessage := causeData["message"].(string)
 		if !hasMessage {
-			msg = "<unknown>"
+			msg = fmt.Sprintf("<unknown: %v>", causeData)
 		}
 
 		typeName, hasTypeName := causeData["type"].(string)
