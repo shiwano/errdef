@@ -7,14 +7,60 @@ import (
 )
 
 type (
+	// Decoder is a function that decodes error data from bytes into DecodedData.
+	// Custom decoders can be implemented to support different formats (e.g., JSON, XML, protobuf).
+	//
+	// Example JSON decoder:
+	//
+	//	func jsonDecoder(data []byte) (*DecodedData, error) {
+	//		var decoded DecodedData
+	//		if err := json.Unmarshal(data, &decoded); err != nil {
+	//			return nil, err
+	//		}
+	//		return &decoded, nil
+	//	}
 	Decoder func(data []byte) (*DecodedData, error)
 
+	// DecodedData represents the decoded error information that will be unmarshaled
+	// into an error instance. This structure is designed to be flexible enough to
+	// represent both defined errors (with Kind) and unknown external errors (with Type).
 	DecodedData struct {
-		Message string           `json:"message"`
-		Kind    errdef.Kind      `json:"kind"`
-		Fields  map[string]any   `json:"fields"`
-		Stack   []errdef.Frame   `json:"stack"`
-		Causes  []map[string]any `json:"causes"`
+		// Message is the error message.
+		Message string `json:"message"`
+
+		// Kind identifies the type of defined error. This field is used for errors
+		// that are registered in the error definition system.
+		Kind errdef.Kind `json:"kind"`
+
+		// Fields contains structured data associated with the error.
+		// The keys should match the field names defined in the error definition.
+		Fields map[string]any `json:"fields"`
+
+		// Stack contains the stack trace where the error was created.
+		Stack []errdef.Frame `json:"stack"`
+
+		// Causes contains the wrapped errors. Each cause can be one of two types:
+		//
+		// 1. Defined errors (errors registered in the error definition system):
+		//   - "message" (string, required): the error message
+		//   - "kind" (string, required): the error kind
+		//   - "fields" (map[string]any, optional): structured data
+		//   - "stack" ([]Frame, optional): stack trace
+		//   - "causes" ([]map[string]any, optional): nested wrapped errors
+		//
+		// 2. External/unknown errors (errors from external libraries or unknown sources):
+		//   - "message" (string, required): the error message
+		//   - "type" (string, optional): the Go type name formatted as fmt.Sprintf("%T", err) (e.g., "*errors.errorString")
+		//   - "causes" ([]map[string]any, optional): nested wrapped errors
+		//
+		// Causes can be nested recursively, allowing deep error chains to be preserved.
+		//
+		// If a cause does not conform to either format, it will be treated as a single unknown error
+		// with default values for missing fields.
+		//
+		// NOTE: For external errors without nested causes, the combination of "type" and "message"
+		// is used to resolve registered sentinel errors (e.g., io.EOF, sql.ErrNoRows).
+		Causes []map[string]any `json:"causes"`
 	}
 )
 
