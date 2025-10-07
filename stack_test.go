@@ -11,7 +11,6 @@ import (
 	"github.com/shiwano/errdef"
 )
 
-
 func TestStack_Frames(t *testing.T) {
 	def := errdef.Define("test_error")
 	err := def.New("test error")
