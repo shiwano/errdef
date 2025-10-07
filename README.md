@@ -507,6 +507,7 @@ func main() {
 ## Appendix: Library Comparison
 
 > **Last updated:** 2025-10-07
+>
 > If you spot inaccuracies or want another library included, please open an issue or PR.
 
 ### Comparison Table
