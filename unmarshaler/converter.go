@@ -18,23 +18,14 @@ func tryConvertFieldValue(fk errdef.FieldKey, value any) (errdef.FieldValue, boo
 		return nil, false, nil
 	}
 
-	if f64, ok := value.(float64); ok {
-		if v, ok, err := tryConvertFloat64(fk, f64, targetType); err != nil {
+	switch tv := value.(type) {
+	case float64:
+		if v, ok, err := tryConvertFloat64(fk, tv, targetType); err != nil {
 			return nil, false, err
 		} else if ok {
 			return v, true, nil
 		}
-	}
-
-	if _, ok := value.(map[string]any); ok {
-		if v, ok, err := tryConvertViaJSON(fk, value, targetType); err != nil {
-			return nil, false, err
-		} else if ok {
-			return v, true, nil
-		}
-	}
-
-	if _, ok := value.([]any); ok {
+	case map[string]any, []any:
 		if v, ok, err := tryConvertViaJSON(fk, value, targetType); err != nil {
 			return nil, false, err
 		} else if ok {
