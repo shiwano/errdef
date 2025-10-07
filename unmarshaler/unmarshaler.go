@@ -9,6 +9,7 @@ import (
 )
 
 type (
+	// Unmarshaler unmarshals serialized error data into UnmarshaledError.
 	Unmarshaler struct {
 		resolver            Resolver
 		decoder             Decoder
@@ -16,10 +17,12 @@ type (
 		additionalFieldKeys []errdef.FieldKey
 	}
 
+	// Resolver provides error definitions for unmarshaling.
 	Resolver interface {
 		Definitions() []*errdef.Definition
 	}
 
+	// Option is a function type for customizing Unmarshaler configuration.
 	Option func(*Unmarshaler)
 
 	sentinelKey struct {
@@ -30,6 +33,7 @@ type (
 
 const redactedStr = "[REDACTED]"
 
+// New creates a new Unmarshaler with the given resolver, decoder, and options.
 func New(resolver Resolver, decoder Decoder, opts ...Option) *Unmarshaler {
 	u := &Unmarshaler{
 		resolver: resolver,
@@ -41,10 +45,12 @@ func New(resolver Resolver, decoder Decoder, opts ...Option) *Unmarshaler {
 	return u
 }
 
+// NewJSON creates a new Unmarshaler with a JSON decoder.
 func NewJSON(resolver Resolver, opts ...Option) *Unmarshaler {
 	return New(resolver, jsonDecoder, opts...)
 }
 
+// Unmarshal deserializes the given byte data into an UnmarshaledError.
 func (d *Unmarshaler) Unmarshal(data []byte) (UnmarshaledError, error) {
 	decoded, err := d.decoder(data)
 	if err != nil {
