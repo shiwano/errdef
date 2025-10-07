@@ -1,8 +1,8 @@
 # errdef
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/shiwano/errdef)](https://goreportcard.com/report/github.com/shiwano/errdef)
-[![Go Reference](https://pkg.go.dev/badge/github.com/shiwano/errdef.svg)](https://pkg.go.dev/github.com/shiwano/errdef)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/shiwano/errdef/test.yml?branch=main)](https://github.com/shiwano/errdef/actions)
+[![Go Reference](https://pkg.go.dev/badge/github.com/shiwano/errdef.svg)](https://pkg.go.dev/github.com/shiwano/errdef)
+[![Go Report Card](https://goreportcard.com/badge/github.com/shiwano/errdef)](https://goreportcard.com/report/github.com/shiwano/errdef)
 
 `errdef` splits error handling in Go into **Definitions** and **Error instances**, so you can keep errors typed, structured, and uniform.
 It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`, `fmt.Formatter`, `json.Marshaler`, and `slog.LogValuer` — while adding fields, stack traces, and flexible error composition.
@@ -31,6 +31,7 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
   - [Ecosystem Integration](#ecosystem-integration)
   - [Built-in Options](#built-in-options)
 - [Contributing](#contributing)
+- [Appendix: Library Comparison](#appendix-library-comparison)
 - [License](#license)
 
 ## Getting Started
@@ -496,6 +497,36 @@ func main() {
 - For hot paths where stack capture isn't necessary: Use `NoTrace()`
 - To limit the number of frames captured in deep call stacks: Use `StackDepth(int)`
 - To prevent deep error chains during error handling: Use `Boundary()`
+
+## Appendix: Library Comparison
+
+> **Last updated:** 2025-10-07
+> If you spot inaccuracies or want another library included, please open an issue or PR.
+
+### Comparison Table
+
+| Feature                         | Go stdlib | pkg/errors | cockroach<br>db/errors | eris         | errorx | merry v2       | **errdef**          |
+|---------------------------------|:---------:|:----------:|:----------------------:|:------------:|:------:|:--------------:|:-------------------:|
+| `errors.Is`/`As` Compatibility  |    ✅     |     ✅     |           ✅           |      ✅      |   ✅   |       ✅       |       **✅**        |
+| Def/Instance Separation         |    ❌     |     ❌     |           ❌           |      ❌      |   ❌   |       ❌       |       **✅**        |
+| Automatic Stack Traces          |    ❌     |     ✅     |           ✅           |      ✅      |   ✅   |       ✅       |       **✅**        |
+| Stack Control (Disable/Depth)   |    ❌     |     ❌     |           ⚠️           |      ❌      |   ❌   |       ✅       |       **✅**        |
+| Structured Data                 |    ❌     |     ❌     |           ⚠️           |      ❌      |   ⚠️   |       ⚠️       | **✅ (Type-Safe)**  |
+| Redaction                       |    ❌     |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       |       **✅**        |
+| Structured JSON                 |    ❌     |     ❌     |       ⚠️ (Proto)       | ⚠️ (Logging) |   ❌   | ⚠️ (Formatted) |       **✅**        |
+| `slog` Integration              |    ❌     |     ❌     |           ❌           |      ❌      |   ❌   |       ❌       |       **✅**        |
+| Panic Capture                   |    ❌     |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       |       **✅**        |
+| Multiple Causes (`errors.Join`) |    ✅     |     ❌     |           ✅           |      ✅      |   ✅   |       ✅       |       **✅**        |
+| JSON Deserialization            |    ❌     |     ❌     |           ⚠️           |      ❌      |   ❌   |       ❌       |       **✅**        |
+| Protobuf Deserialization        |    ❌     |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       | **⚠️ (Extensible)** |
+
+### Quick Notes
+
+* **`pkg/errors`:** A historical library that added stack trace functionality, but is now archived.
+* **`cockroachdb/errors`:** Specializes in distributed systems and has a very powerful Protobuf serialization/deserialization feature.
+* **`eris`:** Provides good stack trace formatting but lacks structured field attachment feature.
+* **`errorx` / `merry v2`:** Although not type-safe, they provide a feature to attach information to errors in a simple key-value format.
+* **`errdef`:** Features a design that separates Definitions from Instances, enabling type-safe fields, native slog integration, and full JSON round-trip capabilities.
 
 ## Contributing
 
