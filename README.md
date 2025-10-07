@@ -396,13 +396,18 @@ if err := processRequest(w, r); err != nil {
 For advanced use cases like mapping error codes from external APIs, use a `Resolver`.
 
 ```go
+import (
+    "github.com/shiwano/errdef"
+    "github.com/shiwano/errdef/resolver"
+)
+
 var (
     ErrStripeCardDeclined = errdef.Define("card_declined", errdef.HTTPStatus(400))
     ErrStripeRateLimit    = errdef.Define("rate_limit", errdef.HTTPStatus(429))
     ErrStripeUnknown      = errdef.Define("stripe_unknown", errdef.HTTPStatus(500))
 
     // Order defines priority (first-wins).
-    ErrStripe = errdef.NewResolver(
+    ErrStripe = resolver.New(
         ErrStripeCardDeclined,
         ErrStripeRateLimit,
     ).WithFallback(ErrStripeUnknown) // Remove if you want strict matching.
@@ -433,6 +438,7 @@ import (
     "io"
 
     "github.com/shiwano/errdef"
+    "github.com/shiwano/errdef/resolver"
     "github.com/shiwano/errdef/unmarshaler"
 )
 
@@ -447,8 +453,8 @@ func main() {
     data, _ := json.Marshal(original)
 
     // Deserialize JSON back into an errdef.Error
-    resolver := errdef.NewResolver(ErrNotFound)
-    u := unmarshaler.NewJSON(resolver, unmarshaler.WithStandardSentinelErrors())
+    r := resolver.New(ErrNotFound)
+    u := unmarshaler.NewJSON(r, unmarshaler.WithStandardSentinelErrors())
     restored, _ := u.Unmarshal(data)
 
     fmt.Println(restored.Kind())             // "not_found"

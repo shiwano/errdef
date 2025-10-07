@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/shiwano/errdef"
+	"github.com/shiwano/errdef/resolver"
 )
 
 type (
@@ -178,13 +179,13 @@ func (d *Unmarshaler) unmarshalCause(causeData map[string]any) (error, error) {
 }
 
 func (d *Unmarshaler) resolveKind(kind errdef.Kind) (*errdef.Definition, error) {
-	if strict, ok := d.resolver.(*errdef.Resolver); ok {
+	if strict, ok := d.resolver.(*resolver.Resolver); ok {
 		def, ok := strict.ResolveKind(kind)
 		if !ok {
 			return nil, ErrKindNotFound.WithOptions(kindField(kind)).New("kind not found")
 		}
 		return def, nil
-	} else if fallback, ok := d.resolver.(*errdef.FallbackResolver); ok {
+	} else if fallback, ok := d.resolver.(*resolver.FallbackResolver); ok {
 		return fallback.ResolveKind(kind), nil
 	}
 	return nil, ErrInternal.New("resolver does not support kind resolution")

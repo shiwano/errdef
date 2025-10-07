@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/shiwano/errdef"
+	"github.com/shiwano/errdef/resolver"
 	"github.com/shiwano/errdef/unmarshaler"
 )
 
@@ -14,8 +15,8 @@ func TestFields_Defined(t *testing.T) {
 	count, countFrom := errdef.DefineField[int]("count")
 
 	def := errdef.Define("test_error", userID("user123"), count(42))
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	original := def.New("test message")
 	data, err := json.Marshal(original)
@@ -39,8 +40,8 @@ func TestFields_Defined(t *testing.T) {
 
 func TestFields_Unknown(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	jsonData := `{
 		"message": "test message",
@@ -79,8 +80,8 @@ func TestFields_Unknown(t *testing.T) {
 func TestFields_Mixed(t *testing.T) {
 	userID, userIDFrom := errdef.DefineField[string]("user_id")
 	def := errdef.Define("test_error", userID("user123"))
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	jsonData := `{
 		"message": "test message",
@@ -120,8 +121,8 @@ func TestFields_Seq(t *testing.T) {
 	userID, _ := errdef.DefineField[string]("user_id")
 	countField, _ := errdef.DefineField[int]("count")
 	def := errdef.Define("test_error", userID("user123"), countField(42))
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	original := def.New("test message")
 	data, err := json.Marshal(original)
@@ -154,8 +155,8 @@ func TestFields_SortedSeq(t *testing.T) {
 	userID, _ := errdef.DefineField[string]("user_id")
 	countField, _ := errdef.DefineField[int]("count")
 	def := errdef.Define("test_error", userID("user123"), countField(42))
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	original := def.New("test message")
 	data, err := json.Marshal(original)
@@ -188,8 +189,8 @@ func TestFields_MarshalJSON(t *testing.T) {
 		userID, _ := errdef.DefineField[string]("user_id")
 		count, _ := errdef.DefineField[int]("count")
 		def := errdef.Define("test_error", userID("user123"), count(42))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		original := def.New("test message")
 		data, err := json.Marshal(original)
@@ -225,8 +226,8 @@ func TestFields_MarshalJSON(t *testing.T) {
 
 	t.Run("unknown fields", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test message",
@@ -266,8 +267,8 @@ func TestFields_MarshalJSON(t *testing.T) {
 	t.Run("mixed fields", func(t *testing.T) {
 		userID, _ := errdef.DefineField[string]("user_id")
 		def := errdef.Define("test_error", userID("user123"))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test message",

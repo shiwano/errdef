@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/shiwano/errdef"
+	"github.com/shiwano/errdef/resolver"
 	"github.com/shiwano/errdef/unmarshaler"
 )
 
@@ -111,7 +112,7 @@ func TestTryConvertFloat64(t *testing.T) {
 				def = errdef.Define("test_error", ctor(0))
 			}
 
-			resolverWithField := errdef.NewResolver(def)
+			resolverWithField := resolver.New(def)
 			u := unmarshaler.NewJSON(resolverWithField)
 
 			unmarshaled, err := u.Unmarshal(data)
@@ -153,8 +154,8 @@ func TestTryConvertFloat64(t *testing.T) {
 
 		ageCtor, ageFrom := errdef.DefineField[Age]("age")
 		def := errdef.Define("test_error", ageCtor(0))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test",
@@ -184,8 +185,8 @@ func TestTryConvertFloat64(t *testing.T) {
 
 		scoreCtor, scoreFrom := errdef.DefineField[Score]("score")
 		def := errdef.Define("test_error", scoreCtor(0))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test",
@@ -231,8 +232,8 @@ func TestTryConvertMapToStruct(t *testing.T) {
 	t.Run("not pointer", func(t *testing.T) {
 		addressCtor, addressFrom := errdef.DefineField[Address]("address")
 		def := errdef.Define("test_error", addressCtor(Address{}))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		unmarshaled, err := u.Unmarshal([]byte(jsonData))
 		if err != nil {
@@ -255,8 +256,8 @@ func TestTryConvertMapToStruct(t *testing.T) {
 	t.Run("pointer", func(t *testing.T) {
 		addressCtor, addressFrom := errdef.DefineField[*Address]("address")
 		def := errdef.Define("test_error", addressCtor(&Address{}))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		unmarshaled, err := u.Unmarshal([]byte(jsonData))
 		if err != nil {
@@ -283,8 +284,8 @@ func TestTryConvertMap(t *testing.T) {
 
 		metadataCtor, metadataFrom := errdef.DefineField[Metadata]("metadata")
 		def := errdef.Define("test_error", metadataCtor(Metadata{}))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test",
@@ -326,8 +327,8 @@ func TestTryConvertSlice(t *testing.T) {
 
 		idsCtor, idsFrom := errdef.DefineField[[]int]("ids")
 		def := errdef.Define("test_error", idsCtor([]int{}))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		unmarshaled, err := u.Unmarshal([]byte(jsonData))
 		if err != nil {
@@ -365,8 +366,8 @@ func TestTryConvertSlice(t *testing.T) {
 		t.Run("not pointer", func(t *testing.T) {
 			itemsCtor, itemsFrom := errdef.DefineField[[]Item]("items")
 			def := errdef.Define("test_error", itemsCtor([]Item{}))
-			resolver := errdef.NewResolver(def)
-			u := unmarshaler.NewJSON(resolver)
+			r := resolver.New(def)
+			u := unmarshaler.NewJSON(r)
 
 			unmarshaled, err := u.Unmarshal([]byte(jsonData))
 			if err != nil {
@@ -393,8 +394,8 @@ func TestTryConvertSlice(t *testing.T) {
 		t.Run("pointer", func(t *testing.T) {
 			itemsCtor, itemsFrom := errdef.DefineField[[]*Item]("items")
 			def := errdef.Define("test_error", itemsCtor([]*Item{}))
-			resolver := errdef.NewResolver(def)
-			u := unmarshaler.NewJSON(resolver)
+			r := resolver.New(def)
+			u := unmarshaler.NewJSON(r)
 
 			unmarshaled, err := u.Unmarshal([]byte(jsonData))
 			if err != nil {
@@ -424,8 +425,8 @@ func TestTryConvertSlice(t *testing.T) {
 
 		idsCtor, idsFrom := errdef.DefineField[IDs]("ids")
 		def := errdef.Define("test_error", idsCtor(IDs{}))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test",
@@ -458,8 +459,8 @@ func TestTryConvertByUnderlyingType(t *testing.T) {
 
 		userIDCtor, userIDFrom := errdef.DefineField[UserID]("user_id")
 		def := errdef.Define("test_error", userIDCtor(""))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test",
@@ -489,8 +490,8 @@ func TestTryConvertByUnderlyingType(t *testing.T) {
 
 		flagCtor, flagFrom := errdef.DefineField[Flag]("flag")
 		def := errdef.Define("test_error", flagCtor(false))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test",
@@ -520,8 +521,8 @@ func TestTryConvertFieldValue(t *testing.T) {
 	t.Run("direct conversion success", func(t *testing.T) {
 		stringCtor, stringFrom := errdef.DefineField[string]("test")
 		def := errdef.Define("test_error", stringCtor(""))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test",
@@ -549,8 +550,8 @@ func TestTryConvertFieldValue(t *testing.T) {
 	t.Run("float64 conversion", func(t *testing.T) {
 		intCtor, intFrom := errdef.DefineField[int]("test")
 		def := errdef.Define("test_error", intCtor(0))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test",
@@ -583,8 +584,8 @@ func TestTryConvertFieldValue(t *testing.T) {
 
 		addressCtor, addressFrom := errdef.DefineField[Address]("test")
 		def := errdef.Define("test_error", addressCtor(Address{}))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test",
@@ -615,8 +616,8 @@ func TestTryConvertFieldValue(t *testing.T) {
 	t.Run("slice conversion", func(t *testing.T) {
 		sliceCtor, sliceFrom := errdef.DefineField[[]int]("test")
 		def := errdef.Define("test_error", sliceCtor([]int{}))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test",
@@ -645,8 +646,8 @@ func TestTryConvertFieldValue(t *testing.T) {
 	t.Run("conversion failure", func(t *testing.T) {
 		intCtor, intFrom := errdef.DefineField[int]("test")
 		def := errdef.Define("test_error", intCtor(99))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test",
@@ -678,8 +679,8 @@ func TestTryConvertPointer(t *testing.T) {
 
 		userIDCtor, userIDFrom := errdef.DefineField[*UserID]("user_id")
 		def := errdef.Define("test_error", userIDCtor(nil))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test",
@@ -713,8 +714,8 @@ func TestTryConvertPointer(t *testing.T) {
 
 		flagCtor, flagFrom := errdef.DefineField[*Flag]("flag")
 		def := errdef.Define("test_error", flagCtor(nil))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test",
@@ -751,8 +752,8 @@ func TestTryConvertPointer(t *testing.T) {
 
 		addressCtor, addressFrom := errdef.DefineField[*Address]("address")
 		def := errdef.Define("test_error", addressCtor(nil))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		jsonData := `{
 			"message": "test",

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/shiwano/errdef"
+	"github.com/shiwano/errdef/resolver"
 	"github.com/shiwano/errdef/unmarshaler"
 )
 
@@ -77,8 +78,8 @@ func xmlDecoder(data []byte) (*unmarshaler.DecodedData, error) {
 
 func TestXMLDecoder_BasicUnmarshal(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.New(resolver, xmlDecoder)
+	r := resolver.New(def)
+	u := unmarshaler.New(r, xmlDecoder)
 
 	xmlData := `<error>
 		<message>test message</message>
@@ -101,8 +102,8 @@ func TestXMLDecoder_BasicUnmarshal(t *testing.T) {
 func TestXMLDecoder_WithFields(t *testing.T) {
 	userID, userIDFrom := errdef.DefineField[int]("user_id")
 	def := errdef.Define("test_error", userID(0))
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.New(resolver, xmlDecoder)
+	r := resolver.New(def)
+	u := unmarshaler.New(r, xmlDecoder)
 
 	xmlData := `<error>
 		<message>user not found</message>
@@ -126,8 +127,8 @@ func TestXMLDecoder_WithFields(t *testing.T) {
 func TestXMLDecoder_WithCauses(t *testing.T) {
 	def := errdef.Define("outer_error")
 	innerDef := errdef.Define("inner_error")
-	resolver := errdef.NewResolver(def, innerDef)
-	u := unmarshaler.New(resolver, xmlDecoder)
+	r := resolver.New(def, innerDef)
+	u := unmarshaler.New(r, xmlDecoder)
 
 	xmlData := `<error>
 		<message>outer message</message>
@@ -167,8 +168,8 @@ func TestXMLDecoder_WithMultipleCauses(t *testing.T) {
 	def := errdef.Define("outer_error")
 	inner1Def := errdef.Define("inner1_error")
 	inner2Def := errdef.Define("inner2_error")
-	resolver := errdef.NewResolver(def, inner1Def, inner2Def)
-	u := unmarshaler.New(resolver, xmlDecoder)
+	r := resolver.New(def, inner1Def, inner2Def)
+	u := unmarshaler.New(r, xmlDecoder)
 
 	xmlData := `<error>
 		<message>outer message</message>
@@ -205,8 +206,8 @@ func TestXMLDecoder_WithMultipleCauses(t *testing.T) {
 
 func TestXMLDecoder_UnknownCauseError(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.New(resolver, xmlDecoder)
+	r := resolver.New(def)
+	u := unmarshaler.New(r, xmlDecoder)
 
 	xmlData := `<error>
 		<message>outer message</message>
@@ -236,7 +237,7 @@ func TestXMLDecoder_UnknownCauseError(t *testing.T) {
 
 func TestXMLDecoder_UnknownCauseError_WithoutMessage(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
+	r := resolver.New(def)
 
 	decoder := func(data []byte) (*unmarshaler.DecodedData, error) {
 		return &unmarshaler.DecodedData{
@@ -249,7 +250,7 @@ func TestXMLDecoder_UnknownCauseError_WithoutMessage(t *testing.T) {
 			},
 		}, nil
 	}
-	u := unmarshaler.New(resolver, decoder)
+	u := unmarshaler.New(r, decoder)
 
 	unmarshaled, err := u.Unmarshal([]byte("dummy"))
 	if err != nil {

@@ -7,13 +7,14 @@ import (
 	"testing"
 
 	"github.com/shiwano/errdef"
+	"github.com/shiwano/errdef/resolver"
 	"github.com/shiwano/errdef/unmarshaler"
 )
 
 func TestStack(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	original := def.New("test message")
 	data, err := json.Marshal(original)
@@ -53,8 +54,8 @@ func TestStack(t *testing.T) {
 
 func TestStack_Len(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	original := def.New("test message")
 	data, err := json.Marshal(original)
@@ -75,8 +76,8 @@ func TestStack_Len(t *testing.T) {
 
 func TestStack_Frames(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	original := def.New("test message")
 	data, err := json.Marshal(original)
@@ -98,8 +99,8 @@ func TestStack_Frames(t *testing.T) {
 
 func TestStack_HeadFrame(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	original := def.New("test message")
 	data, err := json.Marshal(original)
@@ -126,8 +127,8 @@ func TestStack_HeadFrame(t *testing.T) {
 
 func TestStack_StackTrace(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	original := def.New("test message")
 	data, err := json.Marshal(original)
@@ -149,8 +150,8 @@ func TestStack_StackTrace(t *testing.T) {
 
 func TestStack_LogValue(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	original := def.New("test message")
 	data, err := json.Marshal(original)
@@ -172,8 +173,8 @@ func TestStack_LogValue(t *testing.T) {
 
 func TestStack_MarshalJSON(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	original := def.New("test message")
 	data, err := json.Marshal(original)

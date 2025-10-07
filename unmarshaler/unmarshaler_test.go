@@ -10,14 +10,15 @@ import (
 	"testing"
 
 	"github.com/shiwano/errdef"
+	"github.com/shiwano/errdef/resolver"
 	"github.com/shiwano/errdef/unmarshaler"
 )
 
 func TestUnmarshaler_Unmarshal(t *testing.T) {
 	t.Run("basic unmarshal", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		orig := def.New("test message")
 		data, err := json.Marshal(orig)
@@ -41,8 +42,8 @@ func TestUnmarshaler_Unmarshal(t *testing.T) {
 	t.Run("with multiple definitions in resolver", func(t *testing.T) {
 		def1 := errdef.Define("error_one")
 		def2 := errdef.Define("error_two")
-		resolver := errdef.NewResolver(def1, def2)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def1, def2)
+		u := unmarshaler.NewJSON(r)
 
 		orig := def2.New("second error")
 		data, err := json.Marshal(orig)
@@ -63,8 +64,8 @@ func TestUnmarshaler_Unmarshal(t *testing.T) {
 
 func TestUnmarshaler_Error_DecodeFailure(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	invalidJSON := []byte(`{invalid json}`)
 
@@ -80,8 +81,8 @@ func TestUnmarshaler_Error_DecodeFailure(t *testing.T) {
 
 func TestUnmarshaler_Error_KindNotFound(t *testing.T) {
 	def := errdef.Define("known_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	jsonData := `{
 		"message": "test message",
@@ -101,8 +102,8 @@ func TestUnmarshaler_Error_KindNotFound(t *testing.T) {
 func TestUnmarshaler_Causes_Single(t *testing.T) {
 	def := errdef.Define("outer_error")
 	innerDef := errdef.Define("inner_error")
-	resolver := errdef.NewResolver(def, innerDef)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def, innerDef)
+	u := unmarshaler.NewJSON(r)
 
 	inner := innerDef.New("inner message")
 	outer := def.Wrap(inner)
@@ -139,8 +140,8 @@ func TestUnmarshaler_Causes_Multiple(t *testing.T) {
 	def := errdef.Define("outer_error")
 	inner1Def := errdef.Define("inner1_error")
 	inner2Def := errdef.Define("inner2_error")
-	resolver := errdef.NewResolver(def, inner1Def, inner2Def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def, inner1Def, inner2Def)
+	u := unmarshaler.NewJSON(r)
 
 	inner1 := inner1Def.New("inner message 1")
 	inner2 := inner2Def.New("inner message 2")
@@ -173,8 +174,8 @@ func TestUnmarshaler_Causes_Nested(t *testing.T) {
 	def1 := errdef.Define("level1")
 	def2 := errdef.Define("level2")
 	def3 := errdef.Define("level3")
-	resolver := errdef.NewResolver(def1, def2, def3)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def1, def2, def3)
+	u := unmarshaler.NewJSON(r)
 
 	level3 := def3.New("deepest error")
 	level2 := def2.Wrap(level3)
@@ -215,8 +216,8 @@ func TestUnmarshaler_Causes_Nested(t *testing.T) {
 
 func TestUnmarshaler_Causes_Unmarshalable(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	t.Run("unknown kind with type and data", func(t *testing.T) {
 		jsonData := `{
@@ -311,8 +312,8 @@ func TestUnmarshaler_Causes_Unmarshalable(t *testing.T) {
 func TestUnmarshaler_Causes_Mixed(t *testing.T) {
 	def1 := errdef.Define("outer_error")
 	def2 := errdef.Define("known_error")
-	resolver := errdef.NewResolver(def1, def2)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def1, def2)
+	u := unmarshaler.NewJSON(r)
 
 	jsonData := `{
 		"message": "outer message",
@@ -359,8 +360,8 @@ func TestUnmarshaler_Fields_TypeConversionFallback(t *testing.T) {
 	count, countFrom := errdef.DefineField[int]("count")
 
 	def := errdef.Define("test_error", userID("default_user"), count(99))
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	t.Run("use default value when type conversion fails", func(t *testing.T) {
 		jsonData := `{
@@ -439,8 +440,8 @@ func TestUnmarshaler_Fields_Redacted(t *testing.T) {
 	password, passwordFrom := errdef.DefineField[errdef.Redacted[string]]("password")
 
 	def := errdef.Define("auth_error", password(errdef.Redact("secret123")))
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	orig := def.New("authentication failed")
 	data, err := json.Marshal(orig)
@@ -491,8 +492,8 @@ func TestUnmarshaler_Fields_Redacted(t *testing.T) {
 
 func TestUnmarshaler_WithStandardSentinelErrors(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver, unmarshaler.WithStandardSentinelErrors())
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r, unmarshaler.WithStandardSentinelErrors())
 
 	t.Run("io.EOF", func(t *testing.T) {
 		orig := def.Wrap(io.EOF)
@@ -565,8 +566,8 @@ func TestUnmarshaler_SentinelErrors_Custom(t *testing.T) {
 	customSentinel := errors.New("custom sentinel error")
 
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver, unmarshaler.WithSentinelErrors(customSentinel))
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r, unmarshaler.WithSentinelErrors(customSentinel))
 
 	orig := def.Wrap(customSentinel)
 	data, err := json.Marshal(orig)
@@ -591,8 +592,8 @@ func TestUnmarshaler_SentinelErrors_Custom(t *testing.T) {
 
 func TestUnmarshaler_SentinelErrors_WithoutOption(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	orig := def.Wrap(io.EOF)
 	data, err := json.Marshal(orig)
@@ -619,8 +620,8 @@ func TestUnmarshaler_SentinelErrors_WithoutOption(t *testing.T) {
 
 func TestUnmarshaler_Causes_UnknownError_Recursive(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	t.Run("single nested unknown error", func(t *testing.T) {
 		jsonData := `{
@@ -817,7 +818,7 @@ func TestUnmarshaler_Causes_UnknownError_Recursive(t *testing.T) {
 
 	t.Run("mixed known and unknown nested errors", func(t *testing.T) {
 		knownDef := errdef.Define("known_error")
-		mixedResolver := errdef.NewResolver(def, knownDef)
+		mixedResolver := resolver.New(def, knownDef)
 		mixedU := unmarshaler.NewJSON(mixedResolver)
 
 		jsonData := `{
@@ -879,10 +880,10 @@ func TestUnmarshaler_Causes_UnknownError_Recursive(t *testing.T) {
 func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 	t.Run("basic additional field key", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		resolver := errdef.NewResolver(def)
+		r := resolver.New(def)
 
 		extraField, extraFieldFrom := errdef.DefineField[string]("extra")
-		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(extraField.FieldKey()))
+		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(extraField.FieldKey()))
 
 		jsonData := `{
 			"message": "test message",
@@ -909,11 +910,11 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 
 	t.Run("multiple additional field keys", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		resolver := errdef.NewResolver(def)
+		r := resolver.New(def)
 
 		field1, field1From := errdef.DefineField[string]("field1")
 		field2, field2From := errdef.DefineField[int]("field2")
-		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(
+		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(
 			field1.FieldKey(),
 			field2.FieldKey(),
 		))
@@ -951,10 +952,10 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 
 	t.Run("type conversion with float64", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		resolver := errdef.NewResolver(def)
+		r := resolver.New(def)
 
 		intField, intFieldFrom := errdef.DefineField[int]("number")
-		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(intField.FieldKey()))
+		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(intField.FieldKey()))
 
 		jsonData := `{
 			"message": "test message",
@@ -986,10 +987,10 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 		}
 
 		def := errdef.Define("test_error")
-		resolver := errdef.NewResolver(def)
+		r := resolver.New(def)
 
 		addressField, addressFieldFrom := errdef.DefineField[Address]("address")
-		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(addressField.FieldKey()))
+		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(addressField.FieldKey()))
 
 		jsonData := `{
 			"message": "test message",
@@ -1019,10 +1020,10 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 
 	t.Run("slice conversion", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		resolver := errdef.NewResolver(def)
+		r := resolver.New(def)
 
 		idsField, idsFieldFrom := errdef.DefineField[[]int]("ids")
-		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(idsField.FieldKey()))
+		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(idsField.FieldKey()))
 
 		jsonData := `{
 			"message": "test message",
@@ -1050,10 +1051,10 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 
 	t.Run("conversion failure falls to unknownFields", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		resolver := errdef.NewResolver(def)
+		r := resolver.New(def)
 
 		intField, intFieldFrom := errdef.DefineField[int]("number")
-		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(intField.FieldKey()))
+		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(intField.FieldKey()))
 
 		jsonData := `{
 			"message": "test message",
@@ -1084,10 +1085,10 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 
 	t.Run("field not in additional keys goes to unknownFields", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		resolver := errdef.NewResolver(def)
+		r := resolver.New(def)
 
 		field1, _ := errdef.DefineField[string]("field1")
-		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(field1.FieldKey()))
+		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(field1.FieldKey()))
 
 		jsonData := `{
 			"message": "test message",
@@ -1113,10 +1114,10 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 	t.Run("mix of defined and additional fields", func(t *testing.T) {
 		definedField, definedFieldFrom := errdef.DefineField[string]("defined")
 		def := errdef.Define("test_error", definedField("default"))
-		resolver := errdef.NewResolver(def)
+		r := resolver.New(def)
 
 		additionalField, additionalFieldFrom := errdef.DefineField[string]("additional")
-		u := unmarshaler.NewJSON(resolver, unmarshaler.WithAdditionalFields(additionalField.FieldKey()))
+		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(additionalField.FieldKey()))
 
 		jsonData := `{
 			"message": "test message",

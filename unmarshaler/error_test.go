@@ -11,13 +11,14 @@ import (
 	"testing"
 
 	"github.com/shiwano/errdef"
+	"github.com/shiwano/errdef/resolver"
 	"github.com/shiwano/errdef/unmarshaler"
 )
 
 func TestUnmarshaledError_Error(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	orig := def.New("test message")
 	data, err := json.Marshal(orig)
@@ -37,8 +38,8 @@ func TestUnmarshaledError_Error(t *testing.T) {
 
 func TestUnmarshaledError_Kind(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	orig := def.New("test message")
 	data, err := json.Marshal(orig)
@@ -59,8 +60,8 @@ func TestUnmarshaledError_Kind(t *testing.T) {
 func TestUnmarshaledError_Fields(t *testing.T) {
 	userID, _ := errdef.DefineField[string]("user_id")
 	def := errdef.Define("test_error", userID("user123"))
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	orig := def.New("test message")
 	data, err := json.Marshal(orig)
@@ -90,8 +91,8 @@ func TestUnmarshaledError_Fields(t *testing.T) {
 
 func TestUnmarshaledError_Stack(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	orig := def.New("test message")
 	data, err := json.Marshal(orig)
@@ -117,8 +118,8 @@ func TestUnmarshaledError_Stack(t *testing.T) {
 func TestUnmarshaledError_Unwrap(t *testing.T) {
 	def := errdef.Define("outer_error")
 	innerDef := errdef.Define("inner_error")
-	resolver := errdef.NewResolver(def, innerDef)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def, innerDef)
+	u := unmarshaler.NewJSON(r)
 
 	inner := innerDef.New("inner message")
 	outer := def.Wrap(inner)
@@ -145,8 +146,8 @@ func TestUnmarshaledError_Unwrap(t *testing.T) {
 
 func TestUnmarshaledError_Is(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	orig := def.New("test message")
 	data, err := json.Marshal(orig)
@@ -172,8 +173,8 @@ func TestUnmarshaledError_Is(t *testing.T) {
 func TestUnmarshaledError_MarshalJSON(t *testing.T) {
 	t.Run("basic error", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		orig := def.New("test message")
 		data, err := json.Marshal(orig)
@@ -214,8 +215,8 @@ func TestUnmarshaledError_MarshalJSON(t *testing.T) {
 		userID, _ := errdef.DefineField[string]("user_id")
 		requestID, _ := errdef.DefineField[int]("request_id")
 		def := errdef.Define("test_error", userID("user123"), requestID(456))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		orig := def.New("test message")
 		data, err := json.Marshal(orig)
@@ -259,8 +260,8 @@ func TestUnmarshaledError_MarshalJSON(t *testing.T) {
 	t.Run("error with causes", func(t *testing.T) {
 		def := errdef.Define("outer_error")
 		innerDef := errdef.Define("inner_error")
-		resolver := errdef.NewResolver(def, innerDef)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def, innerDef)
+		u := unmarshaler.NewJSON(r)
 
 		inner := innerDef.New("inner message")
 		outer := def.Wrap(inner)
@@ -314,8 +315,8 @@ func TestUnmarshaledError_MarshalJSON(t *testing.T) {
 		def := errdef.Define("outer_error", userID("user123"))
 		middleDef := errdef.Define("middle_error")
 		innerDef := errdef.Define("inner_error")
-		resolver := errdef.NewResolver(def, middleDef, innerDef)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def, middleDef, innerDef)
+		u := unmarshaler.NewJSON(r)
 
 		inner := innerDef.New("inner message")
 		middle := middleDef.Wrap(inner)
@@ -353,8 +354,8 @@ func TestUnmarshaledError_MarshalJSON(t *testing.T) {
 func TestUnmarshaledError_Format(t *testing.T) {
 	t.Run("default format", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		orig := def.New("test message")
 		data, err := json.Marshal(orig)
@@ -375,8 +376,8 @@ func TestUnmarshaledError_Format(t *testing.T) {
 
 	t.Run("quoted format", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		orig := def.New("test message")
 		data, err := json.Marshal(orig)
@@ -398,8 +399,8 @@ func TestUnmarshaledError_Format(t *testing.T) {
 	t.Run("verbose format", func(t *testing.T) {
 		userID, _ := errdef.DefineField[string]("user_id")
 		def := errdef.Define("test_error", errdef.NoTrace(), userID("user123"))
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		orig := def.New("test message")
 		data, err := json.Marshal(orig)
@@ -426,8 +427,8 @@ func TestUnmarshaledError_Format(t *testing.T) {
 	t.Run("verbose format with cause", func(t *testing.T) {
 		def := errdef.Define("test_error", errdef.NoTrace())
 		innerDef := errdef.Define("inner_error", errdef.NoTrace())
-		resolver := errdef.NewResolver(def, innerDef)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def, innerDef)
+		u := unmarshaler.NewJSON(r)
 
 		inner := innerDef.New("inner message")
 		outer := def.Wrap(inner)
@@ -459,8 +460,8 @@ func TestUnmarshaledError_Format(t *testing.T) {
 		def := errdef.Define("test_error", errdef.NoTrace())
 		err1Def := errdef.Define("error_1", errdef.NoTrace())
 		err2Def := errdef.Define("error_2", errdef.NoTrace())
-		resolver := errdef.NewResolver(def, err1Def, err2Def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def, err1Def, err2Def)
+		u := unmarshaler.NewJSON(r)
 
 		err1 := err1Def.New("error 1")
 		err2 := err2Def.New("error 2")
@@ -495,8 +496,8 @@ func TestUnmarshaledError_Format(t *testing.T) {
 
 	t.Run("go format", func(t *testing.T) {
 		def := errdef.Define("test_error", errdef.NoTrace())
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		orig := def.New("test message")
 		data, err := json.Marshal(orig)
@@ -520,8 +521,8 @@ func TestUnmarshaledError_LogValue(t *testing.T) {
 	userID, _ := errdef.DefineField[string]("user_id")
 	def := errdef.Define("test_error")
 	innerDef := errdef.Define("inner_error")
-	resolver := errdef.NewResolver(def, innerDef)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def, innerDef)
+	u := unmarshaler.NewJSON(r)
 
 	inner := innerDef.New("inner message")
 	outer := def.WithOptions(userID("user123")).Wrap(inner)
@@ -566,8 +567,8 @@ func TestUnmarshaledError_LogValue(t *testing.T) {
 
 func TestUnmarshaledError_DebugStack(t *testing.T) {
 	def := errdef.Define("test_error")
-	resolver := errdef.NewResolver(def)
-	u := unmarshaler.NewJSON(resolver)
+	r := resolver.New(def)
+	u := unmarshaler.NewJSON(r)
 
 	orig := def.New("test message")
 	data, err := json.Marshal(orig)
@@ -610,8 +611,8 @@ func TestUnmarshaledError_Cause(t *testing.T) {
 	t.Run("with cause", func(t *testing.T) {
 		def := errdef.Define("outer_error")
 		innerDef := errdef.Define("inner_error")
-		resolver := errdef.NewResolver(def, innerDef)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def, innerDef)
+		u := unmarshaler.NewJSON(r)
 
 		inner := innerDef.New("inner message")
 		outer := def.Wrap(inner)
@@ -643,8 +644,8 @@ func TestUnmarshaledError_Cause(t *testing.T) {
 
 	t.Run("without cause", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		resolver := errdef.NewResolver(def)
-		u := unmarshaler.NewJSON(resolver)
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
 
 		orig := def.New("test message")
 		data, err := json.Marshal(orig)
