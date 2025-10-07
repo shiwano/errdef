@@ -91,6 +91,11 @@ func LogValuer(f func(err Error) slog.Value) Option {
 // Details represents a map of diagnostic details that can be attached to an error.
 type Details map[string]any
 
+// Key returns the field key for Details.
+func (d Details) Key() FieldKey {
+	return detailsFieldKey
+}
+
 func (d Details) applyOption(def *Definition) {
 	def.fields.set(detailsFieldKey, &fieldValue[Details]{value: maps.Clone(d)})
 }

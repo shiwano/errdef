@@ -426,4 +426,25 @@ func TestDetails(t *testing.T) {
 			t.Error("want details not to be found")
 		}
 	})
+
+	t.Run("Key method returns key that can retrieve value", func(t *testing.T) {
+		want := errdef.Details{
+			"key1": "value1",
+			"key2": 123,
+		}
+		def := errdef.Define("test", want)
+		err := def.New("test error")
+
+		key := want.Key()
+		fields := err.(errdef.Error).Fields()
+		fieldValue, ok := fields.Get(key)
+		if !ok {
+			t.Fatal("want field value to be found using Key()")
+		}
+
+		got := fieldValue.Value().(errdef.Details)
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("want details=%v, got details=%v", want, got)
+		}
+	})
 }
