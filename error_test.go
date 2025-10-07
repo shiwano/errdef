@@ -836,6 +836,76 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 			t.Errorf("JSON mismatch:\ngot:  %#v\nwant: %#v", got, want)
 		}
 	})
+
+	t.Run("with error that unwraps to nil pointer error", func(t *testing.T) {
+		def := errdef.Define("wrapper_error", errdef.NoTrace())
+
+		wrapperErr := &errorWithNilUnwrap{msg: "wrapper error"}
+		err := def.Wrap(wrapperErr)
+
+		data, jsonErr := json.Marshal(err)
+		if jsonErr != nil {
+			t.Fatalf("want no error, got %v", jsonErr)
+		}
+
+		var got map[string]any
+		if unmarshalErr := json.Unmarshal(data, &got); unmarshalErr != nil {
+			t.Fatalf("want valid JSON, got %v", unmarshalErr)
+		}
+
+		want := map[string]any{
+			"message": "wrapper error",
+			"kind":    "wrapper_error",
+			"causes": []any{
+				map[string]any{
+					"message": "wrapper error",
+					"type":    "*errdef_test.errorWithNilUnwrap",
+					"causes": []any{
+						map[string]any{
+							"message": "<nil>",
+							"type":    "*errdef_test.nilPointerError",
+						},
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("JSON mismatch:\ngot:  %#v\nwant: %#v", got, want)
+		}
+	})
+
+	t.Run("with value type error", func(t *testing.T) {
+		def := errdef.Define("wrapper_error", errdef.NoTrace())
+
+		valueErr := valueTypeError{msg: "value error"}
+		err := def.Wrap(valueErr)
+
+		data, jsonErr := json.Marshal(err)
+		if jsonErr != nil {
+			t.Fatalf("want no error, got %v", jsonErr)
+		}
+
+		var got map[string]any
+		if unmarshalErr := json.Unmarshal(data, &got); unmarshalErr != nil {
+			t.Fatalf("want valid JSON, got %v", unmarshalErr)
+		}
+
+		want := map[string]any{
+			"message": "value error",
+			"kind":    "wrapper_error",
+			"causes": []any{
+				map[string]any{
+					"message": "value error",
+					"type":    "errdef_test.valueTypeError",
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("JSON mismatch:\ngot:  %#v\nwant: %#v", got, want)
+		}
+	})
 }
 
 func TestError_LogValue(t *testing.T) {
@@ -1099,4 +1169,33 @@ func (e *circularError) Error() string {
 
 func (e *circularError) Unwrap() error {
 	return e.cause
+}
+
+type nilPointerError struct {
+	msg string
+}
+
+func (e *nilPointerError) Error() string {
+	return e.msg
+}
+
+type errorWithNilUnwrap struct {
+	msg string
+}
+
+func (e *errorWithNilUnwrap) Error() string {
+	return e.msg
+}
+
+func (e *errorWithNilUnwrap) Unwrap() error {
+	var nilErr *nilPointerError
+	return nilErr
+}
+
+type valueTypeError struct {
+	msg string
+}
+
+func (e valueTypeError) Error() string {
+	return e.msg
 }

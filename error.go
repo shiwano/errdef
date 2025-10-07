@@ -366,7 +366,44 @@ func marshalCauseJSONWithVisited(c error, visited map[uintptr]bool) (json.RawMes
 	case Error:
 		return t.(json.Marshaler).MarshalJSON()
 	default:
-		ptr := reflect.ValueOf(c).Pointer()
+		// Safely get pointer for cycle detection
+		val := reflect.ValueOf(c)
+		if !val.IsValid() {
+			return json.Marshal(struct {
+				Message string `json:"message"`
+				Type    string `json:"type"`
+			}{
+				Message: "<invalid>",
+				Type:    fmt.Sprintf("%T", c),
+			})
+		}
+
+		// Only try to get pointer for pointer-like types
+		var ptr uintptr
+		if val.Kind() == reflect.Pointer || val.Kind() == reflect.Interface ||
+			val.Kind() == reflect.Map || val.Kind() == reflect.Slice ||
+			val.Kind() == reflect.Chan || val.Kind() == reflect.Func {
+			if val.IsNil() {
+				return json.Marshal(struct {
+					Message string `json:"message"`
+					Type    string `json:"type"`
+				}{
+					Message: "<nil>",
+					Type:    fmt.Sprintf("%T", c),
+				})
+			}
+			ptr = val.Pointer()
+		} else {
+			// For non-pointer types, use type and message as identity
+			// This is a best-effort approach for cycle detection
+			errorMsg := c.Error()
+			if errorMsg == "" {
+				ptr = 0
+			} else {
+				ptr = uintptr(reflect.ValueOf(errorMsg).Pointer())
+			}
+		}
+
 		if visited[ptr] {
 			return json.Marshal(struct {
 				Message string `json:"message"`
