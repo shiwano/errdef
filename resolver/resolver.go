@@ -3,9 +3,9 @@ package resolver
 import "github.com/shiwano/errdef"
 
 type (
-	// Resolver manages multiple error definitions and provides resolution
+	// StrictResolver manages multiple error definitions and provides resolution
 	// functionality based on Kind or Field criteria.
-	Resolver struct {
+	StrictResolver struct {
 		defs   []*errdef.Definition
 		byKind map[errdef.Kind]*errdef.Definition
 	}
@@ -13,23 +13,37 @@ type (
 	// FallbackResolver wraps a Resolver with fallback functionality,
 	// returning a fallback definition when resolution fails.
 	FallbackResolver struct {
-		resolver *Resolver
+		resolver *StrictResolver
 		fallback *errdef.Definition
 	}
 
-	resolver interface {
+	// Resolver provides error definitions for resolution.
+	Resolver interface {
+		// Definitions returns all definitions managed by the resolver.
 		Definitions() []*errdef.Definition
+
+		// ResolveKindStrict resolves a definition by its Kind.
+		// Returns the definition and true if found, nil and false otherwise.
+		ResolveKindStrict(kind errdef.Kind) (*errdef.Definition, bool)
+
+		// ResolveFieldStrict resolves a definition by matching a field value.
+		// Returns the first definition that has the specified field key with the exact value.
+		ResolveFieldStrict(key errdef.FieldKey, want any) (*errdef.Definition, bool)
+
+		// ResolveFieldStrictFunc resolves a definition using a custom field evaluation function.
+		// Returns the first definition where the eq function returns true for the field value.
+		ResolveFieldStrictFunc(key errdef.FieldKey, eq func(v errdef.FieldValue) bool) (*errdef.Definition, bool)
 	}
 )
 
 var (
-	_ resolver = (*Resolver)(nil)
-	_ resolver = (*FallbackResolver)(nil)
+	_ Resolver = (*StrictResolver)(nil)
+	_ Resolver = (*FallbackResolver)(nil)
 )
 
 // New creates a new Resolver with the given definitions.
 // If multiple definitions have the same Kind, the first one wins.
-func New(defs ...*errdef.Definition) *Resolver {
+func New(defs ...*errdef.Definition) *StrictResolver {
 	byKind := make(map[errdef.Kind]*errdef.Definition, len(defs))
 	for _, d := range defs {
 		if d == nil {
@@ -41,37 +55,35 @@ func New(defs ...*errdef.Definition) *Resolver {
 		}
 		byKind[k] = d
 	}
-	return &Resolver{
+	return &StrictResolver{
 		defs:   defs,
 		byKind: byKind,
 	}
 }
 
 // Definitions returns all definitions managed by the resolver.
-func (r *Resolver) Definitions() []*errdef.Definition {
+func (r *StrictResolver) Definitions() []*errdef.Definition {
 	return r.defs[:]
 }
 
 // WithFallback creates a new FallbackResolver that uses the given definition
 // as a fallback when resolution fails.
-func (r *Resolver) WithFallback(fallback *errdef.Definition) *FallbackResolver {
+func (r *StrictResolver) WithFallback(fallback *errdef.Definition) *FallbackResolver {
 	return &FallbackResolver{
 		resolver: r,
 		fallback: fallback,
 	}
 }
 
-// ResolveKind resolves a definition by its Kind.
-// Returns the definition and true if found, nil and false otherwise.
-func (r *Resolver) ResolveKind(kind errdef.Kind) (*errdef.Definition, bool) {
+// ResolveKindStrict implements Resolver.
+func (r *StrictResolver) ResolveKindStrict(kind errdef.Kind) (*errdef.Definition, bool) {
 	def, ok := r.byKind[kind]
 	return def, ok
 }
 
-// ResolveField resolves a definition by matching a field value.
-// Returns the first definition that has the specified field key with the exact value.
-func (r *Resolver) ResolveField(key errdef.FieldKey, want any) (*errdef.Definition, bool) {
-	return r.ResolveFieldFunc(key, func(v errdef.FieldValue) bool {
+// ResolveFieldStrict implements Resolver.
+func (r *StrictResolver) ResolveFieldStrict(key errdef.FieldKey, want any) (*errdef.Definition, bool) {
+	return r.ResolveFieldStrictFunc(key, func(v errdef.FieldValue) bool {
 		if fv, ok := want.(errdef.FieldValue); ok {
 			return v.Equals(fv.Value())
 		}
@@ -79,9 +91,8 @@ func (r *Resolver) ResolveField(key errdef.FieldKey, want any) (*errdef.Definiti
 	})
 }
 
-// ResolveFieldFunc resolves a definition using a custom field evaluation function.
-// Returns the first definition where the eq function returns true for the field value.
-func (r *Resolver) ResolveFieldFunc(key errdef.FieldKey, eq func(v errdef.FieldValue) bool) (*errdef.Definition, bool) {
+// ResolveFieldStrictFunc implements Resolver.
+func (r *StrictResolver) ResolveFieldStrictFunc(key errdef.FieldKey, eq func(v errdef.FieldValue) bool) (*errdef.Definition, bool) {
 	for _, def := range r.defs {
 		v, ok := def.Fields().Get(key)
 		if !ok || !eq(v) {
@@ -103,7 +114,7 @@ func (r *FallbackResolver) Definitions() []*errdef.Definition {
 // ResolveKind resolves a definition by its Kind.
 // Returns the fallback definition if resolution fails.
 func (r *FallbackResolver) ResolveKind(kind errdef.Kind) *errdef.Definition {
-	if def, ok := r.resolver.ResolveKind(kind); ok {
+	if def, ok := r.resolver.ResolveKindStrict(kind); ok {
 		return def
 	}
 	return r.fallback
@@ -112,7 +123,7 @@ func (r *FallbackResolver) ResolveKind(kind errdef.Kind) *errdef.Definition {
 // ResolveField resolves a definition by matching a field value.
 // Returns the fallback definition if resolution fails.
 func (r *FallbackResolver) ResolveField(key errdef.FieldKey, want any) *errdef.Definition {
-	if def, ok := r.resolver.ResolveField(key, want); ok {
+	if def, ok := r.resolver.ResolveFieldStrict(key, want); ok {
 		return def
 	}
 	return r.fallback
@@ -121,10 +132,25 @@ func (r *FallbackResolver) ResolveField(key errdef.FieldKey, want any) *errdef.D
 // ResolveFieldFunc resolves a definition using a custom field evaluation function.
 // Returns the fallback definition if resolution fails.
 func (r *FallbackResolver) ResolveFieldFunc(key errdef.FieldKey, eq func(v errdef.FieldValue) bool) *errdef.Definition {
-	if def, ok := r.resolver.ResolveFieldFunc(key, eq); ok {
+	if def, ok := r.resolver.ResolveFieldStrictFunc(key, eq); ok {
 		return def
 	}
 	return r.fallback
+}
+
+// ResolveKindStrict implements Resolver.
+func (r *FallbackResolver) ResolveKindStrict(kind errdef.Kind) (*errdef.Definition, bool) {
+	return r.resolver.ResolveKindStrict(kind)
+}
+
+// ResolveFieldStrict implements Resolver.
+func (r *FallbackResolver) ResolveFieldStrict(key errdef.FieldKey, want any) (*errdef.Definition, bool) {
+	return r.resolver.ResolveFieldStrict(key, want)
+}
+
+// ResolveFieldStrictFunc implements Resolver.
+func (r *FallbackResolver) ResolveFieldStrictFunc(key errdef.FieldKey, eq func(v errdef.FieldValue) bool) (*errdef.Definition, bool) {
+	return r.resolver.ResolveFieldStrictFunc(key, eq)
 }
 
 // Fallback returns the fallback definition.

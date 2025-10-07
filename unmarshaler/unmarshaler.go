@@ -11,15 +11,10 @@ import (
 type (
 	// Unmarshaler unmarshals serialized error data into UnmarshaledError.
 	Unmarshaler struct {
-		resolver            Resolver
+		resolver            resolver.Resolver
 		decoder             Decoder
 		sentinelErrors      map[sentinelKey]error
 		additionalFieldKeys []errdef.FieldKey
-	}
-
-	// Resolver provides error definitions for unmarshaling.
-	Resolver interface {
-		Definitions() []*errdef.Definition
 	}
 
 	// Option is a function type for customizing Unmarshaler configuration.
@@ -34,7 +29,7 @@ type (
 const redactedStr = "[REDACTED]"
 
 // New creates a new Unmarshaler with the given resolver, decoder, and options.
-func New(resolver Resolver, decoder Decoder, opts ...Option) *Unmarshaler {
+func New(resolver resolver.Resolver, decoder Decoder, opts ...Option) *Unmarshaler {
 	u := &Unmarshaler{
 		resolver: resolver,
 		decoder:  decoder,
@@ -46,7 +41,7 @@ func New(resolver Resolver, decoder Decoder, opts ...Option) *Unmarshaler {
 }
 
 // NewJSON creates a new Unmarshaler with a JSON decoder.
-func NewJSON(resolver Resolver, opts ...Option) *Unmarshaler {
+func NewJSON(resolver resolver.Resolver, opts ...Option) *Unmarshaler {
 	return New(resolver, jsonDecoder, opts...)
 }
 
@@ -185,14 +180,12 @@ func (d *Unmarshaler) unmarshalCause(causeData map[string]any) (error, error) {
 }
 
 func (d *Unmarshaler) resolveKind(kind errdef.Kind) (*errdef.Definition, error) {
-	if strict, ok := d.resolver.(*resolver.Resolver); ok {
-		def, ok := strict.ResolveKind(kind)
-		if !ok {
-			return nil, ErrKindNotFound.WithOptions(kindField(kind)).New("kind not found")
-		}
-		return def, nil
-	} else if fallback, ok := d.resolver.(*resolver.FallbackResolver); ok {
+	if fallback, ok := d.resolver.(*resolver.FallbackResolver); ok {
 		return fallback.ResolveKind(kind), nil
 	}
-	return nil, ErrInternal.New("resolver does not support kind resolution")
+	def, ok := d.resolver.ResolveKindStrict(kind)
+	if !ok {
+		return nil, ErrKindNotFound.WithOptions(kindField(kind)).New("kind not found")
+	}
+	return def, nil
 }
