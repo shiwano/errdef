@@ -58,7 +58,8 @@ type (
 		// If a cause does not conform to either format, it will be treated as a single unknown error
 		// with default values for missing fields.
 		//
-		// NOTE: For external errors without nested causes, the combination of "type" and "message"
+		// NOTE:
+		// For external errors without nested causes, the combination of "type" and "message"
 		// is used to resolve registered sentinel errors (e.g., io.EOF, sql.ErrNoRows).
 		Causes []map[string]any `json:"causes"`
 	}

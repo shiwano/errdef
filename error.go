@@ -29,8 +29,10 @@ type (
 
 	// DebugStacker returns a string that resembles the output of debug.Stack().
 	// This is useful for integrating with Google Cloud Error Reporting.
-	// NOTE: The goroutine ID and state may differ from the actual one.
 	// See: https://cloud.google.com/error-reporting/reference/rest/v1beta1/projects.events/report#ReportedErrorEvent
+	//
+	// NOTE:
+	// The goroutine ID and state may differ from the actual one.
 	DebugStacker interface {
 		DebugStack() string
 	}
