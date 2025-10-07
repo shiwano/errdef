@@ -33,7 +33,6 @@ type (
 	// FieldKey represents a key for structured error fields.
 	FieldKey interface {
 		fmt.Stringer
-
 		// From creates a new FieldValue with the same type from the given value.
 		NewValue(value any) (FieldValue, bool)
 		// ZeroValue returns a FieldValue representing the zero value for the key's type.

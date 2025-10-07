@@ -10,28 +10,7 @@ import (
 type (
 	// Option represents a configuration option that can be applied to error definitions.
 	Option interface {
-		// ApplyOption applies this option to the given applier.
-		ApplyOption(o OptionApplier)
-	}
-
-	// OptionApplier provides methods for applying options to error definitions.
-	OptionApplier interface {
-		// SetField sets a field value.
-		SetField(key FieldKey, value FieldValue)
-		// DisableTrace disables stack trace collection.
-		DisableTrace()
-		// AddStackSkip adds frames to skip during stack trace collection.
-		AddStackSkip(skip int)
-		// SetStackDepth sets the absolute depth for stack trace collection.
-		SetStackDepth(depth int)
-		// SetBoundary marks this error as a boundary in the error chain.
-		SetBoundary()
-		// SetFormatter sets a custom error formatter.
-		SetFormatter(formatter func(err Error, s fmt.State, verb rune))
-		// SetJSONMarshaler sets a custom JSON marshaler.
-		SetJSONMarshaler(marshaler func(err Error) ([]byte, error))
-		// SetLogValuer sets a custom slog.Value converter.
-		SetLogValuer(valuer func(err Error) slog.Value)
+		applyOption(d *Definition)
 	}
 
 	// FieldConstructor creates an Option that sets a field value.
@@ -45,10 +24,6 @@ type (
 
 	// FieldExtractorSingleReturn extracts a field value from an error, returning only the value.
 	FieldExtractorSingleReturn[T any] func(err error) T
-
-	optionApplier struct {
-		def *Definition
-	}
 
 	field[T any] struct {
 		key   FieldKey
@@ -172,74 +147,42 @@ func (f FieldExtractor[T]) OrFallback(err error, fn func(err error) T) T {
 	return f.WithFallback(fn)(err)
 }
 
-func (a *optionApplier) SetField(key FieldKey, value FieldValue) {
-	a.def.fields.set(key, value)
+func (o *field[T]) applyOption(d *Definition) {
+	d.fields.set(o.key, &fieldValue[T]{value: o.value})
 }
 
-func (a *optionApplier) DisableTrace() {
-	a.def.noTrace = true
+func (o *noTrace) applyOption(d *Definition) {
+	d.noTrace = true
 }
 
-func (a *optionApplier) AddStackSkip(skip int) {
-	a.def.stackSkip += skip
+func (o *stackSkip) applyOption(d *Definition) {
+	d.stackSkip += o.skip
 }
 
-func (a *optionApplier) SetStackDepth(depth int) {
-	a.def.stackDepth = depth
+func (o *stackDepth) applyOption(d *Definition) {
+	d.stackDepth = o.depth
 }
 
-func (a *optionApplier) SetBoundary() {
-	a.def.boundary = true
+func (o *boundary) applyOption(d *Definition) {
+	d.boundary = true
 }
 
-func (a *optionApplier) SetFormatter(formatter func(err Error, s fmt.State, verb rune)) {
-	a.def.formatter = formatter
+func (o *formatter) applyOption(d *Definition) {
+	d.formatter = o.formatter
 }
 
-func (a *optionApplier) SetJSONMarshaler(marshaler func(err Error) ([]byte, error)) {
-	a.def.jsonMarshaler = marshaler
+func (o *jsonMarshaler) applyOption(d *Definition) {
+	d.jsonMarshaler = o.marshaler
 }
 
-func (a *optionApplier) SetLogValuer(valuer func(err Error) slog.Value) {
-	a.def.logValuer = valuer
-}
-
-func (o *field[T]) ApplyOption(a OptionApplier) {
-	a.SetField(o.key, &fieldValue[T]{value: o.value})
-}
-
-func (o *noTrace) ApplyOption(a OptionApplier) {
-	a.DisableTrace()
-}
-
-func (o *stackSkip) ApplyOption(a OptionApplier) {
-	a.AddStackSkip(o.skip)
-}
-
-func (o *stackDepth) ApplyOption(a OptionApplier) {
-	a.SetStackDepth(o.depth)
-}
-
-func (o *boundary) ApplyOption(a OptionApplier) {
-	a.SetBoundary()
-}
-
-func (o *formatter) ApplyOption(a OptionApplier) {
-	a.SetFormatter(o.formatter)
-}
-
-func (o *jsonMarshaler) ApplyOption(a OptionApplier) {
-	a.SetJSONMarshaler(o.marshaler)
-}
-
-func (o *logValuer) ApplyOption(a OptionApplier) {
-	a.SetLogValuer(o.valuer)
+func (o *logValuer) applyOption(d *Definition) {
+	d.logValuer = o.valuer
 }
 
 func fieldKeyFromOption(opt Option) FieldKey {
-	applier := &optionApplier{def: &Definition{fields: newFields()}}
-	opt.ApplyOption(applier)
-	for k := range applier.def.fields.data {
+	def := &Definition{fields: newFields()}
+	opt.applyOption(def)
+	for k := range def.fields.data {
 		return k
 	}
 	panic("no field key")

@@ -11,19 +11,6 @@ import (
 	"github.com/shiwano/errdef"
 )
 
-type (
-	customFieldKey string
-
-	customField struct {
-		key   errdef.FieldKey
-		value any
-	}
-
-	customFieldValue[T comparable] struct {
-		value T
-	}
-)
-
 func TestFields_Get(t *testing.T) {
 	t.Run("existing key", func(t *testing.T) {
 		ctor, _ := errdef.DefineField[string]("test_field")
@@ -53,24 +40,6 @@ func TestFields_Get(t *testing.T) {
 		}
 	})
 
-	t.Run("custom field", func(t *testing.T) {
-		key := customFieldKey("test_field")
-		def := errdef.Define("test_error", customField{
-			key:   key,
-			value: "test_value",
-		})
-		err := def.New("test message")
-
-		fields := err.(errdef.Error).Fields()
-
-		value, found := fields.Get(key)
-		if !found {
-			t.Fatal("want field to be found via Fields.Get")
-		}
-		if value.Value() != "test_value" {
-			t.Errorf("want value %q, got %q", "test_value", value)
-		}
-	})
 }
 
 func TestFields_FindKeys(t *testing.T) {
@@ -111,14 +80,12 @@ func TestFields_FindKeys(t *testing.T) {
 func TestFields_Seq(t *testing.T) {
 	ctor1, _ := errdef.DefineField[string]("field1")
 	ctor2, _ := errdef.DefineField[int]("field2")
+	ctor3, _ := errdef.DefineField[bool]("field3")
 
 	def := errdef.Define("test_error",
 		ctor1("value1"),
 		ctor2(123),
-		customField{
-			key:   customFieldKey("field3"),
-			value: false,
-		},
+		ctor3(false),
 	)
 	err := def.New("test message")
 
@@ -144,14 +111,12 @@ func TestFields_SortedSeq(t *testing.T) {
 	t.Run("basic sorting", func(t *testing.T) {
 		ctor1, _ := errdef.DefineField[string]("c_field")
 		ctor2, _ := errdef.DefineField[int]("a_field")
+		ctor3, _ := errdef.DefineField[bool]("b_field")
 
 		def := errdef.Define("test_error",
 			ctor1("value_c"),
 			ctor2(123),
-			customField{
-				key:   customFieldKey("b_field"),
-				value: true,
-			},
+			ctor3(true),
 		)
 		err := def.New("test message")
 
@@ -179,15 +144,13 @@ func TestFields_SortedSeq(t *testing.T) {
 		ctor1, _ := errdef.DefineField[string]("same_name")
 		ctor2, _ := errdef.DefineField[int]("same_name")
 		ctor3, _ := errdef.DefineField[bool]("same_name")
+		ctor4, _ := errdef.DefineField[float64]("same_name")
 
 		def := errdef.Define("test_error",
 			ctor1("string_value"),
 			ctor2(42),
 			ctor3(true),
-			customField{
-				key:   customFieldKey("same_name"),
-				value: 3.14,
-			},
+			ctor4(3.14),
 		)
 		err := def.New("test message")
 
@@ -256,14 +219,12 @@ func TestFields_MarshalJSON(t *testing.T) {
 	t.Run("marshal to JSON", func(t *testing.T) {
 		ctor1, _ := errdef.DefineField[string]("b_field")
 		ctor2, _ := errdef.DefineField[int]("a_field")
+		ctor3, _ := errdef.DefineField[bool]("c_field")
 
 		def := errdef.Define("test_error",
 			ctor1("string_value"),
 			ctor2(42),
-			customField{
-				key:   customFieldKey("c_field"),
-				value: true,
-			},
+			ctor3(true),
 		)
 		err := def.New("test message")
 
@@ -430,57 +391,4 @@ func TestFields_LogValue(t *testing.T) {
 		}
 	})
 
-	t.Run("custom field key", func(t *testing.T) {
-		customKey := customFieldKey("custom_field")
-		customOpt := customField{key: customKey, value: "custom_value"}
-		def := errdef.Define("test_error", customOpt)
-		err := def.New("test message")
-
-		fields := err.(errdef.Error).Fields()
-		value := fields.(slog.LogValuer).LogValue()
-
-		var buf bytes.Buffer
-		logger := slog.New(slog.NewJSONHandler(&buf, nil))
-		logger.Info("test", slog.Any("fields", value))
-
-		var result map[string]any
-		if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-			t.Fatalf("failed to unmarshal JSON: %v", err)
-		}
-
-		want := map[string]any{
-			"custom_field": "custom_value",
-		}
-
-		if !reflect.DeepEqual(result["fields"], want) {
-			t.Errorf("want fields %+v, got %+v", want, result["fields"])
-		}
-	})
-}
-
-func (o customField) ApplyOption(a errdef.OptionApplier) {
-	a.SetField(o.key, &customFieldValue[any]{value: o.value})
-}
-
-func (k customFieldKey) String() string {
-	return string(k)
-}
-
-func (k customFieldKey) NewValue(value any) (errdef.FieldValue, bool) {
-	return nil, false
-}
-
-func (k customFieldKey) ZeroValue() errdef.FieldValue {
-	return &customFieldValue[any]{value: nil}
-}
-
-func (v *customFieldValue[T]) Value() any {
-	return v.value
-}
-
-func (v *customFieldValue[T]) Equals(other any) bool {
-	if tv, ok := other.(T); ok {
-		return v.value == tv
-	}
-	return false
 }

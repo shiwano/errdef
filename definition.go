@@ -127,11 +127,7 @@ func (d *Definition) clone() *Definition {
 }
 
 func (d *Definition) applyOptions(opts []Option) {
-	if len(opts) == 0 {
-		return
-	}
-	a := &optionApplier{def: d}
 	for _, opt := range opts {
-		opt.ApplyOption(a)
+		opt.applyOption(d)
 	}
 }

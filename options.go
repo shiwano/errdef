@@ -91,9 +91,8 @@ func LogValuer(f func(err Error) slog.Value) Option {
 // Details represents a map of diagnostic details that can be attached to an error.
 type Details map[string]any
 
-// ApplyOption implements the Option interface.
-func (d Details) ApplyOption(a OptionApplier) {
-	a.SetField(detailsFieldKey, &fieldValue[Details]{value: maps.Clone(d)})
+func (d Details) applyOption(def *Definition) {
+	def.fields.set(detailsFieldKey, &fieldValue[Details]{value: maps.Clone(d)})
 }
 
 func detailsFrom(err error) (Details, bool) {
