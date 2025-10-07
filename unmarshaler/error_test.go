@@ -79,7 +79,7 @@ func TestUnmarshaledError_Fields(t *testing.T) {
 		t.Errorf("want 1 field, got %d", fields.Len())
 	}
 
-	value, ok := fields.Get(userID.FieldKey())
+	value, ok := fields.Get(userID.Key())
 	if !ok {
 		t.Fatal("want user_id field to be found")
 	}

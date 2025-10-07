@@ -19,7 +19,7 @@ func TestFields_Get(t *testing.T) {
 
 		fields := err.(errdef.Error).Fields()
 
-		value, ok := fields.Get(ctor.FieldKey())
+		value, ok := fields.Get(ctor.Key())
 		if !ok {
 			t.Fatal("want field to be found via Fields.Get")
 		}

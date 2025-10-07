@@ -133,7 +133,7 @@ func TestResolver_ResolveField(t *testing.T) {
 	r := resolver.New(def1, def2, def3)
 
 	t.Run("resolves by string field", func(t *testing.T) {
-		result, ok := r.ResolveField(ctor1.FieldKey(), "value1")
+		result, ok := r.ResolveField(ctor1.Key(), "value1")
 
 		if !ok {
 			t.Fatal("want to resolve by string field")
@@ -144,7 +144,7 @@ func TestResolver_ResolveField(t *testing.T) {
 	})
 
 	t.Run("resolves by int field", func(t *testing.T) {
-		result, ok := r.ResolveField(ctor2.FieldKey(), 100)
+		result, ok := r.ResolveField(ctor2.Key(), 100)
 
 		if !ok {
 			t.Fatal("want to resolve by int field")
@@ -155,7 +155,7 @@ func TestResolver_ResolveField(t *testing.T) {
 	})
 
 	t.Run("returns false for non-existing field", func(t *testing.T) {
-		result, ok := r.ResolveField(ctor1.FieldKey(), "non_existing")
+		result, ok := r.ResolveField(ctor1.Key(), "non_existing")
 
 		if ok {
 			t.Fatal("want not to resolve non-existing field value")
@@ -168,7 +168,7 @@ func TestResolver_ResolveField(t *testing.T) {
 	t.Run("returns false for field not in any definition", func(t *testing.T) {
 		ctor3, _ := errdef.DefineField[string]("missing_field")
 
-		result, ok := r.ResolveField(ctor3.FieldKey(), "any_value")
+		result, ok := r.ResolveField(ctor3.Key(), "any_value")
 
 		if ok {
 			t.Fatal("want not to resolve field not in any definition")
@@ -186,7 +186,7 @@ func TestResolver_ResolveField(t *testing.T) {
 
 		sliceResolver := resolver.New(defWithSlice1, defWithSlice2)
 
-		result, ok := sliceResolver.ResolveField(sliceCtor.FieldKey(), []string{"a", "b"})
+		result, ok := sliceResolver.ResolveField(sliceCtor.Key(), []string{"a", "b"})
 
 		if !ok {
 			t.Fatal("want to resolve by slice field")
@@ -204,7 +204,7 @@ func TestResolver_ResolveField(t *testing.T) {
 
 		mapResolver := resolver.New(defWithMap1, defWithMap2)
 
-		result, ok := mapResolver.ResolveField(mapCtor.FieldKey(), map[string]int{"key1": 1})
+		result, ok := mapResolver.ResolveField(mapCtor.Key(), map[string]int{"key1": 1})
 
 		if !ok {
 			t.Fatal("want to resolve by map field")
@@ -225,7 +225,7 @@ func TestResolver_ResolveFieldFunc(t *testing.T) {
 	r := resolver.New(def1, def2, def3)
 
 	t.Run("resolves with custom function", func(t *testing.T) {
-		result, ok := r.ResolveFieldFunc(ctor.FieldKey(), func(v errdef.FieldValue) bool {
+		result, ok := r.ResolveFieldFunc(ctor.Key(), func(v errdef.FieldValue) bool {
 			str, isString := v.Value().(string)
 			return isString && len(str) == 5
 		})
@@ -239,7 +239,7 @@ func TestResolver_ResolveFieldFunc(t *testing.T) {
 	})
 
 	t.Run("returns false when no field matches", func(t *testing.T) {
-		result, ok := r.ResolveFieldFunc(ctor.FieldKey(), func(v errdef.FieldValue) bool {
+		result, ok := r.ResolveFieldFunc(ctor.Key(), func(v errdef.FieldValue) bool {
 			str, isString := v.Value().(string)
 			return isString && len(str) > 10
 		})
@@ -255,7 +255,7 @@ func TestResolver_ResolveFieldFunc(t *testing.T) {
 	t.Run("returns false for field not in any definition", func(t *testing.T) {
 		ctor2, _ := errdef.DefineField[string]("missing_field")
 
-		result, ok := r.ResolveFieldFunc(ctor2.FieldKey(), func(v errdef.FieldValue) bool {
+		result, ok := r.ResolveFieldFunc(ctor2.Key(), func(v errdef.FieldValue) bool {
 			return true
 		})
 
@@ -328,7 +328,7 @@ func TestFallbackResolver_ResolveField(t *testing.T) {
 	fallbackResolver := r.WithFallback(fallbackDef)
 
 	t.Run("resolves existing field", func(t *testing.T) {
-		result := fallbackResolver.ResolveField(ctor.FieldKey(), "value1")
+		result := fallbackResolver.ResolveField(ctor.Key(), "value1")
 
 		if result != def1 {
 			t.Errorf("want resolved definition to be def1, got %v", result)
@@ -336,7 +336,7 @@ func TestFallbackResolver_ResolveField(t *testing.T) {
 	})
 
 	t.Run("returns fallback for non-existing field value", func(t *testing.T) {
-		result := fallbackResolver.ResolveField(ctor.FieldKey(), "non_existing")
+		result := fallbackResolver.ResolveField(ctor.Key(), "non_existing")
 
 		if result != fallbackDef {
 			t.Errorf("want fallback definition for non-existing field value, got %v", result)
@@ -346,7 +346,7 @@ func TestFallbackResolver_ResolveField(t *testing.T) {
 	t.Run("returns fallback for field not in any definition", func(t *testing.T) {
 		ctor2, _ := errdef.DefineField[string]("missing_field")
 
-		result := fallbackResolver.ResolveField(ctor2.FieldKey(), "any_value")
+		result := fallbackResolver.ResolveField(ctor2.Key(), "any_value")
 
 		if result != fallbackDef {
 			t.Errorf("want fallback definition for field not in any definition, got %v", result)
@@ -365,7 +365,7 @@ func TestFallbackResolver_ResolveFieldFunc(t *testing.T) {
 	fallbackResolver := r.WithFallback(fallbackDef)
 
 	t.Run("resolves with custom function", func(t *testing.T) {
-		result := fallbackResolver.ResolveFieldFunc(ctor.FieldKey(), func(v errdef.FieldValue) bool {
+		result := fallbackResolver.ResolveFieldFunc(ctor.Key(), func(v errdef.FieldValue) bool {
 			str, isString := v.Value().(string)
 			return isString && len(str) == 5
 		})
@@ -376,7 +376,7 @@ func TestFallbackResolver_ResolveFieldFunc(t *testing.T) {
 	})
 
 	t.Run("returns fallback when no field matches", func(t *testing.T) {
-		result := fallbackResolver.ResolveFieldFunc(ctor.FieldKey(), func(v errdef.FieldValue) bool {
+		result := fallbackResolver.ResolveFieldFunc(ctor.Key(), func(v errdef.FieldValue) bool {
 			str, isString := v.Value().(string)
 			return isString && len(str) > 10
 		})
@@ -389,7 +389,7 @@ func TestFallbackResolver_ResolveFieldFunc(t *testing.T) {
 	t.Run("returns fallback for field not in any definition", func(t *testing.T) {
 		ctor2, _ := errdef.DefineField[string]("missing_field")
 
-		result := fallbackResolver.ResolveFieldFunc(ctor2.FieldKey(), func(v errdef.FieldValue) bool {
+		result := fallbackResolver.ResolveFieldFunc(ctor2.Key(), func(v errdef.FieldValue) bool {
 			return true
 		})
 

@@ -14,8 +14,8 @@ func TestFieldConstructor_FieldKey(t *testing.T) {
 	rawCtor2, _ := errdef.DefineField[int]("test_field_2")
 	ctor2 := rawCtor2.WithValue(100)
 
-	key1 := ctor1.FieldKey()
-	key2 := ctor2.FieldKey()
+	key1 := ctor1.Key()
+	key2 := ctor2.Key()
 
 	if key1.String() != "test_field_1" {
 		t.Errorf("want field key %q, got %q", "test_field_1", key1.String())

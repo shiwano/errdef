@@ -55,14 +55,14 @@ type (
 	}
 )
 
-// FieldKey returns the key associated with this constructor.
-func (f FieldConstructor[T]) FieldKey() FieldKey {
+// Key returns the key associated with this constructor.
+func (f FieldConstructor[T]) Key() FieldKey {
 	var zero T
 	return fieldKeyFromOption(f(zero))
 }
 
-// FieldKey returns the key associated with this constructor.
-func (f FieldConstructorNoArgs[T]) FieldKey() FieldKey {
+// Key returns the key associated with this constructor.
+func (f FieldConstructorNoArgs[T]) Key() FieldKey {
 	return fieldKeyFromOption(f())
 }
 

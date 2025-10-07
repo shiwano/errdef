@@ -418,7 +418,7 @@ func handleStripeError(code, msg string) error {
 }
 
 func handleStripeHTTPError(statusCode int, msg string) error {
-    return ErrStripe.ResolveField(errdef.HTTPStatus.FieldKey(), statusCode).New(msg)
+    return ErrStripe.ResolveField(errdef.HTTPStatus.Key(), statusCode).New(msg)
 }
 ```
 
