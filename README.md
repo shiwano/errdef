@@ -512,20 +512,20 @@ func main() {
 
 ### Comparison Table
 
-| Feature                         | Go stdlib | pkg/errors | cockroach<br>db/errors | eris         | errorx | merry v2       | **errdef**          |
-|---------------------------------|:---------:|:----------:|:----------------------:|:------------:|:------:|:--------------:|:-------------------:|
-| `errors.Is`/`As` Compatibility  |    ✅     |     ✅     |           ✅           |      ✅      |   ✅   |       ✅       |       **✅**        |
-| Def/Instance Separation         |    ❌     |     ❌     |           ❌           |      ❌      |   ❌   |       ❌       |       **✅**        |
-| Automatic Stack Traces          |    ❌     |     ✅     |           ✅           |      ✅      |   ✅   |       ✅       |       **✅**        |
-| Stack Control (Disable/Depth)   |    ❌     |     ❌     |           ⚠️           |      ❌      |   ❌   |       ✅       |       **✅**        |
-| Structured Data                 |    ❌     |     ❌     |           ⚠️           |      ❌      |   ⚠️   |       ⚠️       | **✅ (Type-Safe)**  |
-| Redaction                       |    ❌     |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       |       **✅**        |
-| Structured JSON                 |    ❌     |     ❌     |       ⚠️ (Proto)       | ⚠️ (Logging) |   ❌   | ⚠️ (Formatted) |       **✅**        |
-| `slog` Integration              |    ❌     |     ❌     |           ❌           |      ❌      |   ❌   |       ❌       |       **✅**        |
-| Panic Capture                   |    ❌     |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       |       **✅**        |
-| Multiple Causes (`errors.Join`) |    ✅     |     ❌     |           ✅           |      ✅      |   ✅   |       ✅       |       **✅**        |
-| JSON Deserialization            |    ❌     |     ❌     |           ⚠️           |      ❌      |   ❌   |       ❌       |       **✅**        |
-| Protobuf Deserialization        |    ❌     |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       | **⚠️ (Extensible)** |
+| Feature                         | Go stdlib | pkg/errors | cockroach<br>db/errors | eris         | errorx | merry v2       | **errdef**       |
+|---------------------------------|:---------:|:----------:|:----------------------:|:------------:|:------:|:--------------:|:----------------:|
+| `errors.Is`/`As` Compatibility  |    ✅     |     ✅     |           ✅           |      ✅      |   ✅   |       ✅       |        ✅        |
+| Def/Instance Separation         |    ❌     |     ❌     |           ❌           |      ❌      |   ❌   |       ❌       |        ✅        |
+| Automatic Stack Traces          |    ❌     |     ✅     |           ✅           |      ✅      |   ✅   |       ✅       |        ✅        |
+| Stack Control (Disable/Depth)   |    ❌     |     ❌     |           ⚠️           |      ❌      |   ❌   |       ✅       |        ✅        |
+| Structured Data                 |    ❌     |     ❌     |           ⚠️           |      ❌      |   ⚠️   |       ⚠️       | ✅ (Type-Safe)** |
+| Redaction                       |    ❌     |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       |        ✅        |
+| Structured JSON                 |    ❌     |     ❌     |       ⚠️ (Proto)       | ⚠️ (Logging) |   ❌   | ⚠️ (Formatted) |        ✅        |
+| `slog` Integration              |    ❌     |     ❌     |           ❌           |      ❌      |   ❌   |       ❌       |        ✅        |
+| Panic Capture                   |    ❌     |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       |        ✅        |
+| Multiple Causes (`errors.Join`) |    ✅     |     ❌     |           ✅           |      ✅      |   ✅   |       ✅       |        ✅        |
+| JSON Deserialization            |    ❌     |     ❌     |           ⚠️           |      ❌      |   ❌   |       ❌       |        ✅        |
+| Protobuf Deserialization        |    ❌     |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       | ⚠️ (Extensible)  |
 
 ### Quick Notes
 
