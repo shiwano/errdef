@@ -1,6 +1,10 @@
 package resolver
 
-import "github.com/shiwano/errdef"
+import (
+	"slices"
+
+	"github.com/shiwano/errdef"
+)
 
 type (
 	// StrictResolver manages multiple error definitions and provides resolution
@@ -44,16 +48,16 @@ var (
 // New creates a new Resolver with the given definitions.
 // If multiple definitions have the same Kind, the first one wins.
 func New(defs ...*errdef.Definition) *StrictResolver {
+	defs = slices.CompactFunc(defs, func(a, b *errdef.Definition) bool {
+		return a == b
+	})
+
 	byKind := make(map[errdef.Kind]*errdef.Definition, len(defs))
 	for _, d := range defs {
-		if d == nil {
-			continue
-		}
 		k := d.Kind()
-		if _, exists := byKind[k]; exists {
-			continue // First definition wins
+		if _, exists := byKind[k]; !exists {
+			byKind[k] = d
 		}
-		byKind[k] = d
 	}
 	return &StrictResolver{
 		defs:   defs,
@@ -69,8 +73,9 @@ func (r *StrictResolver) Definitions() []*errdef.Definition {
 // WithFallback creates a new FallbackResolver that uses the given definition
 // as a fallback when resolution fails.
 func (r *StrictResolver) WithFallback(fallback *errdef.Definition) *FallbackResolver {
+	allDefs := append(r.Definitions(), fallback)
 	return &FallbackResolver{
-		resolver: r,
+		resolver: New(allDefs...),
 		fallback: fallback,
 	}
 }
@@ -106,9 +111,7 @@ func (r *StrictResolver) ResolveFieldStrictFunc(key errdef.FieldKey, eq func(v e
 
 // Definitions returns all definitions managed by the resolver.
 func (r *FallbackResolver) Definitions() []*errdef.Definition {
-	defs := r.resolver.Definitions()
-	defs = append(defs, r.fallback)
-	return defs
+	return r.resolver.Definitions()
 }
 
 // ResolveKind resolves a definition by its Kind.

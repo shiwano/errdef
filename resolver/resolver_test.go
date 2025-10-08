@@ -19,25 +19,6 @@ func TestNew(t *testing.T) {
 		}
 	})
 
-	t.Run("skips nil definitions", func(t *testing.T) {
-		def1 := errdef.Define("error1")
-		var nilDef *errdef.Definition
-
-		r := resolver.New(def1, nilDef)
-
-		if r == nil {
-			t.Fatal("want resolver to be created")
-		}
-
-		result, ok := r.ResolveKindStrict("error1")
-		if !ok {
-			t.Fatal("want to resolve existing kind")
-		}
-		if result != def1 {
-			t.Errorf("want resolved definition to be def1, got %v", result)
-		}
-	})
-
 	t.Run("first definition wins for duplicate kinds", func(t *testing.T) {
 		def1 := errdef.Define("error1")
 		def2 := errdef.Define("error1")
