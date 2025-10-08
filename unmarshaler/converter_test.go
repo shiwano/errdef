@@ -673,6 +673,175 @@ func TestTryConvertFieldValue(t *testing.T) {
 	})
 }
 
+func TestTryConvertViaJSONError(t *testing.T) {
+	t.Run("type mismatch in struct field", func(t *testing.T) {
+		type User struct {
+			ID   int    `json:"id"`
+			Name string `json:"name"`
+		}
+
+		userCtor, _ := errdef.DefineField[User]("user")
+		def := errdef.Define("test_error", userCtor(User{ID: 999, Name: "default"}))
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"user": {
+					"id": "not_a_number",
+					"name": "John"
+				}
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err == nil {
+			t.Fatal("want unmarshal error")
+		}
+
+		if unmarshaled != nil {
+			t.Errorf("want nil result on error, got %v", unmarshaled)
+		}
+	})
+
+	t.Run("invalid map structure", func(t *testing.T) {
+		type Config struct {
+			Value string `json:"value"`
+		}
+
+		configCtor, configFrom := errdef.DefineField[Config]("config")
+		def := errdef.Define("test_error", configCtor(Config{Value: "default"}))
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"config": {
+					"value": ["array", "not", "string"]
+				}
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err == nil {
+			t.Fatal("want unmarshal error")
+		}
+
+		if unmarshaled != nil {
+			got, ok := configFrom(unmarshaled)
+			if ok && got.Value == "default" {
+				return
+			}
+			t.Errorf("want default value on error")
+		}
+	})
+}
+
+func TestTryConvertNilValue(t *testing.T) {
+	t.Run("nil map", func(t *testing.T) {
+		type Config struct {
+			Value string `json:"value"`
+		}
+
+		configCtor, configFrom := errdef.DefineField[Config]("config")
+		def := errdef.Define("test_error", configCtor(Config{Value: "default"}))
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"config": null
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := configFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		if got.Value != "default" {
+			t.Errorf("want default value, got %v", got)
+		}
+	})
+
+	t.Run("nil slice", func(t *testing.T) {
+		idsCtor, idsFrom := errdef.DefineField[[]int]("ids")
+		def := errdef.Define("test_error", idsCtor([]int{1, 2, 3}))
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"ids": null
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := idsFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		want := []int{1, 2, 3}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("want default value %v, got %v", want, got)
+		}
+	})
+
+	t.Run("nil pointer field", func(t *testing.T) {
+		type UserID string
+
+		userIDCtor, userIDFrom := errdef.DefineField[*UserID]("user_id")
+		defaultID := UserID("default")
+		def := errdef.Define("test_error", userIDCtor(&defaultID))
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
+
+		jsonData := `{
+			"message": "test",
+			"kind": "test_error",
+			"fields": {
+				"user_id": null
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		got, ok := userIDFrom(unmarshaled)
+		if !ok {
+			t.Fatal("want field to be found")
+		}
+
+		if got == nil {
+			t.Fatal("want non-nil default pointer")
+		}
+
+		if *got != "default" {
+			t.Errorf("want default value %q, got %q", "default", *got)
+		}
+	})
+}
+
 func TestTryConvertPointer(t *testing.T) {
 	t.Run("pointer to string derived type", func(t *testing.T) {
 		type UserID string
