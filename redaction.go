@@ -19,11 +19,13 @@ type Redacted[T any] struct {
 }
 
 var (
-	_ fmt.Stringer           = Redacted[any]{}
-	_ fmt.Formatter          = Redacted[any]{}
-	_ json.Marshaler         = Redacted[any]{}
-	_ encoding.TextMarshaler = Redacted[any]{}
-	_ slog.LogValuer         = Redacted[any]{}
+	_ fmt.Stringer             = Redacted[any]{}
+	_ fmt.GoStringer           = Redacted[any]{}
+	_ fmt.Formatter            = Redacted[any]{}
+	_ json.Marshaler           = Redacted[any]{}
+	_ encoding.TextMarshaler   = Redacted[any]{}
+	_ encoding.BinaryMarshaler = Redacted[any]{}
+	_ slog.LogValuer           = Redacted[any]{}
 )
 
 func (r Redacted[T]) Value() T {
@@ -31,6 +33,10 @@ func (r Redacted[T]) Value() T {
 }
 
 func (r Redacted[T]) String() string {
+	return redactedStr
+}
+
+func (r Redacted[T]) GoString() string {
 	return redactedStr
 }
 
@@ -43,6 +49,10 @@ func (r Redacted[T]) MarshalJSON() ([]byte, error) {
 }
 
 func (r Redacted[T]) MarshalText() ([]byte, error) {
+	return []byte(redactedStr), nil
+}
+
+func (r Redacted[T]) MarshalBinary() ([]byte, error) {
 	return []byte(redactedStr), nil
 }
 

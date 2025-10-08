@@ -2,6 +2,7 @@ package errdef
 
 import (
 	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -47,6 +48,16 @@ func TestRedacted_String(t *testing.T) {
 	redacted := Redact("secret")
 	want := "[REDACTED]"
 	got := redacted.String()
+
+	if got != want {
+		t.Errorf("want %v, got %v", want, got)
+	}
+}
+
+func TestRedacted_GoString(t *testing.T) {
+	redacted := Redact("secret")
+	want := "[REDACTED]"
+	got := redacted.GoString()
 
 	if got != want {
 		t.Errorf("want %v, got %v", want, got)
@@ -108,6 +119,29 @@ func TestRedacted_MarshalText(t *testing.T) {
 	want := `<container><secret>[REDACTED]</secret></container>`
 	if string(got) != want {
 		t.Errorf("want %v, got %v", want, string(got))
+	}
+}
+
+func TestRedacted_MarshalBinary(t *testing.T) {
+	type container struct {
+		Secret Redacted[string]
+	}
+
+	c := container{Secret: Redact("my-secret-password")}
+
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(&c)
+	if err != nil {
+		t.Fatalf("gob.Encode() error = %v", err)
+	}
+
+	encodedData := buf.String()
+	if strings.Contains(encodedData, "my-secret-password") {
+		t.Error("want secret to be redacted, but found in gob encoded data")
+	}
+	if !strings.Contains(encodedData, "[REDACTED]") {
+		t.Error("want [REDACTED] in gob encoded data")
 	}
 }
 
