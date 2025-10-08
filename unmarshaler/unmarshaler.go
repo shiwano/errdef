@@ -27,10 +27,9 @@ type (
 )
 
 const (
-	errDefTypeName      = "*errdef.Definition"
-	errDefMessagePrefix = "errdef: "
-	errDefKindUnnamed   = "<unnamed>"
-	redactedStr         = "[REDACTED]"
+	errdefDefinitionTypeName         = "*errdef.Definition"
+	errdefDefinitionEmptyKindMessage = "<unnamed>"
+	redactedStr                      = "[REDACTED]"
 )
 
 // New creates a new Unmarshaler with the given resolver, decoder, and options.
@@ -168,7 +167,7 @@ func (d *Unmarshaler) unmarshalCause(causeData map[string]any) (error, error) {
 		}
 
 		if len(nestedCauses) == 0 {
-			if typeName == errDefTypeName {
+			if typeName == errdefDefinitionTypeName {
 				if def, ok := d.resolveDefinitionFromMessage(msg); ok {
 					return def, nil
 				}
@@ -191,12 +190,8 @@ func (d *Unmarshaler) unmarshalCause(causeData map[string]any) (error, error) {
 }
 
 func (d *Unmarshaler) resolveDefinitionFromMessage(msg string) (*errdef.Definition, bool) {
-	if len(msg) <= len(errDefMessagePrefix) || msg[:len(errDefMessagePrefix)] != errDefMessagePrefix {
-		return nil, false
-	}
-
-	kind := errdef.Kind(msg[len(errDefMessagePrefix):])
-	if kind == errDefKindUnnamed {
+	kind := errdef.Kind(msg)
+	if kind == errdefDefinitionEmptyKindMessage {
 		kind = ""
 	}
 	return d.resolver.ResolveKindStrict(kind)

@@ -30,9 +30,9 @@ func (d *Definition) Kind() Kind {
 // This makes Definition implement the error interface.
 func (d *Definition) Error() string {
 	if d.kind == "" {
-		return "errdef: <unnamed>"
+		return "<unnamed>"
 	}
-	return fmt.Sprintf("errdef: %s", d.kind)
+	return string(d.kind)
 }
 
 // With creates a new Definition and applies options from context first (if any),
