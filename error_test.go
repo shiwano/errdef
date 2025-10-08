@@ -172,6 +172,211 @@ func TestError_Unwrap(t *testing.T) {
 	})
 }
 
+func TestError_UnwrapTree(t *testing.T) {
+	t.Run("no causes", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		err := def.New("test message").(errdef.Error)
+
+		tree := err.UnwrapTree()
+		data, jsonErr := json.Marshal(tree)
+		if jsonErr != nil {
+			t.Fatalf("failed to marshal tree: %v", jsonErr)
+		}
+
+		var got any
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		// When there are no causes, JSON should be null
+		if got != nil {
+			t.Errorf("want null, got %+v", got)
+		}
+	})
+
+	t.Run("single cause", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		cause := errors.New("original error")
+		wrapped := def.Wrap(cause).(errdef.Error)
+
+		tree := wrapped.UnwrapTree()
+		data, jsonErr := json.Marshal(tree)
+		if jsonErr != nil {
+			t.Fatalf("failed to marshal tree: %v", jsonErr)
+		}
+
+		var got []any
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		want := []any{
+			map[string]any{
+				"message": "original error",
+				"type":    "*errors.errorString",
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", got, want)
+		}
+	})
+
+	t.Run("nested causes", func(t *testing.T) {
+		def := errdef.Define("test_error", errdef.NoTrace())
+		baseErr := errors.New("base error")
+		wrappedErr := fmt.Errorf("wrapped: %w", baseErr)
+		err := def.Wrap(wrappedErr).(errdef.Error)
+
+		tree := err.UnwrapTree()
+		data, jsonErr := json.Marshal(tree)
+		if jsonErr != nil {
+			t.Fatalf("failed to marshal tree: %v", jsonErr)
+		}
+
+		var got []any
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		want := []any{
+			map[string]any{
+				"message": "wrapped: base error",
+				"type":    "*fmt.wrapError",
+				"causes": []any{
+					map[string]any{
+						"message": "base error",
+						"type":    "*errors.errorString",
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", got, want)
+		}
+	})
+
+	t.Run("multiple causes with Join", func(t *testing.T) {
+		err1 := errors.New("error 1")
+		err2 := errors.New("error 2")
+		def := errdef.Define("test_error")
+		joined := def.Join(err1, err2).(errdef.Error)
+
+		tree := joined.UnwrapTree()
+		data, jsonErr := json.Marshal(tree)
+		if jsonErr != nil {
+			t.Fatalf("failed to marshal tree: %v", jsonErr)
+		}
+
+		var got []any
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		want := []any{
+			map[string]any{
+				"message": "error 1",
+				"type":    "*errors.errorString",
+			},
+			map[string]any{
+				"message": "error 2",
+				"type":    "*errors.errorString",
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", got, want)
+		}
+	})
+
+	t.Run("circular reference detection", func(t *testing.T) {
+		var ce1, ce2 *circularError
+		ce1 = &circularError{msg: "error 1"}
+		ce2 = &circularError{msg: "error 2", cause: ce1}
+		ce1.cause = ce2
+
+		def := errdef.Define("test_error")
+		wrapped := def.Wrap(ce1).(errdef.Error)
+
+		tree := wrapped.UnwrapTree()
+		data, jsonErr := json.Marshal(tree)
+		if jsonErr != nil {
+			t.Fatalf("failed to marshal tree: %v", jsonErr)
+		}
+
+		var got []any
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		want := []any{
+			map[string]any{
+				"message": "error 1",
+				"type":    "*errdef_test.circularError",
+				"causes": []any{
+					map[string]any{
+						"message": "error 2",
+						"type":    "*errdef_test.circularError",
+						"causes": []any{
+							map[string]any{
+								"message": "error 1",
+								"type":    "*errdef_test.circularError",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", got, want)
+		}
+	})
+
+	t.Run("mixed error types", func(t *testing.T) {
+		def1 := errdef.Define("inner_error", errdef.NoTrace())
+		def2 := errdef.Define("outer_error", errdef.NoTrace())
+
+		innerErr := def1.New("inner message")
+		stdErr := errors.New("standard error")
+		joined := errors.Join(innerErr, stdErr)
+		outerErr := def2.Wrap(joined).(errdef.Error)
+
+		tree := outerErr.UnwrapTree()
+		data, jsonErr := json.Marshal(tree)
+		if jsonErr != nil {
+			t.Fatalf("failed to marshal tree: %v", jsonErr)
+		}
+
+		var got []any
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		want := []any{
+			map[string]any{
+				"message": "inner message\nstandard error",
+				"type":    "*errors.joinError",
+				"causes": []any{
+					map[string]any{
+						"message": "inner message",
+						"kind":    "inner_error",
+					},
+					map[string]any{
+						"message": "standard error",
+						"type":    "*errors.errorString",
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", got, want)
+		}
+	})
+}
+
 func TestDefinedError_Is(t *testing.T) {
 	t.Run("same instance", func(t *testing.T) {
 		def := errdef.Define("test_error")
@@ -1154,6 +1359,174 @@ func TestError_LogValue(t *testing.T) {
 		funcName, _ := origin["func"].(string)
 		if !strings.Contains(funcName, "TestError_LogValue") {
 			t.Errorf("want function name to contain TestError_LogValue, got %q", funcName)
+		}
+	})
+}
+
+func TestErrorNode_MarshalJSON(t *testing.T) {
+	t.Run("simple error node", func(t *testing.T) {
+		node := errdef.ErrorNode{
+			Error: errors.New("test error"),
+		}
+
+		data, err := json.Marshal(node)
+		if err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		var got map[string]any
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("want valid JSON, got %v", err)
+		}
+
+		want := map[string]any{
+			"message": "test error",
+			"type":    "*errors.errorString",
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("JSON mismatch:\ngot:  %#v\nwant: %#v", got, want)
+		}
+	})
+
+	t.Run("with nested causes", func(t *testing.T) {
+		stdErr := errors.New("standard error")
+		wrappedErr := fmt.Errorf("wrapped: %w", stdErr)
+
+		node := errdef.ErrorNode{
+			Error: wrappedErr,
+			Causes: []errdef.ErrorNode{
+				{Error: stdErr},
+			},
+		}
+
+		data, err := json.Marshal(node)
+		if err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		var got map[string]any
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("want valid JSON, got %v", err)
+		}
+
+		want := map[string]any{
+			"message": "wrapped: standard error",
+			"type":    "*fmt.wrapError",
+			"causes": []any{
+				map[string]any{
+					"message": "standard error",
+					"type":    "*errors.errorString",
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("JSON mismatch:\ngot:  %#v\nwant: %#v", got, want)
+		}
+	})
+
+	t.Run("nested error nodes", func(t *testing.T) {
+		err1 := errors.New("level 1")
+		err2 := errors.New("level 2")
+		err3 := errors.New("level 3")
+
+		node := errdef.ErrorNode{
+			Error: err1,
+			Causes: []errdef.ErrorNode{
+				{
+					Error: err2,
+					Causes: []errdef.ErrorNode{
+						{Error: err3},
+					},
+				},
+			},
+		}
+
+		data, err := json.Marshal(node)
+		if err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		var got map[string]any
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("want valid JSON, got %v", err)
+		}
+
+		want := map[string]any{
+			"message": "level 1",
+			"type":    "*errors.errorString",
+			"causes": []any{
+				map[string]any{
+					"message": "level 2",
+					"type":    "*errors.errorString",
+					"causes": []any{
+						map[string]any{
+							"message": "level 3",
+							"type":    "*errors.errorString",
+						},
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("JSON mismatch:\ngot:  %#v\nwant: %#v", got, want)
+		}
+	})
+
+	t.Run("with circular reference", func(t *testing.T) {
+		var ce1, ce2 *circularError
+		ce1 = &circularError{msg: "error 1"}
+		ce2 = &circularError{msg: "error 2", cause: ce1}
+		ce1.cause = ce2
+
+		def := errdef.Define("test_error", errdef.NoTrace())
+		wrapped := def.Wrap(ce1).(errdef.Error)
+
+		tree := wrapped.UnwrapTree()
+		data, err := json.Marshal(tree)
+		if err != nil {
+			t.Fatalf("want no error, got %v", err)
+		}
+
+		var got []any
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("want valid JSON, got %v", err)
+		}
+
+		if len(got) != 1 {
+			t.Fatalf("want 1 root node, got %d", len(got))
+		}
+
+		rootNode := got[0].(map[string]any)
+		if rootNode["message"] != "error 1" {
+			t.Errorf("want root message %q, got %q", "error 1", rootNode["message"])
+		}
+
+		causes := rootNode["causes"].([]any)
+		if len(causes) != 1 {
+			t.Fatalf("want 1 cause at level 1, got %d", len(causes))
+		}
+
+		level2 := causes[0].(map[string]any)
+		if level2["message"] != "error 2" {
+			t.Errorf("want message %q at level 2, got %q", "error 2", level2["message"])
+		}
+
+		level2Causes := level2["causes"].([]any)
+		if len(level2Causes) != 1 {
+			t.Fatalf("want 1 cause at level 2, got %d", len(level2Causes))
+		}
+
+		level3 := level2Causes[0].(map[string]any)
+		if level3["message"] != "error 1" {
+			t.Errorf("want message %q at level 3, got %q", "error 1", level3["message"])
+		}
+
+		// Should not have causes at level 3 due to cycle detection
+		if _, hasCauses := level3["causes"]; hasCauses {
+			t.Error("want no causes at level 3 due to cycle detection")
 		}
 	})
 }

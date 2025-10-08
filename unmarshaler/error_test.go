@@ -144,6 +144,207 @@ func TestUnmarshaledError_Unwrap(t *testing.T) {
 	}
 }
 
+func TestUnmarshaledError_UnwrapTree(t *testing.T) {
+	t.Run("no causes", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
+
+		orig := def.New("test message")
+		data, err := json.Marshal(orig)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		unmarshaled, err := u.Unmarshal(data)
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		tree := unmarshaled.UnwrapTree()
+		treeData, jsonErr := json.Marshal(tree)
+		if jsonErr != nil {
+			t.Fatalf("failed to marshal tree: %v", jsonErr)
+		}
+
+		var got any
+		if err := json.Unmarshal(treeData, &got); err != nil {
+			t.Fatalf("failed to unmarshal tree: %v", err)
+		}
+
+		// When there are no causes, JSON should be null
+		if got != nil {
+			t.Errorf("want null, got %+v", got)
+		}
+	})
+
+	t.Run("with causes", func(t *testing.T) {
+		def := errdef.Define("outer_error")
+		innerDef := errdef.Define("inner_error")
+		r := resolver.New(def, innerDef)
+		u := unmarshaler.NewJSON(r)
+
+		inner := innerDef.New("inner message")
+		outer := def.Wrap(inner)
+
+		data, err := json.Marshal(outer)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		unmarshaled, err := u.Unmarshal(data)
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		tree := unmarshaled.UnwrapTree()
+		treeData, jsonErr := json.Marshal(tree)
+		if jsonErr != nil {
+			t.Fatalf("failed to marshal tree: %v", jsonErr)
+		}
+
+		var got []any
+		if err := json.Unmarshal(treeData, &got); err != nil {
+			t.Fatalf("failed to unmarshal tree: %v", err)
+		}
+
+		// Get the stack from the original data to compare
+		var originalData map[string]any
+		if err := json.Unmarshal(data, &originalData); err != nil {
+			t.Fatalf("failed to unmarshal original data: %v", err)
+		}
+		originalCauses := originalData["causes"].([]any)
+		originalCause := originalCauses[0].(map[string]any)
+
+		want := []any{
+			map[string]any{
+				"message": "inner message",
+				"kind":    "inner_error",
+				"stack":   originalCause["stack"],
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", got, want)
+		}
+	})
+
+	t.Run("nested unknown errors", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
+
+		jsonData := `{
+			"message": "outer message",
+			"kind": "test_error",
+			"causes": [
+				{
+					"message": "unknown outer",
+					"type": "UnknownError",
+					"causes": [
+						{
+							"message": "unknown inner",
+							"type": "AnotherError"
+						}
+					]
+				}
+			]
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		tree := unmarshaled.UnwrapTree()
+		treeData, jsonErr := json.Marshal(tree)
+		if jsonErr != nil {
+			t.Fatalf("failed to marshal tree: %v", jsonErr)
+		}
+
+		var got []any
+		if err := json.Unmarshal(treeData, &got); err != nil {
+			t.Fatalf("failed to unmarshal tree: %v", err)
+		}
+
+		want := []any{
+			map[string]any{
+				"message": "unknown outer",
+				"type":    "UnknownError",
+				"causes": []any{
+					map[string]any{
+						"message": "unknown inner",
+						"type":    "AnotherError",
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", got, want)
+		}
+	})
+
+	t.Run("mixed known and unknown errors", func(t *testing.T) {
+		knownDef := errdef.Define("known_error")
+		outerDef := errdef.Define("outer_error")
+		r := resolver.New(knownDef, outerDef)
+		u := unmarshaler.NewJSON(r)
+
+		jsonData := `{
+			"message": "outer message",
+			"kind": "outer_error",
+			"causes": [
+				{
+					"message": "known error",
+					"kind": "known_error"
+				},
+				{
+					"message": "unknown error",
+					"type": "UnknownError"
+				}
+			]
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		tree := unmarshaled.UnwrapTree()
+		treeData, jsonErr := json.Marshal(tree)
+		if jsonErr != nil {
+			t.Fatalf("failed to marshal tree: %v", jsonErr)
+		}
+
+		var got []any
+		if err := json.Unmarshal(treeData, &got); err != nil {
+			t.Fatalf("failed to unmarshal tree: %v", err)
+		}
+
+		// Get stacks from original data
+		var originalData map[string]any
+		if err := json.Unmarshal([]byte(jsonData), &originalData); err != nil {
+			t.Fatalf("failed to unmarshal original data: %v", err)
+		}
+
+		want := []any{
+			map[string]any{
+				"message": "known error",
+				"kind":    "known_error",
+			},
+			map[string]any{
+				"message": "unknown error",
+				"type":    "UnknownError",
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", got, want)
+		}
+	})
+}
+
 func TestUnmarshaledError_Is(t *testing.T) {
 	def := errdef.Define("test_error")
 	r := resolver.New(def)

@@ -245,12 +245,12 @@ func TestUnmarshaler_Causes_Unmarshalable(t *testing.T) {
 			t.Errorf("want cause message %q, got %q", "unknown error", causes[0].Error())
 		}
 
-		if causeErr, ok := causes[0].(interface{ Type() string }); ok {
-			if causeErr.Type() != "CustomError" {
-				t.Errorf("want type %q, got %q", "CustomError", causeErr.Type())
+		if causeErr, ok := causes[0].(errdef.ErrorTypeNamer); ok {
+			if causeErr.TypeName() != "CustomError" {
+				t.Errorf("want type %q, got %q", "CustomError", causeErr.TypeName())
 			}
 		} else {
-			t.Errorf("want cause to be interface with Type(), got %T", causes[0])
+			t.Errorf("want cause to be errdef.ErrorTypeNamer, got %T", causes[0])
 		}
 	})
 

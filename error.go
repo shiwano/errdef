@@ -25,6 +25,8 @@ type (
 		Stack() Stack
 		// Unwrap returns the errors that this error wraps.
 		Unwrap() []error
+		// UnwrapTree returns all causes as a tree structure with cycle detection already performed.
+		UnwrapTree() []ErrorNode
 	}
 
 	// DebugStacker returns a string that resembles the output of debug.Stack().
@@ -49,6 +51,20 @@ type (
 		Cause() error
 	}
 
+	// ErrorNode represents a node in the cause tree with cycle detection already performed.
+	ErrorNode struct {
+		// Error is the error at this node.
+		Error error
+		// Causes are the nested causes of this error.
+		Causes []ErrorNode
+	}
+
+	// ErrorTypeNamer is a simple error implementation that wraps a message and a type name.
+	ErrorTypeNamer interface {
+		error
+		TypeName() string
+	}
+
 	// errorEncoder defines methods for exporting error information in various formats.
 	// This interface is used internally to implement fmt.Formatter, json.Marshaler,
 	// and slog.LogValuer in the unmarshaler package.
@@ -65,6 +81,11 @@ type (
 		stack  stack
 		joined bool
 	}
+
+	errorTypeNamer struct {
+		msg      string
+		typeName string
+	}
 )
 
 var (
@@ -76,6 +97,8 @@ var (
 	_ stackTracer    = (*definedError)(nil)
 	_ causer         = (*definedError)(nil)
 	_ errorEncoder   = (*definedError)(nil)
+
+	_ json.Marshaler = ErrorNode{}
 )
 
 func newError(d *Definition, cause error, msg string, joined bool, stackSkip int) error {
@@ -125,6 +148,11 @@ func (e *definedError) Unwrap() []error {
 		}
 	}
 	return []error{e.cause}
+}
+
+func (e *definedError) UnwrapTree() []ErrorNode {
+	visited := make(map[uintptr]bool)
+	return buildCauseNodes(e.Unwrap(), visited)
 }
 
 func (e *definedError) Is(target error) bool {
@@ -293,32 +321,18 @@ func (e *definedError) ErrorJSONMarshaler(err Error) ([]byte, error) {
 		fields = err.Fields()
 	}
 
-	var stacks []Frame
-	if err.Stack().Len() > 0 {
-		stacks = err.Stack().Frames()
-	}
-
-	var causes []json.RawMessage
-	for _, c := range err.Unwrap() {
-		b, err := marshalCauseJSON(c)
-		if err != nil {
-			return nil, err
-		}
-		causes = append(causes, b)
-	}
-
 	return json.Marshal(struct {
-		Message string            `json:"message"`
-		Kind    string            `json:"kind,omitempty"`
-		Fields  Fields            `json:"fields,omitempty"`
-		Stack   []Frame           `json:"stack,omitempty"`
-		Causes  []json.RawMessage `json:"causes,omitempty"`
+		Message string      `json:"message"`
+		Kind    string      `json:"kind,omitempty"`
+		Fields  Fields      `json:"fields,omitempty"`
+		Stack   []Frame     `json:"stack,omitempty"`
+		Causes  []ErrorNode `json:"causes,omitempty"`
 	}{
 		Message: err.Error(),
 		Kind:    string(err.Kind()),
 		Fields:  fields,
-		Stack:   stacks,
-		Causes:  causes,
+		Stack:   err.Stack().Frames(),
+		Causes:  err.UnwrapTree(),
 	})
 }
 
@@ -356,107 +370,102 @@ func (e *definedError) ErrorLogValuer(err Error) slog.Value {
 	return slog.GroupValue(attrs...)
 }
 
-func marshalCauseJSON(c error) (json.RawMessage, error) {
-	visited := make(map[uintptr]bool)
-	return marshalCauseJSONWithVisited(c, visited)
-}
-
-func marshalCauseJSONWithVisited(c error, visited map[uintptr]bool) (json.RawMessage, error) {
-	switch t := c.(type) {
-	case Error:
-		return t.(json.Marshaler).MarshalJSON()
-	case *Definition:
+// MarshalJSON implements json.Marshaler for ErrorNode.
+func (n ErrorNode) MarshalJSON() ([]byte, error) {
+	switch te := n.Error.(type) {
+	case json.Marshaler:
+		return te.MarshalJSON()
+	case ErrorTypeNamer:
 		return json.Marshal(struct {
-			Message string `json:"message"`
-			Type    string `json:"type"`
+			Message string      `json:"message"`
+			Type    string      `json:"type"`
+			Causes  []ErrorNode `json:"causes,omitempty"`
 		}{
-			Message: t.Error(),
-			Type:    fmt.Sprintf("%T", t),
+			Message: te.Error(),
+			Type:    te.TypeName(),
+			Causes:  n.Causes,
 		})
 	default:
-		// Safely get pointer for cycle detection
-		val := reflect.ValueOf(c)
-		if !val.IsValid() {
-			return json.Marshal(struct {
-				Message string `json:"message"`
-				Type    string `json:"type"`
-			}{
-				Message: "<invalid>",
-				Type:    fmt.Sprintf("%T", c),
-			})
-		}
+		return json.Marshal(struct {
+			Message string      `json:"message"`
+			Type    string      `json:"type"`
+			Causes  []ErrorNode `json:"causes,omitempty"`
+		}{
+			Message: n.Error.Error(),
+			Type:    fmt.Sprintf("%T", n.Error),
+			Causes:  n.Causes,
+		})
+	}
+}
 
-		// Only try to get pointer for pointer-like types
-		var ptr uintptr
-		if val.Kind() == reflect.Pointer || val.Kind() == reflect.Interface ||
-			val.Kind() == reflect.Map || val.Kind() == reflect.Slice ||
-			val.Kind() == reflect.Chan || val.Kind() == reflect.Func {
-			if val.IsNil() {
-				return json.Marshal(struct {
-					Message string `json:"message"`
-					Type    string `json:"type"`
-				}{
-					Message: "<nil>",
-					Type:    fmt.Sprintf("%T", c),
-				})
-			}
-			ptr = val.Pointer()
-		} else {
-			// For non-pointer types, use type and message as identity
-			// This is a best-effort approach for cycle detection
-			errorMsg := c.Error()
-			if errorMsg == "" {
-				ptr = 0
-			} else {
-				ptr = uintptr(reflect.ValueOf(errorMsg).Pointer())
+func (e errorTypeNamer) Error() string {
+	return e.msg
+}
+
+func (e errorTypeNamer) TypeName() string {
+	return e.typeName
+}
+
+func buildCauseNodes(causes []error, visited map[uintptr]bool) []ErrorNode {
+	if len(causes) == 0 {
+		return nil
+	}
+
+	nodes := make([]ErrorNode, 0, len(causes))
+	for _, c := range causes {
+		if c == nil {
+			continue
+		}
+		node := buildCauseNode(c, visited)
+		nodes = append(nodes, node)
+	}
+	return nodes
+}
+
+func buildCauseNode(err error, visited map[uintptr]bool) ErrorNode {
+	val := reflect.ValueOf(err)
+	if !val.IsValid() {
+		return ErrorNode{
+			Error: errorTypeNamer{
+				msg:      "<invalid>",
+				typeName: fmt.Sprintf("%T", err),
+			},
+		}
+	}
+
+	if val.Kind() == reflect.Pointer || val.Kind() == reflect.Interface ||
+		val.Kind() == reflect.Map || val.Kind() == reflect.Slice ||
+		val.Kind() == reflect.Chan || val.Kind() == reflect.Func {
+		if val.IsNil() {
+			return ErrorNode{
+				Error: errorTypeNamer{
+					msg:      "<nil>",
+					typeName: fmt.Sprintf("%T", err),
+				},
 			}
 		}
+		ptr := val.Pointer()
 
 		if visited[ptr] {
-			return json.Marshal(struct {
-				Message string `json:"message"`
-				Type    string `json:"type"`
-			}{
-				Message: c.Error(),
-				Type:    fmt.Sprintf("%T", c),
-			})
+			// Circular reference detected, return node without causes
+			return ErrorNode{
+				Error: err,
+			}
 		}
 		visited[ptr] = true
+	}
 
-		var typeName string
-		if t, ok := c.(interface{ Type() string }); ok {
-			typeName = t.Type()
-		} else {
-			typeName = fmt.Sprintf("%T", c)
+	var causes []error
+	if unwrapper, ok := err.(interface{ Unwrap() error }); ok {
+		if nested := unwrapper.Unwrap(); nested != nil {
+			causes = []error{nested}
 		}
+	} else if unwrapper, ok := err.(interface{ Unwrap() []error }); ok {
+		causes = unwrapper.Unwrap()
+	}
 
-		var nestedCauses []json.RawMessage
-		if unwrapper, ok := c.(interface{ Unwrap() error }); ok {
-			if nested := unwrapper.Unwrap(); nested != nil {
-				nestedCause, err := marshalCauseJSONWithVisited(nested, visited)
-				if err != nil {
-					return nil, err
-				}
-				nestedCauses = append(nestedCauses, nestedCause)
-			}
-		} else if unwrapper, ok := c.(interface{ Unwrap() []error }); ok {
-			for _, nested := range unwrapper.Unwrap() {
-				nestedCause, err := marshalCauseJSONWithVisited(nested, visited)
-				if err != nil {
-					return nil, err
-				}
-				nestedCauses = append(nestedCauses, nestedCause)
-			}
-		}
-
-		return json.Marshal(struct {
-			Message string            `json:"message"`
-			Type    string            `json:"type"`
-			Causes  []json.RawMessage `json:"causes,omitempty"`
-		}{
-			Message: c.Error(),
-			Type:    typeName,
-			Causes:  nestedCauses,
-		})
+	return ErrorNode{
+		Error:  err,
+		Causes: buildCauseNodes(causes, visited),
 	}
 }

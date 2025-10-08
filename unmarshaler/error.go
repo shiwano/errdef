@@ -50,6 +50,8 @@ var (
 	_ json.Marshaler      = (*unmarshaledError)(nil)
 	_ slog.LogValuer      = (*unmarshaledError)(nil)
 	_ causer              = (*unmarshaledError)(nil)
+
+	_ errdef.ErrorTypeNamer = (*unknownCauseError)(nil)
 )
 
 func (e *unmarshaledError) Error() string {
@@ -107,6 +109,10 @@ func (e *unmarshaledError) LogValue() slog.Value {
 	return e.definedError.(errorEncoder).ErrorLogValuer(e)
 }
 
+func (e *unmarshaledError) UnwrapTree() []errdef.ErrorNode {
+	return buildCauseNodes(e.causes)
+}
+
 func (e *unmarshaledError) DebugStack() string {
 	buf := bytes.NewBufferString(e.Error())
 
@@ -134,10 +140,41 @@ func (e *unknownCauseError) Error() string {
 	return e.message
 }
 
-func (e *unknownCauseError) Type() string {
+func (e *unknownCauseError) TypeName() string {
 	return e.typeName
 }
 
 func (e *unknownCauseError) Unwrap() []error {
 	return e.causes
+}
+
+func buildCauseNodes(causes []error) []errdef.ErrorNode {
+	if len(causes) == 0 {
+		return nil
+	}
+
+	nodes := make([]errdef.ErrorNode, 0, len(causes))
+	for _, c := range causes {
+		if c == nil {
+			continue
+		}
+		nodes = append(nodes, buildCauseNode(c))
+	}
+	return nodes
+}
+
+func buildCauseNode(err error) errdef.ErrorNode {
+	var causes []error
+	if unwrapper, ok := err.(interface{ Unwrap() error }); ok {
+		if nested := unwrapper.Unwrap(); nested != nil {
+			causes = []error{nested}
+		}
+	} else if unwrapper, ok := err.(interface{ Unwrap() []error }); ok {
+		causes = unwrapper.Unwrap()
+	}
+
+	return errdef.ErrorNode{
+		Error:  err,
+		Causes: buildCauseNodes(causes),
+	}
 }
