@@ -112,6 +112,10 @@ func (d *Definition) CapturePanic(errPtr *error, panicValue any) (any, bool) {
 
 // Is reports whether this definition matches the given error.
 func (d *Definition) Is(err error) bool {
+	var e *Definition
+	if errors.As(err, &e) {
+		return d.root() == e.root()
+	}
 	return errors.Is(err, d)
 }
 

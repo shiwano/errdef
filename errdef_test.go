@@ -2,6 +2,7 @@ package errdef_test
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/shiwano/errdef"
@@ -73,6 +74,33 @@ func TestDefineField(t *testing.T) {
 
 		if _, ok := extr(err); ok {
 			t.Error("want field not to be found on non-errdef error")
+		}
+	})
+
+	t.Run("extractor on definition", func(t *testing.T) {
+		ctor, extr := errdef.DefineField[int]("code")
+		def := errdef.Define("test_error", ctor(404))
+
+		code, ok := extr(def)
+		if !ok {
+			t.Error("want field to be found in definition")
+		}
+		if code != 404 {
+			t.Errorf("want code to be 404, got %d", code)
+		}
+	})
+
+	t.Run("extractor on wrapped definition", func(t *testing.T) {
+		ctor, extr := errdef.DefineField[int]("code")
+		def := errdef.Define("test_error", ctor(404))
+
+		wrapped := fmt.Errorf("wrapped: %w", def)
+		code, ok := extr(wrapped)
+		if !ok {
+			t.Error("want field to be found in wrapped definition")
+		}
+		if code != 404 {
+			t.Errorf("want code to be 404, got %d", code)
 		}
 	})
 }

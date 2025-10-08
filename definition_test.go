@@ -634,4 +634,29 @@ func TestDefinition_Is(t *testing.T) {
 			t.Error("want With definition to match its own error")
 		}
 	})
+
+	t.Run("definition as sentinel error", func(t *testing.T) {
+		def := errdef.Define("test_error")
+
+		if !def.Is(def) {
+			t.Error("want definition to match itself with Is method")
+		}
+
+		if !errors.Is(def, def) {
+			t.Error("want definition to match with errors.Is")
+		}
+	})
+
+	t.Run("wrapped definition as sentinel error", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		wrapped := fmt.Errorf("wrapped: %w", def)
+
+		if !def.Is(wrapped) {
+			t.Error("want wrapped definition to match its root with Is method")
+		}
+
+		if !errors.Is(wrapped, def) {
+			t.Error("want wrapped definition to match with errors.Is")
+		}
+	})
 }

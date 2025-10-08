@@ -249,6 +249,16 @@ func fieldValueFrom[T any](err error, key FieldKey) (T, bool) {
 			}
 		}
 	}
+
+	var def *Definition
+	if errors.As(err, &def) {
+		if v, found := def.Fields().Get(key); found {
+			if tv, ok := v.Value().(T); ok {
+				return tv, true
+			}
+		}
+	}
+
 	var zero T
 	return zero, false
 }

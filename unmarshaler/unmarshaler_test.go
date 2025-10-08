@@ -1150,3 +1150,64 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 		}
 	})
 }
+
+func TestUnmarshaler_DefinitionAsSentinel(t *testing.T) {
+	t.Run("unmarshal definition as cause", func(t *testing.T) {
+		def := errdef.Define("not_found")
+		wrapper := errdef.Define("wrapper")
+		r := resolver.New(def, wrapper)
+		u := unmarshaler.NewJSON(r)
+
+		wrappedDef := wrapper.Wrap(def)
+		data, err := json.Marshal(wrappedDef)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		unmarshaled, err := u.Unmarshal(data)
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		causes := unmarshaled.Unwrap()
+		if len(causes) != 1 {
+			t.Fatalf("want 1 cause, got %d", len(causes))
+		}
+
+		if !errors.Is(causes[0], def) {
+			t.Error("want cause to be the definition")
+		}
+	})
+
+	t.Run("unmarshal definition with fields", func(t *testing.T) {
+		ctor, extr := errdef.DefineField[int]("code")
+		def := errdef.Define("not_found", ctor(404))
+		wrapper := errdef.Define("wrapper")
+		r := resolver.New(def, wrapper)
+		u := unmarshaler.NewJSON(r)
+
+		wrappedDef := wrapper.Wrap(def)
+		data, err := json.Marshal(wrappedDef)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		unmarshaled, err := u.Unmarshal(data)
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		causes := unmarshaled.Unwrap()
+		if len(causes) != 1 {
+			t.Fatalf("want 1 cause, got %d", len(causes))
+		}
+
+		code, ok := extr(causes[0])
+		if !ok {
+			t.Error("want field to be found in unmarshaled definition")
+		}
+		if code != 404 {
+			t.Errorf("want code to be 404, got %d", code)
+		}
+	})
+}

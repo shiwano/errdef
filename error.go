@@ -365,6 +365,14 @@ func marshalCauseJSONWithVisited(c error, visited map[uintptr]bool) (json.RawMes
 	switch t := c.(type) {
 	case Error:
 		return t.(json.Marshaler).MarshalJSON()
+	case *Definition:
+		return json.Marshal(struct {
+			Message string `json:"message"`
+			Type    string `json:"type"`
+		}{
+			Message: t.Error(),
+			Type:    fmt.Sprintf("%T", t),
+		})
 	default:
 		// Safely get pointer for cycle detection
 		val := reflect.ValueOf(c)
