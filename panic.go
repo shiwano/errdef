@@ -3,7 +3,6 @@ package errdef
 import (
 	"fmt"
 	"io"
-	"log/slog"
 )
 
 type (
@@ -24,7 +23,6 @@ type (
 var (
 	_ PanicError    = (*panicError)(nil)
 	_ fmt.Formatter = (*panicError)(nil)
-	_ slog.LogValuer = (*panicError)(nil)
 )
 
 func newPanicError(panicValue any) *panicError {
@@ -50,18 +48,20 @@ func (e *panicError) Unwrap() error {
 }
 
 func (e *panicError) Format(s fmt.State, verb rune) {
-	if f, ok := e.panicValue.(fmt.Formatter); ok {
-		f.Format(s, verb)
-		return
-	}
-
 	switch verb {
 	case 'v':
 		switch {
 		case s.Flag('+'):
+			_, _ = io.WriteString(s, e.Error())
+			_, _ = io.WriteString(s, "\n---")
+			_, _ = io.WriteString(s, "\npanic_value: ")
 			_, _ = fmt.Fprintf(s, "%+v", e.panicValue)
 		case s.Flag('#'):
-			_, _ = fmt.Fprintf(s, "%#v", e.panicValue)
+			type (
+				panicError_ panicError
+				panicError  panicError_
+			)
+			_, _ = fmt.Fprintf(s, "%#v", (*panicError)(e))
 		default:
 			_, _ = io.WriteString(s, e.Error())
 		}
