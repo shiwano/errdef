@@ -37,7 +37,7 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
 
 ## Getting Started
 
-```shell
+```sh
 go get github.com/shiwano/errdef
 ```
 
@@ -592,6 +592,12 @@ Other operations also have measurable overhead:
 | JSON round-trip (marshal + unmarshal)  | ~11.8 µs    | 5.6 KB |
 
 > Times are per operation. Deep chains show performance degrades linearly with depth.
+
+### How to Run the Benchmarks
+
+```sh
+GOMAXPROCS=1 go test -bench=. -benchmem -benchtime=3s ./...
+```
 
 In practice, error handling is rarely the bottleneck. Focus on correctness first, then optimize if profiling shows that error creation is a significant cost.
 
