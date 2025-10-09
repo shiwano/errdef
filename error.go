@@ -91,6 +91,7 @@ type (
 var (
 	_ Error          = (*definedError)(nil)
 	_ DebugStacker   = (*definedError)(nil)
+	_ fmt.GoStringer = (*definedError)(nil)
 	_ fmt.Formatter  = (*definedError)(nil)
 	_ json.Marshaler = (*definedError)(nil)
 	_ slog.LogValuer = (*definedError)(nil)
@@ -192,16 +193,15 @@ func (e *definedError) Cause() error {
 	return e.cause
 }
 
+func (e *definedError) GoString() string {
+	type (
+		definedError_ definedError
+		definedError  definedError_
+	)
+	return fmt.Sprintf("%#v", (*definedError)(e))
+}
+
 func (e *definedError) Format(s fmt.State, verb rune) {
-	if verb == 'v' && s.Flag('#') {
-		// Avoid infinite recursion in case someone does %#v on definedError.
-		type (
-			definedError_ definedError
-			definedError  definedError_
-		)
-		_, _ = fmt.Fprintf(s, "%#v", (*definedError)(e))
-		return
-	}
 	e.ErrorFormatter(e, s, verb)
 }
 
@@ -229,6 +229,12 @@ func (e *definedError) ErrorFormatter(err Error, s fmt.State, verb rune) {
 			if len(causes) > 0 {
 				formatCausesHeader(s, "", len(causes))
 				formatErrorNodes(causes, s, "  ")
+			}
+		case s.Flag('#'):
+			if gs, ok := err.(fmt.GoStringer); ok {
+				_, _ = io.WriteString(s, gs.GoString())
+			} else {
+				_, _ = io.WriteString(s, err.Error())
 			}
 		default:
 			_, _ = io.WriteString(s, err.Error())

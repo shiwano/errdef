@@ -47,6 +47,7 @@ var (
 	_ UnmarshaledError    = (*unmarshaledError)(nil)
 	_ errdef.DebugStacker = (*unmarshaledError)(nil)
 	_ fmt.Formatter       = (*unmarshaledError)(nil)
+	_ fmt.GoStringer      = (*unmarshaledError)(nil)
 	_ json.Marshaler      = (*unmarshaledError)(nil)
 	_ slog.LogValuer      = (*unmarshaledError)(nil)
 	_ causer              = (*unmarshaledError)(nil)
@@ -88,16 +89,15 @@ func (e *unmarshaledError) Is(target error) bool {
 	return false
 }
 
+func (e *unmarshaledError) GoString() string {
+	type (
+		unmarshaledError_ unmarshaledError
+		unmarshaledError  unmarshaledError_
+	)
+	return fmt.Sprintf("%#v", (*unmarshaledError)(e))
+}
+
 func (e *unmarshaledError) Format(s fmt.State, verb rune) {
-	if verb == 'v' && s.Flag('#') {
-		// Avoid infinite recursion in case someone does %#v on unmarshaledError.
-		type (
-			unmarshaledError_ unmarshaledError
-			unmarshaledError  unmarshaledError_
-		)
-		_, _ = fmt.Fprintf(s, "%#v", (*unmarshaledError)(e))
-		return
-	}
 	e.definedError.(errorEncoder).ErrorFormatter(e, s, verb)
 }
 
