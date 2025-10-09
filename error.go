@@ -152,7 +152,7 @@ func (e *definedError) Unwrap() []error {
 
 func (e *definedError) UnwrapTree() []ErrorNode {
 	visited := make(map[uintptr]bool)
-	return buildCauseNodes(e.Unwrap(), visited)
+	return buildErrorNodes(e.Unwrap(), visited)
 }
 
 func (e *definedError) Is(target error) bool {
@@ -406,7 +406,7 @@ func (e errorTypeNamer) TypeName() string {
 	return e.typeName
 }
 
-func buildCauseNodes(causes []error, visited map[uintptr]bool) []ErrorNode {
+func buildErrorNodes(causes []error, visited map[uintptr]bool) []ErrorNode {
 	if len(causes) == 0 {
 		return nil
 	}
@@ -416,13 +416,14 @@ func buildCauseNodes(causes []error, visited map[uintptr]bool) []ErrorNode {
 		if c == nil {
 			continue
 		}
-		node := buildCauseNode(c, visited)
-		nodes = append(nodes, node)
+		if node, ok := buildErrorNode(c, visited); ok {
+			nodes = append(nodes, node)
+		}
 	}
 	return nodes
 }
 
-func buildCauseNode(err error, visited map[uintptr]bool) ErrorNode {
+func buildErrorNode(err error, visited map[uintptr]bool) (ErrorNode, bool) {
 	val := reflect.ValueOf(err)
 	if !val.IsValid() {
 		return ErrorNode{
@@ -430,7 +431,7 @@ func buildCauseNode(err error, visited map[uintptr]bool) ErrorNode {
 				msg:      "<invalid>",
 				typeName: fmt.Sprintf("%T", err),
 			},
-		}
+		}, true
 	}
 
 	if val.Kind() == reflect.Pointer || val.Kind() == reflect.Interface ||
@@ -442,15 +443,12 @@ func buildCauseNode(err error, visited map[uintptr]bool) ErrorNode {
 					msg:      "<nil>",
 					typeName: fmt.Sprintf("%T", err),
 				},
-			}
+			}, true
 		}
 		ptr := val.Pointer()
 
 		if visited[ptr] {
-			// Circular reference detected, return node without causes
-			return ErrorNode{
-				Error: err,
-			}
+			return ErrorNode{}, false // Circular reference detected
 		}
 		visited[ptr] = true
 	}
@@ -466,6 +464,6 @@ func buildCauseNode(err error, visited map[uintptr]bool) ErrorNode {
 
 	return ErrorNode{
 		Error:  err,
-		Causes: buildCauseNodes(causes, visited),
-	}
+		Causes: buildErrorNodes(causes, visited),
+	}, true
 }

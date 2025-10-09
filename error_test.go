@@ -318,12 +318,6 @@ func TestError_UnwrapTree(t *testing.T) {
 					map[string]any{
 						"message": "error 2",
 						"type":    "*errdef_test.circularError",
-						"causes": []any{
-							map[string]any{
-								"message": "error 1",
-								"type":    "*errdef_test.circularError",
-							},
-						},
 					},
 				},
 			},
@@ -735,12 +729,6 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 						map[string]any{
 							"message": "error 2",
 							"type":    "*errdef_test.circularError",
-							"causes": []any{
-								map[string]any{
-									"message": "error 1",
-									"type":    "*errdef_test.circularError",
-								},
-							},
 						},
 					},
 				},
@@ -1514,19 +1502,9 @@ func TestErrorNode_MarshalJSON(t *testing.T) {
 			t.Errorf("want message %q at level 2, got %q", "error 2", level2["message"])
 		}
 
-		level2Causes := level2["causes"].([]any)
-		if len(level2Causes) != 1 {
-			t.Fatalf("want 1 cause at level 2, got %d", len(level2Causes))
-		}
-
-		level3 := level2Causes[0].(map[string]any)
-		if level3["message"] != "error 1" {
-			t.Errorf("want message %q at level 3, got %q", "error 1", level3["message"])
-		}
-
-		// Should not have causes at level 3 due to cycle detection
-		if _, hasCauses := level3["causes"]; hasCauses {
-			t.Error("want no causes at level 3 due to cycle detection")
+		// Should not have causes at level 2 due to cycle detection
+		if _, hasCauses := level2["causes"]; hasCauses {
+			t.Error("want no causes at level 2 due to cycle detection")
 		}
 	})
 }
