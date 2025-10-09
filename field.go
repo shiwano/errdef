@@ -43,8 +43,8 @@ type (
 	FieldValue interface {
 		// Value returns the underlying value.
 		Value() any
-		// Equals checks if the value is equal to another value.
-		Equals(other any) bool
+		// Equal checks if the value is equal to another value.
+		Equal(other any) bool
 	}
 
 	fields struct {
@@ -185,7 +185,7 @@ func (v *fieldValue[T]) Value() any {
 	return v.value
 }
 
-func (v *fieldValue[T]) Equals(other any) bool {
+func (v *fieldValue[T]) Equal(other any) bool {
 	if tOther, ok := other.(T); ok {
 		switch tv := any(v.value).(type) {
 		case string:
@@ -237,7 +237,7 @@ func (v *fieldValue[T]) Equals(other any) bool {
 			return reflect.DeepEqual(v.value, tOther)
 		}
 	} else if fv, ok := other.(FieldValue); ok {
-		return v.Equals(fv.Value())
+		return v.Equal(fv.Value())
 	}
 	return false
 }

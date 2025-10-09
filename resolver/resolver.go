@@ -90,9 +90,9 @@ func (r *StrictResolver) ResolveKindStrict(kind errdef.Kind) (*errdef.Definition
 func (r *StrictResolver) ResolveFieldStrict(key errdef.FieldKey, want any) (*errdef.Definition, bool) {
 	return r.ResolveFieldStrictFunc(key, func(v errdef.FieldValue) bool {
 		if fv, ok := want.(errdef.FieldValue); ok {
-			return v.Equals(fv.Value())
+			return v.Equal(fv.Value())
 		}
-		return v.Equals(want)
+		return v.Equal(want)
 	})
 }
 

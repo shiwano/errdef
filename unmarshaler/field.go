@@ -135,6 +135,6 @@ func (v *unmarshaledFieldValue) Value() any {
 	return v.value
 }
 
-func (v *unmarshaledFieldValue) Equals(other any) bool {
+func (v *unmarshaledFieldValue) Equal(other any) bool {
 	return false
 }
