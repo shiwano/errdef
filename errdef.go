@@ -20,7 +20,6 @@ func Define(kind Kind, opts ...Option) *Definition {
 		kind:   kind,
 		fields: newFields(),
 	}
-	def.rootDef = nil
 	def.applyOptions(opts)
 	return def
 }
@@ -40,11 +39,11 @@ func Define(kind Kind, opts ...Option) *Definition {
 // it is strongly recommended to use a unique name for each defined field.
 func DefineField[T any](name string) (FieldConstructor[T], FieldExtractor[T]) {
 	k := &fieldKey[T]{name: name}
-	constructor := func(value T) Option {
+	ctor := func(value T) Option {
 		return &field[T]{key: k, value: value}
 	}
-	extractor := func(err error) (T, bool) {
+	extr := func(err error) (T, bool) {
 		return fieldValueFrom[T](err, k)
 	}
-	return constructor, extractor
+	return ctor, extr
 }
