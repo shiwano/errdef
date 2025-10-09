@@ -503,7 +503,7 @@ func main() {
 
 > **Last updated:** 2025-10-10
 
-errdef adds structured error handling on top of Go's standard library. Here's the measured overhead:
+`errdef` adds structured error handling on top of Go's standard library. Here's the measured overhead:
 
 | Operation        | stdlib  | errdef (default) | errdef (NoTrace) |
 |------------------|---------|------------------|------------------|
@@ -513,7 +513,7 @@ errdef adds structured error handling on top of Go's standard library. Here's th
 
 > Apple M1 Pro, Go 1.25, GOMAXPROCS=1, stack depth: 32. Memory: benchmem B/op. stdlib: errors.New() / fmt.Errorf("%w")
 
-The main performance cost comes from stack trace capture. Without stack traces, errdef adds minimal overhead compared to the standard library.
+The main performance cost comes from stack trace capture. Without stack traces, `errdef` adds minimal overhead compared to the standard library.
 
 ### When to Use NoTrace()
 
