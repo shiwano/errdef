@@ -15,6 +15,20 @@ import (
 type (
 	// Error extends the built-in error interface with additional functionality
 	// for structured error handling including kinds, fields, and stack traces.
+	//
+	// Error instances are created from a Definition and remain immutable after creation.
+	// They provide rich context through Kind (error classification), Fields (structured data),
+	// and Stack (call stack information), while maintaining compatibility with standard
+	// Go error handling via errors.Is and errors.As.
+	//
+	// Error implements several standard interfaces for formatting and serialization:
+	// fmt.Formatter for detailed output, json.Marshaler for JSON serialization,
+	// and slog.LogValuer for structured logging. It also integrates with external
+	// error tracking services like Sentry (via stackTracer) and Google Cloud Error
+	// Reporting (via DebugStacker), as well as legacy pkg/errors (via causer).
+	//
+	// Error chains are supported through Unwrap() for standard error unwrapping,
+	// and UnwrapTree() for accessing the full error tree with cycle detection.
 	Error interface {
 		error
 		// Kind returns the type of this error.
@@ -33,8 +47,7 @@ type (
 	// This is useful for integrating with Google Cloud Error Reporting.
 	// See: https://cloud.google.com/error-reporting/reference/rest/v1beta1/projects.events/report#ReportedErrorEvent
 	//
-	// NOTE:
-	// The goroutine ID and state may differ from the actual one.
+	// NOTE: The goroutine ID and state may differ from the actual one.
 	DebugStacker interface {
 		DebugStack() string
 	}
