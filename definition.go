@@ -21,6 +21,11 @@ type Definition struct {
 	logValuer     func(err Error) slog.Value
 }
 
+var (
+	_ error        = (*Definition)(nil)
+	_ fieldsGetter = (*Definition)(nil)
+)
+
 // Kind returns the kind of this error definition.
 func (d *Definition) Kind() Kind {
 	return d.kind

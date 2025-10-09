@@ -64,6 +64,10 @@ type (
 		value FieldValue
 		index int
 	}
+
+	fieldsGetter interface {
+		Fields() Fields
+	}
 )
 
 var (
@@ -239,21 +243,12 @@ func (v *fieldValue[T]) Equals(other any) bool {
 }
 
 func fieldValueFrom[T any](err error, key FieldKey) (T, bool) {
-	var e Error
+	var e fieldsGetter
 	if errors.As(err, &e) {
-		if v, found := e.Fields().Get(key); found {
-			vv := v.Value()
+		if fv, ok := e.Fields().Get(key); ok {
+			v := fv.Value()
 
-			if tv, ok := vv.(T); ok {
-				return tv, true
-			}
-		}
-	}
-
-	var def *Definition
-	if errors.As(err, &def) {
-		if v, found := def.Fields().Get(key); found {
-			if tv, ok := v.Value().(T); ok {
+			if tv, ok := v.(T); ok {
 				return tv, true
 			}
 		}

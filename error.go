@@ -98,6 +98,7 @@ var (
 	_ stackTracer    = (*definedError)(nil)
 	_ causer         = (*definedError)(nil)
 	_ errorEncoder   = (*definedError)(nil)
+	_ fieldsGetter   = (*definedError)(nil)
 
 	_ json.Marshaler = ErrorNode{}
 )
