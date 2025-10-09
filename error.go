@@ -223,84 +223,13 @@ func (e *definedError) ErrorFormatter(err Error, s fmt.State, verb rune) {
 	case 'v':
 		switch {
 		case s.Flag('+'):
-			_, _ = io.WriteString(s, err.Error())
-
-			causes := err.Unwrap()
-
-			if err.Kind() != "" || err.Fields().Len() > 0 || err.Stack().Len() > 0 || len(causes) > 0 {
-				_, _ = io.WriteString(s, "\n---")
-			}
-
-			if err.Kind() != "" {
-				_, _ = io.WriteString(s, "\nkind: ")
-				_, _ = io.WriteString(s, string(err.Kind()))
-			}
-
-			if err.Fields().Len() > 0 {
-				_, _ = io.WriteString(s, "\nfields:")
-				for k, v := range err.Fields().SortedSeq() {
-					_, _ = io.WriteString(s, "\n  ")
-					_, _ = io.WriteString(s, k.String())
-					_, _ = io.WriteString(s, ": ")
-
-					valueStr := fmt.Sprintf("%+v", v.Value())
-					if strings.Contains(valueStr, "\n") {
-						_, _ = io.WriteString(s, "|\n")
-						for line := range strings.SplitSeq(valueStr, "\n") {
-							_, _ = io.WriteString(s, "    ")
-							_, _ = io.WriteString(s, line)
-							_, _ = io.WriteString(s, "\n")
-						}
-					} else {
-						_, _ = io.WriteString(s, valueStr)
-					}
-				}
-			}
-
-			if err.Stack().Len() > 0 {
-				_, _ = io.WriteString(s, "\nstack:")
-				for _, f := range err.Stack().Frames() {
-					if f.File != "" {
-						_, _ = io.WriteString(s, "\n  ")
-						_, _ = io.WriteString(s, f.Func)
-						_, _ = io.WriteString(s, "\n    ")
-						_, _ = io.WriteString(s, f.File)
-						_, _ = io.WriteString(s, ":")
-						_, _ = io.WriteString(s, strconv.Itoa(f.Line))
-					}
-				}
-			}
+			causes := err.UnwrapTree()
+			formatErrorDetails(err, s, "", len(causes) > 0)
 
 			if len(causes) > 0 {
-				_, _ = io.WriteString(s, "\ncauses: (")
-				if len(causes) == 1 {
-					_, _ = io.WriteString(s, "1 error")
-				} else {
-					_, _ = io.WriteString(s, strconv.Itoa(len(causes)))
-					_, _ = io.WriteString(s, " errors")
-				}
-				_, _ = io.WriteString(s, ")")
-
-				for i, cause := range causes {
-					_, _ = io.WriteString(s, "\n  [")
-					_, _ = io.WriteString(s, strconv.Itoa(i+1))
-					_, _ = io.WriteString(s, "] ")
-
-					causeStr := strings.Trim(fmt.Sprintf("%+v", cause), "\n")
-
-					j := 0
-					for line := range strings.SplitSeq(causeStr, "\n") {
-						if j > 0 {
-							_, _ = io.WriteString(s, "\n      ")
-						}
-						_, _ = io.WriteString(s, line)
-						j++
-					}
-				}
+				formatCausesHeader(s, "", len(causes))
+				formatErrorNodes(causes, s, "  ")
 			}
-		case s.Flag('#'):
-			// Don't support %#v to avoid infinite recursion in this method.
-			_, _ = io.WriteString(s, err.Error())
 		default:
 			_, _ = io.WriteString(s, err.Error())
 		}
@@ -466,4 +395,108 @@ func buildErrorNode(err error, visited map[uintptr]bool) (ErrorNode, bool) {
 		Error:  err,
 		Causes: buildErrorNodes(causes, visited),
 	}, true
+}
+
+func formatErrorDetails(err Error, s io.Writer, indent string, hasCauses bool) {
+	_, _ = io.WriteString(s, err.Error())
+
+	hasDetails := err.Kind() != "" || err.Fields().Len() > 0 || err.Stack().Len() > 0
+	if hasDetails || hasCauses {
+		_, _ = io.WriteString(s, "\n")
+		_, _ = io.WriteString(s, indent)
+		_, _ = io.WriteString(s, "---")
+	}
+
+	if err.Kind() != "" {
+		_, _ = io.WriteString(s, "\n")
+		_, _ = io.WriteString(s, indent)
+		_, _ = io.WriteString(s, "kind: ")
+		_, _ = io.WriteString(s, string(err.Kind()))
+	}
+
+	if err.Fields().Len() > 0 {
+		_, _ = io.WriteString(s, "\n")
+		_, _ = io.WriteString(s, indent)
+		_, _ = io.WriteString(s, "fields:")
+		for k, v := range err.Fields().SortedSeq() {
+			_, _ = io.WriteString(s, "\n")
+			_, _ = io.WriteString(s, indent)
+			_, _ = io.WriteString(s, "  ")
+			_, _ = io.WriteString(s, k.String())
+			_, _ = io.WriteString(s, ": ")
+
+			valueStr := fmt.Sprintf("%+v", v.Value())
+			if strings.Contains(valueStr, "\n") {
+				_, _ = io.WriteString(s, "|\n")
+				for line := range strings.SplitSeq(valueStr, "\n") {
+					_, _ = io.WriteString(s, indent)
+					_, _ = io.WriteString(s, "    ")
+					_, _ = io.WriteString(s, line)
+					_, _ = io.WriteString(s, "\n")
+				}
+			} else {
+				_, _ = io.WriteString(s, valueStr)
+			}
+		}
+	}
+
+	if err.Stack().Len() > 0 {
+		_, _ = io.WriteString(s, "\n")
+		_, _ = io.WriteString(s, indent)
+		_, _ = io.WriteString(s, "stack:")
+		for _, f := range err.Stack().Frames() {
+			if f.File != "" {
+				_, _ = io.WriteString(s, "\n")
+				_, _ = io.WriteString(s, indent)
+				_, _ = io.WriteString(s, "  ")
+				_, _ = io.WriteString(s, f.Func)
+				_, _ = io.WriteString(s, "\n")
+				_, _ = io.WriteString(s, indent)
+				_, _ = io.WriteString(s, "    ")
+				_, _ = io.WriteString(s, f.File)
+				_, _ = io.WriteString(s, ":")
+				_, _ = io.WriteString(s, strconv.Itoa(f.Line))
+			}
+		}
+	}
+}
+
+func formatCausesHeader(s io.Writer, indent string, count int) {
+	_, _ = io.WriteString(s, "\n")
+	_, _ = io.WriteString(s, indent)
+	_, _ = io.WriteString(s, "causes: (")
+	if count == 1 {
+		_, _ = io.WriteString(s, "1 error")
+	} else {
+		_, _ = io.WriteString(s, strconv.Itoa(count))
+		_, _ = io.WriteString(s, " errors")
+	}
+	_, _ = io.WriteString(s, ")")
+}
+
+func formatErrorNodes(nodes []ErrorNode, s io.Writer, indent string) {
+	for i, node := range nodes {
+		_, _ = io.WriteString(s, "\n")
+		_, _ = io.WriteString(s, indent)
+		_, _ = io.WriteString(s, "[")
+		_, _ = io.WriteString(s, strconv.Itoa(i+1))
+		_, _ = io.WriteString(s, "] ")
+
+		if err, ok := node.Error.(Error); ok {
+			formatErrorDetails(err, s, indent+"    ", len(node.Causes) > 0)
+		} else {
+			_, _ = io.WriteString(s, node.Error.Error())
+
+			if len(node.Causes) > 0 {
+				_, _ = io.WriteString(s, "\n")
+				_, _ = io.WriteString(s, indent)
+				_, _ = io.WriteString(s, "    ---")
+			}
+		}
+
+		if len(node.Causes) > 0 {
+			formatCausesHeader(s, indent+"    ", len(node.Causes))
+			formatErrorNodes(node.Causes, s, indent+"    ")
+		}
+	}
 }

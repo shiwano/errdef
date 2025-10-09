@@ -584,6 +584,75 @@ func TestFormatter_Format(t *testing.T) {
 		}
 	})
 
+	t.Run("verbose format with circular reference", func(t *testing.T) {
+		var ce1, ce2 *circularError
+		ce1 = &circularError{msg: "error 1"}
+		ce2 = &circularError{msg: "error 2", cause: ce1}
+		ce1.cause = ce2
+
+		def := errdef.Define("test_error", errdef.NoTrace())
+		wrapped := def.Wrap(ce1)
+
+		result := fmt.Sprintf("%+v", wrapped)
+
+		want := "error 1\n" +
+			"---\n" +
+			"kind: test_error\n" +
+			"causes: (1 error)\n" +
+			"  [1] error 1\n" +
+			"      ---\n" +
+			"      causes: (1 error)\n" +
+			"      [1] error 2"
+		if want != result {
+			t.Errorf("want format to equal, got: %q", result)
+		}
+	})
+
+	t.Run("verbose format with nested causes", func(t *testing.T) {
+		def := errdef.Define("test_error", errdef.NoTrace())
+		baseErr := errors.New("base error")
+		wrappedErr := fmt.Errorf("wrapped: %w", baseErr)
+		err := def.Wrap(wrappedErr)
+
+		result := fmt.Sprintf("%+v", err)
+
+		want := "wrapped: base error\n" +
+			"---\n" +
+			"kind: test_error\n" +
+			"causes: (1 error)\n" +
+			"  [1] wrapped: base error\n" +
+			"      ---\n" +
+			"      causes: (1 error)\n" +
+			"      [1] base error"
+		if want != result {
+			t.Errorf("want format to equal, got: %q", result)
+		}
+	})
+
+	t.Run("verbose format with nested Error types", func(t *testing.T) {
+		def1 := errdef.Define("inner_error", errdef.NoTrace())
+		def2 := errdef.Define("outer_error", errdef.NoTrace())
+
+		baseErr := errors.New("base error")
+		innerErr := def1.Wrap(baseErr)
+		outerErr := def2.Wrap(innerErr)
+
+		result := fmt.Sprintf("%+v", outerErr)
+
+		want := "base error\n" +
+			"---\n" +
+			"kind: outer_error\n" +
+			"causes: (1 error)\n" +
+			"  [1] base error\n" +
+			"      ---\n" +
+			"      kind: inner_error\n" +
+			"      causes: (1 error)\n" +
+			"      [1] base error"
+		if want != result {
+			t.Errorf("want format to equal, got: %q", result)
+		}
+	})
+
 	t.Run("go format", func(t *testing.T) {
 		def := errdef.Define("test_error", errdef.NoTrace())
 		err := def.New("test message")
