@@ -503,8 +503,6 @@ func main() {
 
 > **Last updated:** 2025-10-10
 
-### Overhead Comparison
-
 errdef adds structured error handling on top of Go's standard library. Here's the measured overhead:
 
 | Operation        | stdlib  | errdef (default) | errdef (NoTrace) |
@@ -513,9 +511,9 @@ errdef adds structured error handling on top of Go's standard library. Here's th
 | Wrapping error   | ~104 ns | ~289 ns          | ~28 ns           |
 | Memory per error | 16-56 B | ~336 B           | ~80 B            |
 
-*Apple M1 Pro, Go 1.25, GOMAXPROCS=1, stack depth: 32. Memory: benchmem B/op. stdlib: errors.New() / fmt.Errorf("%w")*
+> Apple M1 Pro, Go 1.25, GOMAXPROCS=1, stack depth: 32. Memory: benchmem B/op. stdlib: errors.New() / fmt.Errorf("%w")
 
-The main performance cost comes from **stack trace capture**. Without stack traces (`NoTrace()`), errdef adds minimal overhead compared to the standard library.
+The main performance cost comes from stack trace capture. Without stack traces, errdef adds minimal overhead compared to the standard library.
 
 ### When to Use NoTrace()
 
@@ -532,6 +530,9 @@ for _, item := range items {
 
 // ✅ Long-lived errors (cached, stored in memory)
 var ErrCacheExpired = errdef.Define("cache_expired", errdef.NoTrace())
+var cachedErrors = map[string]error{
+    "expired": ErrCacheExpired.New("cache entry expired"),
+}
 
 // ❌ API boundaries, critical errors (keep stack traces!)
 var ErrDatabaseFailure = errdef.Define("db_failure") // ~287 ns overhead
@@ -590,7 +591,7 @@ Other operations also have measurable overhead:
 | JSON unmarshal (deep chain, 10 levels) | ~65 µs      | 47 KB  |
 | JSON round-trip (marshal + unmarshal)  | ~11.8 µs    | 5.6 KB |
 
-*Times are per operation. Deep chains show performance degrades linearly with depth.*
+> Times are per operation. Deep chains show performance degrades linearly with depth.
 
 In practice, error handling is rarely the bottleneck. Focus on correctness first, then optimize if profiling shows that error creation is a significant cost.
 
