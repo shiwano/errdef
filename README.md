@@ -551,7 +551,7 @@ var ErrDatabaseFailure = errdef.Define("db_failure") // ~287 ns overhead
        _ = ErrValidation.New("invalid")
    }
 
-   // ❌ Slower: Attach dynamic field in hot path
+   // ❌ Slower: Attach dynamic fields in hot path
    var ErrValidation = errdef.Define("validation")
    for _, item := range items {
        _ = ErrValidation.WithOptions(errdef.HTTPStatus(400)).New("invalid")
