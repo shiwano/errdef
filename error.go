@@ -152,7 +152,7 @@ func (e *definedError) Unwrap() []error {
 }
 
 func (e *definedError) UnwrapTree() []ErrorNode {
-	visited := make(map[uintptr]bool)
+	visited := make(map[uintptr]struct{})
 	return buildErrorNodes(e.Unwrap(), visited)
 }
 
@@ -341,7 +341,7 @@ func (e errorTypeNamer) TypeName() string {
 	return e.typeName
 }
 
-func buildErrorNodes(causes []error, visited map[uintptr]bool) []ErrorNode {
+func buildErrorNodes(causes []error, visited map[uintptr]struct{}) []ErrorNode {
 	if len(causes) == 0 {
 		return nil
 	}
@@ -358,7 +358,7 @@ func buildErrorNodes(causes []error, visited map[uintptr]bool) []ErrorNode {
 	return nodes
 }
 
-func buildErrorNode(err error, visited map[uintptr]bool) (ErrorNode, bool) {
+func buildErrorNode(err error, visited map[uintptr]struct{}) (ErrorNode, bool) {
 	val := reflect.ValueOf(err)
 	if !val.IsValid() {
 		return ErrorNode{
@@ -382,10 +382,10 @@ func buildErrorNode(err error, visited map[uintptr]bool) (ErrorNode, bool) {
 		}
 		ptr := val.Pointer()
 
-		if visited[ptr] {
+		if _, ok := visited[ptr]; ok {
 			return ErrorNode{}, false // Circular reference detected
 		}
-		visited[ptr] = true
+		visited[ptr] = struct{}{}
 	}
 
 	var causes []error
