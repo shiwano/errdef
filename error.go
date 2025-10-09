@@ -369,23 +369,11 @@ func buildErrorNode(err error, visited map[uintptr]struct{}) (ErrorNode, bool) {
 		}, true
 	}
 
+	var ptr uintptr
 	if val.Kind() == reflect.Pointer || val.Kind() == reflect.Interface ||
 		val.Kind() == reflect.Map || val.Kind() == reflect.Slice ||
 		val.Kind() == reflect.Chan || val.Kind() == reflect.Func {
-		if val.IsNil() {
-			return ErrorNode{
-				Error: errorTypeNamer{
-					msg:      "<nil>",
-					typeName: fmt.Sprintf("%T", err),
-				},
-			}, true
-		}
-		ptr := val.Pointer()
-
-		if _, ok := visited[ptr]; ok {
-			return ErrorNode{}, false // Circular reference detected
-		}
-		visited[ptr] = struct{}{}
+		ptr = val.Pointer()
 	}
 
 	var causes []error
@@ -395,6 +383,13 @@ func buildErrorNode(err error, visited map[uintptr]struct{}) (ErrorNode, bool) {
 		}
 	} else if unwrapper, ok := err.(interface{ Unwrap() []error }); ok {
 		causes = unwrapper.Unwrap()
+	}
+
+	if len(causes) > 0 && ptr != 0 {
+		if _, ok := visited[ptr]; ok {
+			return ErrorNode{}, false // Circular reference detected
+		}
+		visited[ptr] = struct{}{}
 	}
 
 	return ErrorNode{

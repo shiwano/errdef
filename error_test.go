@@ -369,6 +369,71 @@ func TestError_UnwrapTree(t *testing.T) {
 			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", got, want)
 		}
 	})
+
+	t.Run("duplicate sentinel errors with Join", func(t *testing.T) {
+		sentinelErr := errors.New("sentinel error")
+		def := errdef.Define("test_error", errdef.NoTrace())
+
+		joined := def.Join(sentinelErr, sentinelErr, errors.New("other error")).(errdef.Error)
+
+		tree := joined.UnwrapTree()
+		data, jsonErr := json.Marshal(tree)
+		if jsonErr != nil {
+			t.Fatalf("failed to marshal tree: %v", jsonErr)
+		}
+
+		var got []any
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		want := []any{
+			map[string]any{
+				"message": "sentinel error",
+				"type":    "*errors.errorString",
+			},
+			map[string]any{
+				"message": "sentinel error",
+				"type":    "*errors.errorString",
+			},
+			map[string]any{
+				"message": "other error",
+				"type":    "*errors.errorString",
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", got, want)
+		}
+	})
+
+	t.Run("nil receiver error", func(t *testing.T) {
+		var nilErr *nilReceiverError
+		def := errdef.Define("test_error", errdef.NoTrace())
+		wrapped := def.Wrap(nilErr).(errdef.Error)
+
+		tree := wrapped.UnwrapTree()
+		data, jsonErr := json.Marshal(tree)
+		if jsonErr != nil {
+			t.Fatalf("failed to marshal tree: %v", jsonErr)
+		}
+
+		var got []any
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		want := []any{
+			map[string]any{
+				"message": "nil receiver error",
+				"type":    "*errdef_test.nilReceiverError",
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", got, want)
+		}
+	})
 }
 
 func TestDefinedError_Is(t *testing.T) {
@@ -1099,44 +1164,6 @@ func TestMarshaler_MarshalJSON(t *testing.T) {
 		}
 	})
 
-	t.Run("with error that unwraps to nil pointer error", func(t *testing.T) {
-		def := errdef.Define("wrapper_error", errdef.NoTrace())
-
-		wrapperErr := &errorWithNilUnwrap{msg: "wrapper error"}
-		err := def.Wrap(wrapperErr)
-
-		data, jsonErr := json.Marshal(err)
-		if jsonErr != nil {
-			t.Fatalf("want no error, got %v", jsonErr)
-		}
-
-		var got map[string]any
-		if unmarshalErr := json.Unmarshal(data, &got); unmarshalErr != nil {
-			t.Fatalf("want valid JSON, got %v", unmarshalErr)
-		}
-
-		want := map[string]any{
-			"message": "wrapper error",
-			"kind":    "wrapper_error",
-			"causes": []any{
-				map[string]any{
-					"message": "wrapper error",
-					"type":    "*errdef_test.errorWithNilUnwrap",
-					"causes": []any{
-						map[string]any{
-							"message": "<nil>",
-							"type":    "*errdef_test.nilPointerError",
-						},
-					},
-				},
-			},
-		}
-
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("JSON mismatch:\ngot:  %#v\nwant: %#v", got, want)
-		}
-	})
-
 	t.Run("with value type error", func(t *testing.T) {
 		def := errdef.Define("wrapper_error", errdef.NoTrace())
 
@@ -1591,25 +1618,15 @@ func (e *circularError) Unwrap() error {
 	return e.cause
 }
 
-type nilPointerError struct {
+type nilReceiverError struct {
 	msg string
 }
 
-func (e *nilPointerError) Error() string {
+func (e *nilReceiverError) Error() string {
+	if e == nil {
+		return "nil receiver error"
+	}
 	return e.msg
-}
-
-type errorWithNilUnwrap struct {
-	msg string
-}
-
-func (e *errorWithNilUnwrap) Error() string {
-	return e.msg
-}
-
-func (e *errorWithNilUnwrap) Unwrap() error {
-	var nilErr *nilPointerError
-	return nilErr
 }
 
 type valueTypeError struct {
