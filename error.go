@@ -373,8 +373,8 @@ func (e *definedError) ErrorLogValuer(err Error) slog.Value {
 // MarshalJSON implements json.Marshaler for ErrorNode.
 func (n ErrorNode) MarshalJSON() ([]byte, error) {
 	switch te := n.Error.(type) {
-	case json.Marshaler:
-		return te.MarshalJSON()
+	case Error:
+		return te.(json.Marshaler).MarshalJSON()
 	case ErrorTypeNamer:
 		return json.Marshal(struct {
 			Message string      `json:"message"`

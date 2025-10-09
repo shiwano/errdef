@@ -1211,3 +1211,136 @@ func TestUnmarshaler_DefinitionAsSentinel(t *testing.T) {
 		}
 	})
 }
+
+func TestUnmarshaler_CapturePanic(t *testing.T) {
+	t.Run("panic with error value", func(t *testing.T) {
+		def := errdef.Define("panic_error")
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
+
+		panicValue := errors.New("original panic error")
+		var capturedErr error
+		def.CapturePanic(&capturedErr, panicValue)
+
+		data, err := json.Marshal(capturedErr)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		unmarshaled, err := u.Unmarshal(data)
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		if unmarshaled.Kind() != "panic_error" {
+			t.Errorf("want kind %q, got %q", "panic_error", unmarshaled.Kind())
+		}
+
+		causes := unmarshaled.Unwrap()
+		if len(causes) != 1 {
+			t.Fatalf("want 1 cause, got %d", len(causes))
+		}
+
+		if causes[0].Error() != "original panic error" {
+			t.Errorf("want cause message %q, got %q", "original panic error", causes[0].Error())
+		}
+
+		if unwrapper, ok := causes[0].(interface{ Unwrap() []error }); ok {
+			unwrappedCauses := unwrapper.Unwrap()
+			if len(unwrappedCauses) != 1 {
+				t.Fatalf("want 1 unwrapped cause, got %d", len(unwrappedCauses))
+			}
+			if unwrappedCauses[0].Error() != "original panic error" {
+				t.Errorf("want unwrapped message %q, got %q", "original panic error", unwrappedCauses[0].Error())
+			}
+		} else {
+			t.Error("want panic cause to have Unwrap() []error")
+		}
+	})
+
+	t.Run("panic with string value", func(t *testing.T) {
+		def := errdef.Define("panic_error")
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
+
+		panicValue := "panic string message"
+		var capturedErr error
+		def.CapturePanic(&capturedErr, panicValue)
+
+		data, err := json.Marshal(capturedErr)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		unmarshaled, err := u.Unmarshal(data)
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		causes := unmarshaled.Unwrap()
+		if len(causes) != 1 {
+			t.Fatalf("want 1 cause, got %d", len(causes))
+		}
+
+		if causes[0].Error() != "panic string message" {
+			t.Errorf("want cause message %q, got %q", "panic string message", causes[0].Error())
+		}
+
+		if unwrapper, ok := causes[0].(interface{ Unwrap() []error }); ok {
+			unwrappedCauses := unwrapper.Unwrap()
+			if len(unwrappedCauses) != 0 {
+				t.Errorf("want no unwrapped causes for non-error panic value, got %d", len(unwrappedCauses))
+			}
+		}
+	})
+
+	t.Run("panic with errdef.Error value", func(t *testing.T) {
+		def := errdef.Define("panic_error")
+		innerDef := errdef.Define("inner_error")
+		r := resolver.New(def, innerDef)
+		u := unmarshaler.NewJSON(r)
+
+		panicValue := innerDef.New("inner error message")
+		var capturedErr error
+		def.CapturePanic(&capturedErr, panicValue)
+
+		data, err := json.Marshal(capturedErr)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		unmarshaled, err := u.Unmarshal(data)
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		causes := unmarshaled.Unwrap()
+		if len(causes) != 1 {
+			t.Fatalf("want 1 cause, got %d", len(causes))
+		}
+
+		if causes[0].Error() != "inner error message" {
+			t.Errorf("want cause message %q, got %q", "inner error message", causes[0].Error())
+		}
+
+		if unwrapper, ok := causes[0].(interface{ Unwrap() []error }); ok {
+			unwrappedCauses := unwrapper.Unwrap()
+			if len(unwrappedCauses) != 1 {
+				t.Fatalf("want 1 unwrapped cause, got %d", len(unwrappedCauses))
+			}
+
+			if innerErrDef, ok := unwrappedCauses[0].(errdef.Error); ok {
+				if innerErrDef.Kind() != "inner_error" {
+					t.Errorf("want inner error kind %q, got %q", "inner_error", innerErrDef.Kind())
+				}
+				if innerErrDef.Error() != "inner error message" {
+					t.Errorf("want inner error message %q, got %q", "inner error message", innerErrDef.Error())
+				}
+			} else {
+				t.Error("want inner error to be errdef.Error")
+			}
+		} else {
+			t.Error("want panic cause to have Unwrap() []error")
+		}
+	})
+}

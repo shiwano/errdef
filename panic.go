@@ -1,7 +1,6 @@
 package errdef
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -23,9 +22,8 @@ type (
 )
 
 var (
-	_ PanicError     = (*panicError)(nil)
-	_ fmt.Formatter  = (*panicError)(nil)
-	_ json.Marshaler = (*panicError)(nil)
+	_ PanicError    = (*panicError)(nil)
+	_ fmt.Formatter = (*panicError)(nil)
 	_ slog.LogValuer = (*panicError)(nil)
 )
 
@@ -72,13 +70,6 @@ func (e *panicError) Format(s fmt.State, verb rune) {
 	case 'q':
 		_, _ = fmt.Fprintf(s, "%q", e.Error())
 	}
-}
-
-func (e *panicError) MarshalJSON() ([]byte, error) {
-	if m, ok := e.panicValue.(json.Marshaler); ok {
-		return m.MarshalJSON()
-	}
-	return json.Marshal(e.panicValue)
 }
 
 func (e *panicError) LogValue() slog.Value {
