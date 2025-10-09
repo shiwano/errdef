@@ -41,8 +41,8 @@ func (e *panicError) PanicValue() any {
 }
 
 func (e *panicError) Unwrap() error {
-	if uw, ok := e.panicValue.(error); ok {
-		return uw
+	if err, ok := e.panicValue.(error); ok {
+		return err
 	}
 	return nil
 }
@@ -70,11 +70,4 @@ func (e *panicError) Format(s fmt.State, verb rune) {
 	case 'q':
 		_, _ = fmt.Fprintf(s, "%q", e.Error())
 	}
-}
-
-func (e *panicError) LogValue() slog.Value {
-	if v, ok := e.panicValue.(slog.LogValuer); ok {
-		return v.LogValue()
-	}
-	return slog.AnyValue(e.panicValue)
 }
