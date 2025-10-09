@@ -545,16 +545,16 @@ var ErrDatabaseFailure = errdef.Define("db_failure") // ~287 ns overhead
 3. **Minimize dynamic fields**: Using `With()` or `WithOptions()` adds ~190 ns base overhead plus ~50-90 ns per field. For hot paths where fields are constant, prefer defining errors with fields upfront:
 
    ```go
-   // ❌ Slower: Dynamic field attachment in hot path
-   var ErrValidation = errdef.Define("validation")
-   for _, item := range items {
-       _ = ErrValidation.WithOptions(errdef.HTTPStatus(400)).New("invalid")
-   }
-
    // ✅ Faster: Attach fields to definition upfront
    var ErrValidation = errdef.Define("validation", errdef.HTTPStatus(400))
    for _, item := range items {
        _ = ErrValidation.New("invalid")
+   }
+
+   // ❌ Slower: Attach dynamic field in hot path
+   var ErrValidation = errdef.Define("validation")
+   for _, item := range items {
+       _ = ErrValidation.WithOptions(errdef.HTTPStatus(400)).New("invalid")
    }
    ```
 
@@ -581,7 +581,7 @@ Other operations also have measurable overhead:
 | Operation                              | Time        | Memory |
 |----------------------------------------|-------------|--------|
 | Field extraction                       | ~220 ns     | 32 B   |
-| slog.LogValue                          | ~331 ns     | 544 B  |
+| `slog.LogValue`                        | ~331 ns     | 544 B  |
 | Resolver (kind lookup)                 | ~6-8 ns     | 0 B    |
 | Resolver (field lookup)                | ~213-243 ns | 544 B  |
 | JSON marshal (simple)                  | ~2.1 µs     | 1.7 KB |
