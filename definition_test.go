@@ -602,36 +602,36 @@ func TestDefinition_Is(t *testing.T) {
 		}
 	})
 
-	t.Run("WithOptions preserves identity", func(t *testing.T) {
+	t.Run("WithOptions creates errors matched by original definition", func(t *testing.T) {
 		orig := errdef.Define("test_error")
 		ctor, _ := errdef.DefineField[string]("test_field")
 
-		withOptions := orig.WithOptions(ctor("test_value"))
-		err := withOptions.New("test message")
+		factory := orig.WithOptions(ctor("test_value"))
+		err := factory.New("test message")
 
 		if !orig.Is(err) {
-			t.Error("want original definition to match error from WithOptions definition")
+			t.Error("want original definition to match error from WithOptions factory")
 		}
 
-		if !withOptions.Is(err) {
-			t.Error("want WithOptions definition to match its own error")
+		if !errors.Is(err, orig) {
+			t.Error("want errors.Is to match original definition")
 		}
 	})
 
-	t.Run("With preserves identity", func(t *testing.T) {
+	t.Run("With creates errors matched by original definition", func(t *testing.T) {
 		orig := errdef.Define("test_error")
 		ctor, _ := errdef.DefineField[string]("test_field")
 
 		ctx := context.Background()
-		withCtx := orig.With(ctx, ctor("test_value"))
-		err := withCtx.New("test message")
+		factory := orig.With(ctx, ctor("test_value"))
+		err := factory.New("test message")
 
 		if !orig.Is(err) {
-			t.Error("want original definition to match error from With definition")
+			t.Error("want original definition to match error from With factory")
 		}
 
-		if !withCtx.Is(err) {
-			t.Error("want With definition to match its own error")
+		if !errors.Is(err, orig) {
+			t.Error("want errors.Is to match original definition")
 		}
 	})
 

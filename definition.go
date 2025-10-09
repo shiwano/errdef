@@ -7,22 +7,63 @@ import (
 	"log/slog"
 )
 
-// Definition represents an error definition with customizable options.
-type Definition struct {
-	rootDef       *Definition
-	kind          Kind
-	fields        *fields
-	noTrace       bool
-	stackSkip     int
-	stackDepth    int
-	boundary      bool
-	formatter     func(err Error, s fmt.State, verb rune)
-	jsonMarshaler func(err Error) ([]byte, error)
-	logValuer     func(err Error) slog.Value
-}
+type (
+	// Definition represents an error definition with customizable options.
+	// It serves as a reusable template for creating structured errors with a specific kind,
+	// fields, and behavior (e.g., stack traces, formatting, serialization).
+	//
+	// Definition can be used as a sentinel error for identity checks with errors.Is,
+	// similar to standard errors like io.EOF. It can also be configured with additional
+	// options using With or WithOptions to create an ErrorFactory for generating errors
+	// with context-specific or request-scoped data.
+	//
+	// Definition implements both the error interface and ErrorFactory interface,
+	// making it suitable for both direct error creation and identity comparison.
+	Definition struct {
+		rootDef       *Definition
+		kind          Kind
+		fields        *fields
+		noTrace       bool
+		stackSkip     int
+		stackDepth    int
+		boundary      bool
+		formatter     func(err Error, s fmt.State, verb rune)
+		jsonMarshaler func(err Error) ([]byte, error)
+		logValuer     func(err Error) slog.Value
+	}
+
+	// ErrorFactory is an interface for creating errors from a configured Definition.
+	// It provides only error creation methods, preventing misuse such as identity
+	// comparison (errors.Is) or further configuration (With/WithOptions).
+	//
+	// ErrorFactory instances are typically created by Definition.With or
+	// Definition.WithOptions methods, and are intended to be used immediately
+	// for error creation rather than stored as sentinel values.
+	ErrorFactory interface {
+		// New creates a new error with the given message using this definition.
+		New(msg string) error
+		// Errorf creates a new error with a formatted message using this definition.
+		Errorf(format string, args ...any) error
+		// Wrap wraps an existing error using this definition.
+		// Returns nil if cause is nil.
+		Wrap(cause error) error
+		// Wrapf wraps an existing error with a formatted message using this definition.
+		// Returns nil if cause is nil.
+		Wrapf(cause error, format string, args ...any) error
+		// Join creates a new error by joining multiple errors using this definition.
+		// Returns nil if all causes are nil.
+		Join(causes ...error) error
+		// CapturePanic captures a panic value and converts it to an error wrapped by this definition,
+		// and returns the original panic value and true.
+		// If errPtr is nil or panicValue is nil, this function does nothing and returns nil and false.
+		// The resulting error implements PanicError interface to preserve the original panic value.
+		CapturePanic(errPtr *error, panicValue any) (any, bool)
+	}
+)
 
 var (
 	_ error        = (*Definition)(nil)
+	_ ErrorFactory = (*Definition)(nil)
 	_ fieldsGetter = (*Definition)(nil)
 )
 
@@ -40,9 +81,9 @@ func (d *Definition) Error() string {
 	return string(d.kind)
 }
 
-// With creates a new Definition and applies options from context first (if any),
+// With creates a new ErrorFactory and applies options from context first (if any),
 // then the given opts. Later options override earlier ones.
-func (d *Definition) With(ctx context.Context, opts ...Option) *Definition {
+func (d *Definition) With(ctx context.Context, opts ...Option) ErrorFactory {
 	ctxOpts := optionsFromContext(ctx)
 	if len(ctxOpts) == 0 && len(opts) == 0 {
 		return d
@@ -53,9 +94,9 @@ func (d *Definition) With(ctx context.Context, opts ...Option) *Definition {
 	return def
 }
 
-// WithOptions creates a new Definition with the given options applied.
+// WithOptions creates a new ErrorFactory with the given options applied.
 // Later options override earlier ones.
-func (d *Definition) WithOptions(opts ...Option) *Definition {
+func (d *Definition) WithOptions(opts ...Option) ErrorFactory {
 	if len(opts) == 0 {
 		return d
 	}
