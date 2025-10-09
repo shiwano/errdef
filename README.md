@@ -8,7 +8,7 @@
 It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`, `fmt.Formatter`, `json.Marshaler`, and `slog.LogValuer` — while adding fields, stack traces, and flexible error composition.
 
 > **Status:** The core API is stable, but minor breaking changes may occur before v1.0.0.
-
+>
 > **Requirements:** Go 1.25+
 
 ## Table of Contents
@@ -551,7 +551,7 @@ var ErrDatabaseFailure = errdef.Define("db_failure") // ~287 ns overhead
        _ = ErrValidation.WithOptions(errdef.HTTPStatus(400)).New("invalid")
    }
 
-   // ✅ Faster: Define errors upfront when possible
+   // ✅ Faster: Attach fields to definition upfront
    var ErrValidation = errdef.Define("validation", errdef.HTTPStatus(400))
    for _, item := range items {
        _ = ErrValidation.New("invalid")
@@ -569,7 +569,7 @@ var ErrDatabaseFailure = errdef.Define("db_failure") // ~287 ns overhead
    ```go
    var ErrAPI = errdef.Define("api_error", errdef.Boundary())
    err := ErrAPI.Wrap(deepInternalError) // Chain stops here for serialization
-
+   json.Marshal(err)
    // Deep chain (10 levels): ~162 µs, ~53 KB
    // With Boundary (3 levels): ~86 µs, ~30 KB (47% faster, 44% smaller)
    ```
@@ -590,8 +590,6 @@ Other operations also have measurable overhead:
 | JSON unmarshal (simple)                | ~5.8 µs     | 2.7 KB |
 | JSON unmarshal (deep chain, 10 levels) | ~65 µs      | 47 KB  |
 | JSON round-trip (marshal + unmarshal)  | ~11.8 µs    | 5.6 KB |
-
-> Times are per operation. Deep chains show performance degrades linearly with depth.
 
 ### How to Run the Benchmarks
 
