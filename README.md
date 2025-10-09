@@ -30,7 +30,8 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
   - [Error Deserialization](#error-deserialization)
   - [Ecosystem Integration](#ecosystem-integration)
   - [Built-in Options](#built-in-options)
-- [Appendix: Library Comparison](#appendix-library-comparison)
+- [Performance](#performance)
+- [Library Comparison](#library-comparison)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -498,13 +499,102 @@ func main() {
 | `JSONMarshaler(f)`          | Overrides the default `json.Marshaler` behavior.         | -                |
 | `LogValuer(f)`              | Overrides the default `slog.LogValuer` behavior.         | -                |
 
-#### Performance Knobs
+## Performance
 
-- For hot paths where stack capture isn't necessary: Use `NoTrace()`
-- To limit the number of frames captured in deep call stacks: Use `StackDepth(int)`
-- To prevent deep error chains during error handling: Use `Boundary()`
+> **Last updated:** 2025-10-10
 
-## Appendix: Library Comparison
+### Overhead Comparison
+
+errdef adds structured error handling on top of Go's standard library. Here's the measured overhead:
+
+| Operation        | stdlib  | errdef (default) | errdef (NoTrace) |
+|------------------|---------|------------------|------------------|
+| Creating error   | ~16 ns  | ~287 ns          | ~27 ns           |
+| Wrapping error   | ~104 ns | ~289 ns          | ~28 ns           |
+| Memory per error | 16-56 B | ~336 B           | ~80 B            |
+
+*Apple M1 Pro, Go 1.25, GOMAXPROCS=1, stack depth: 32. Memory: benchmem B/op. stdlib: errors.New() / fmt.Errorf("%w")*
+
+The main performance cost comes from **stack trace capture**. Without stack traces (`NoTrace()`), errdef adds minimal overhead compared to the standard library.
+
+### When to Use NoTrace()
+
+Stack trace capture takes ~260 ns per error. Use `NoTrace()` to optimize hot paths:
+
+```go
+// ✅ Hot paths (loops, frequently called functions)
+var ErrValidation = errdef.Define("validation", errdef.NoTrace())
+for _, item := range items {
+    if err := validate(item); err != nil {
+        return ErrValidation.Wrap(err) // Fast: ~28 ns overhead
+    }
+}
+
+// ✅ Long-lived errors (cached, stored in memory)
+var ErrCacheExpired = errdef.Define("cache_expired", errdef.NoTrace())
+
+// ❌ API boundaries, critical errors (keep stack traces!)
+var ErrDatabaseFailure = errdef.Define("db_failure") // ~287 ns overhead
+```
+
+### Performance Best Practices
+
+1. **Default is fine for most cases**: The ~300 ns overhead is negligible unless you're creating thousands of errors per second.
+2. **Optimize hot paths**: Use `NoTrace()` in tight loops or high-frequency code paths where errors are common.
+3. **Minimize dynamic fields**: Using `With()` or `WithOptions()` adds ~190 ns base overhead plus ~50-90 ns per field. For hot paths where fields are constant, prefer defining errors with fields upfront:
+
+   ```go
+   // ❌ Slower: Dynamic field attachment in hot path
+   var ErrValidation = errdef.Define("validation")
+   for _, item := range items {
+       _ = ErrValidation.WithOptions(errdef.HTTPStatus(400)).New("invalid")
+   }
+
+   // ✅ Faster: Define errors upfront when possible
+   var ErrValidation = errdef.Define("validation", errdef.HTTPStatus(400))
+   for _, item := range items {
+       _ = ErrValidation.New("invalid")
+   }
+   ```
+
+4. **Limit stack depth**: For hot paths where you still want to capture the error origin, use `StackDepth(1)` to keep just the first frame:
+
+   ```go
+   var ErrShallow = errdef.Define("error", errdef.StackDepth(1)) // ~177 ns, ~88 B
+   ```
+
+5. **Break error chains for serialization**: Use `Boundary()` at API boundaries to reduce JSON size and marshal time:
+
+   ```go
+   var ErrAPI = errdef.Define("api_error", errdef.Boundary())
+   err := ErrAPI.Wrap(deepInternalError) // Chain stops here for serialization
+
+   // Deep chain (10 levels): ~162 µs, ~53 KB
+   // With Boundary (3 levels): ~86 µs, ~30 KB (47% faster, 44% smaller)
+   ```
+
+### Additional Operations
+
+Other operations also have measurable overhead:
+
+| Operation                              | Time        | Memory |
+|----------------------------------------|-------------|--------|
+| Field extraction                       | ~220 ns     | 32 B   |
+| slog.LogValue                          | ~331 ns     | 544 B  |
+| Resolver (kind lookup)                 | ~6-8 ns     | 0 B    |
+| Resolver (field lookup)                | ~213-243 ns | 544 B  |
+| JSON marshal (simple)                  | ~2.1 µs     | 1.7 KB |
+| JSON marshal (NoTrace)                 | ~878 ns     | 752 B  |
+| JSON marshal (deep chain, 10 levels)   | ~162 µs     | 53 KB  |
+| JSON unmarshal (simple)                | ~5.8 µs     | 2.7 KB |
+| JSON unmarshal (deep chain, 10 levels) | ~65 µs      | 47 KB  |
+| JSON round-trip (marshal + unmarshal)  | ~11.8 µs    | 5.6 KB |
+
+*Times are per operation. Deep chains show performance degrades linearly with depth.*
+
+In practice, error handling is rarely the bottleneck. Focus on correctness first, then optimize if profiling shows that error creation is a significant cost.
+
+## Library Comparison
 
 > **Last updated:** 2025-10-07
 >
@@ -512,20 +602,20 @@ func main() {
 
 ### Comparison Table
 
-| Feature                         | Go stdlib | pkg/errors | cockroach<br>db/errors | eris         | errorx | merry v2       | **errdef**      |
-|---------------------------------|:---------:|:----------:|:----------------------:|:------------:|:------:|:--------------:|:---------------:|
-| `errors.Is`/`As` Compatibility  |    ✅     |     ✅     |           ✅           |      ✅      |   ✅   |       ✅       |       ✅        |
-| Def/Instance Separation         |    ❌     |     ❌     |           ❌           |      ❌      |   ❌   |       ❌       |       ✅        |
-| Automatic Stack Traces          |    ❌     |     ✅     |           ✅           |      ✅      |   ✅   |       ✅       |       ✅        |
-| Stack Control (Disable/Depth)   |    ❌     |     ❌     |           ⚠️           |      ❌      |   ❌   |       ✅       |       ✅        |
-| Structured Data                 |    ❌     |     ❌     |           ⚠️           |      ❌      |   ⚠️   |       ⚠️       | ✅ (Type-Safe)  |
-| Redaction                       |    ❌     |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       |       ✅        |
-| Structured JSON                 |    ❌     |     ❌     |       ⚠️ (Proto)       | ⚠️ (Logging) |   ❌   | ⚠️ (Formatted) |       ✅        |
-| `slog` Integration              |    ❌     |     ❌     |           ❌           |      ❌      |   ❌   |       ❌       |       ✅        |
-| Panic Capture                   |    ❌     |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       |       ✅        |
-| Multiple Causes (`errors.Join`) |    ✅     |     ❌     |           ✅           |      ✅      |   ✅   |       ✅       |       ✅        |
-| JSON Deserialization            |    ❌     |     ❌     |           ⚠️           |      ❌      |   ❌   |       ❌       |       ✅        |
-| Protobuf Deserialization        |    ❌     |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       | ⚠️ (Extensible) |
+| Feature                         | stdlib | pkg/errors | cockroach<br>db/errors | eris         | errorx | merry v2       | errdef          |
+|---------------------------------|:------:|:----------:|:----------------------:|:------------:|:------:|:--------------:|:---------------:|
+| `errors.Is`/`As` Compatibility  |   ✅   |     ✅     |           ✅           |      ✅      |   ✅   |       ✅       |       ✅        |
+| Def/Instance Separation         |   ❌   |     ❌     |           ❌           |      ❌      |   ❌   |       ❌       |       ✅        |
+| Automatic Stack Traces          |   ❌   |     ✅     |           ✅           |      ✅      |   ✅   |       ✅       |       ✅        |
+| Stack Control (Disable/Depth)   |   ❌   |     ❌     |           ⚠️           |      ❌      |   ❌   |       ✅       |       ✅        |
+| Structured Data                 |   ❌   |     ❌     |           ⚠️           |      ❌      |   ⚠️   |       ⚠️       | ✅ (Type-Safe)  |
+| Redaction                       |   ❌   |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       |       ✅        |
+| Structured JSON                 |   ❌   |     ❌     |       ⚠️ (Proto)       | ⚠️ (Logging) |   ❌   | ⚠️ (Formatted) |       ✅        |
+| `slog` Integration              |   ❌   |     ❌     |           ❌           |      ❌      |   ❌   |       ❌       |       ✅        |
+| Panic Capture                   |   ❌   |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       |       ✅        |
+| Multiple Causes (`errors.Join`) |   ✅   |     ❌     |           ✅           |      ✅      |   ✅   |       ✅       |       ✅        |
+| JSON Deserialization            |   ❌   |     ❌     |           ⚠️           |      ❌      |   ❌   |       ❌       |       ✅        |
+| Protobuf Deserialization        |   ❌   |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       | ⚠️ (Extensible) |
 
 ### Quick Notes
 
