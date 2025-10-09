@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"iter"
 	"log/slog"
 
 	"github.com/shiwano/errdef"
@@ -14,8 +15,9 @@ type (
 	UnmarshaledError interface {
 		errdef.Error
 
-		// Unmarshaled is a marker method to identify this interface.
-		Unmarshaled()
+		// UnknownFields returns an iterator over unknown fields that were present
+		// in the serialized data but not defined in the error definition.
+		UnknownFields() iter.Seq2[string, any]
 	}
 
 	unmarshaledError struct {
@@ -78,7 +80,15 @@ func (e *unmarshaledError) Unwrap() []error {
 	return e.causes
 }
 
-func (e *unmarshaledError) Unmarshaled() {}
+func (e *unmarshaledError) UnknownFields() iter.Seq2[string, any] {
+	return func(yield func(string, any) bool) {
+		for k, v := range e.unknownFields {
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
+}
 
 func (e *unmarshaledError) Is(target error) bool {
 	if is, ok := e.definedError.(interface{ Is(error) bool }); ok {

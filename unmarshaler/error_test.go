@@ -89,6 +89,78 @@ func TestUnmarshaledError_Fields(t *testing.T) {
 	}
 }
 
+func TestUnmarshaledError_UnknownFields(t *testing.T) {
+	t.Run("no unknown fields", func(t *testing.T) {
+		userID, _ := errdef.DefineField[string]("user_id")
+		def := errdef.Define("test_error", userID("user123"))
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
+
+		orig := def.New("test message")
+		data, err := json.Marshal(orig)
+		if err != nil {
+			t.Fatalf("failed to marshal: %v", err)
+		}
+
+		unmarshaled, err := u.Unmarshal(data)
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		count := 0
+		for range unmarshaled.UnknownFields() {
+			count++
+		}
+
+		if count != 0 {
+			t.Errorf("want 0 unknown fields, got %d", count)
+		}
+	})
+
+	t.Run("with unknown fields", func(t *testing.T) {
+		userID, _ := errdef.DefineField[string]("user_id")
+		def := errdef.Define("test_error", userID("user123"))
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r)
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "test_error",
+			"fields": {
+				"user_id": "user123",
+				"unknown_field1": "value1",
+				"unknown_field2": 42
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		unknownFields := make(map[string]any)
+		for k, v := range unmarshaled.UnknownFields() {
+			unknownFields[k] = v
+		}
+
+		if len(unknownFields) != 2 {
+			t.Errorf("want 2 unknown fields, got %d", len(unknownFields))
+		}
+
+		if v, ok := unknownFields["unknown_field1"]; !ok {
+			t.Error("want unknown_field1 to exist")
+		} else if v != "value1" {
+			t.Errorf("want unknown_field1 value %q, got %v", "value1", v)
+		}
+
+		if v, ok := unknownFields["unknown_field2"]; !ok {
+			t.Error("want unknown_field2 to exist")
+		} else if v != float64(42) {
+			t.Errorf("want unknown_field2 value %v, got %v", float64(42), v)
+		}
+	})
+}
+
 func TestUnmarshaledError_Stack(t *testing.T) {
 	def := errdef.Define("test_error")
 	r := resolver.New(def)
