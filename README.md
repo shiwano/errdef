@@ -570,8 +570,8 @@ var ErrDatabaseFailure = errdef.Define("db_failure") // ~287 ns overhead
    var ErrAPI = errdef.Define("api_error", errdef.Boundary())
    err := ErrAPI.Wrap(deepInternalError) // Chain stops here for serialization
    json.Marshal(err)
-   // Deep chain (10 levels): ~162 µs, ~53 KB
-   // With Boundary (3 levels): ~86 µs, ~30 KB (47% faster, 44% smaller)
+   // Deep chain (10 levels): ~137 µs, ~45 KB
+   // With Boundary (1 level): ~1.4 µs, ~1160 B (99% faster, 97% smaller)
    ```
 
 ### Additional Operations
