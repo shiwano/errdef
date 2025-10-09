@@ -511,7 +511,7 @@ func main() {
 | Wrap             | ~104 ns | ~289 ns          | ~28 ns           |
 | Memory per error | 16-56 B | ~336 B           | ~80 B            |
 
-> Apple M1 Pro, Go 1.25, GOMAXPROCS=1, Stack depth: 32. Memory: benchmem B/op. stdlib: errors.New() / fmt.Errorf("%w")
+> Apple M1 Pro, Go 1.25, GOMAXPROCS=1, Stack depth: 32, Memory: benchmem B/op, stdlib: errors.New() / fmt.Errorf("%w")
 
 The main performance cost comes from stack trace capture. Without stack traces, `errdef` adds minimal overhead compared to the standard library.
 
