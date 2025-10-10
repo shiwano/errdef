@@ -140,7 +140,7 @@ func tryConvertViaJSON(fk errdef.FieldKey, value any, targetType reflect.Type) (
 
 	targetPtr := reflect.New(targetType)
 	if err := json.Unmarshal(jsonBytes, targetPtr.Interface()); err != nil {
-		return nil, false, ErrFieldUnmarshalFailure.Wrapf(err, "failed to unmarshal to %s", targetType)
+		return nil, false, ErrInternal.Wrapf(err, "failed to unmarshal to %s", targetType)
 	}
 
 	targetValue := targetPtr.Elem().Interface()

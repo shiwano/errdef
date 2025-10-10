@@ -9,8 +9,6 @@ var (
 	ErrKindNotFound = errdef.Define("errdef/unmarshaler.kind_not_found", errdef.NoTrace())
 	// ErrUnknownField is returned when an unknown field is encountered in strict mode.
 	ErrUnknownField = errdef.Define("errdef/unmarshaler.unknown_field", errdef.NoTrace())
-	// ErrFieldUnmarshalFailure is returned when the unmarshaler fails to unmarshal a field value.
-	ErrFieldUnmarshalFailure = errdef.Define("errdef/unmarshaler.field_unmarshal_failure", errdef.NoTrace())
 	// ErrInternal is returned when an unexpected error occurs within the unmarshaler.
 	ErrInternal = errdef.Define("errdef/unmarshaler.internal", errdef.NoTrace())
 
