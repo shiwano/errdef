@@ -80,8 +80,9 @@ func main() {
 }
 ```
 
-> **Note:** Both `errors.Is` and field extractors compare **identities**, not string names.
-> Each call to `errdef.Define` or `errdef.DefineField` creates a unique identity, even if the kind or field name is the same.
+> **Note:** Both `errors.Is` and field extractors compare identities, not string names.
+> Each `Define` or `DefineField` call creates a unique identity, even with identical strings.
+> Use unique names throughout your application to avoid confusion.
 >
 > ```go
 > // Different definitions with the same kind string
