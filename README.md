@@ -242,18 +242,18 @@ slog.Error("failed to find user", "error", err)
 
 For more advanced control, you can:
 
-- **Log only the structured fields**: The `Fields` type also implements `slog.LogValuer`.
-
-  ```go
-  fields := err.(errdef.Error).Fields()
-  slog.Warn("...", "fields", fields)
-  ```
-
 - **Log the full stack trace**: The `Stack` type also implements `slog.LogValuer`.
 
   ```go
   stack := err.(errdef.Error).Stack()
   slog.Error("...", "stack", stack)
+  ```
+
+- **Log the full causes tree**: The `ErrorNode` type also implements `slog.LogValuer`.
+
+  ```go
+  nodes, _ := err.(errdef.Error).UnwrapTree()
+  slog.Error("...", "causes", nodes)
   ```
 
 ### Field Constructors

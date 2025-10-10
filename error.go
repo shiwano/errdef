@@ -351,6 +351,32 @@ func (n ErrorNode) MarshalJSON() ([]byte, error) {
 	}
 }
 
+// LogValue implements slog.LogValuer for ErrorNode.
+func (e ErrorNode) LogValue() slog.Value {
+	switch te := e.Error.(type) {
+	case Error:
+		return te.(slog.LogValuer).LogValue()
+	case ErrorTypeNamer:
+		attrs := []slog.Attr{
+			slog.String("message", te.Error()),
+			slog.String("type", te.TypeName()),
+		}
+		if len(e.Causes) > 0 {
+			attrs = append(attrs, slog.Any("causes", e.Causes))
+		}
+		return slog.GroupValue(attrs...)
+	default:
+		attrs := []slog.Attr{
+			slog.String("message", e.Error.Error()),
+			slog.String("type", fmt.Sprintf("%T", e.Error)),
+		}
+		if len(e.Causes) > 0 {
+			attrs = append(attrs, slog.Any("causes", e.Causes))
+		}
+		return slog.GroupValue(attrs...)
+	}
+}
+
 func (e errorTypeNamer) Error() string {
 	return e.msg
 }

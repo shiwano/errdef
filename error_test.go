@@ -1652,6 +1652,159 @@ func TestErrorNode_MarshalJSON(t *testing.T) {
 	})
 }
 
+func TestErrorNode_LogValue(t *testing.T) {
+	t.Run("simple error node", func(t *testing.T) {
+		node := errdef.ErrorNode{
+			Error: errors.New("test error"),
+		}
+
+		value := node.LogValue()
+
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, nil))
+		logger.Info("test", slog.Any("node", value))
+
+		var result map[string]any
+		if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+			t.Fatalf("failed to unmarshal JSON: %v", err)
+		}
+
+		nodeData := result["node"].(map[string]any)
+
+		want := map[string]any{
+			"message": "test error",
+			"type":    "*errors.errorString",
+		}
+
+		if !reflect.DeepEqual(nodeData, want) {
+			t.Errorf("want node %+v, got %+v", want, nodeData)
+		}
+	})
+
+	t.Run("with nested causes", func(t *testing.T) {
+		stdErr := errors.New("standard error")
+		wrappedErr := fmt.Errorf("wrapped: %w", stdErr)
+
+		node := errdef.ErrorNode{
+			Error: wrappedErr,
+			Causes: []errdef.ErrorNode{
+				{Error: stdErr},
+			},
+		}
+
+		value := node.LogValue()
+
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, nil))
+		logger.Info("test", slog.Any("node", value))
+
+		var result map[string]any
+		if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+			t.Fatalf("failed to unmarshal JSON: %v", err)
+		}
+
+		nodeData := result["node"].(map[string]any)
+
+		want := map[string]any{
+			"message": "wrapped: standard error",
+			"type":    "*fmt.wrapError",
+			"causes": []any{
+				map[string]any{
+					"message": "standard error",
+					"type":    "*errors.errorString",
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(nodeData, want) {
+			t.Errorf("want node %+v, got %+v", want, nodeData)
+		}
+	})
+
+	t.Run("with Error type", func(t *testing.T) {
+		def := errdef.Define("test_error", errdef.NoTrace())
+		err := def.New("test message")
+
+		node := errdef.ErrorNode{
+			Error: err,
+		}
+
+		value := node.LogValue()
+
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, nil))
+		logger.Info("test", slog.Any("node", value))
+
+		var result map[string]any
+		if jsonErr := json.Unmarshal(buf.Bytes(), &result); jsonErr != nil {
+			t.Fatalf("failed to unmarshal JSON: %v", jsonErr)
+		}
+
+		nodeData := result["node"].(map[string]any)
+
+		want := map[string]any{
+			"message": "test message",
+			"kind":    "test_error",
+		}
+
+		if !reflect.DeepEqual(nodeData, want) {
+			t.Errorf("want node %+v, got %+v", want, nodeData)
+		}
+	})
+
+	t.Run("nested error nodes", func(t *testing.T) {
+		err1 := errors.New("level 1")
+		err2 := errors.New("level 2")
+		err3 := errors.New("level 3")
+
+		node := errdef.ErrorNode{
+			Error: err1,
+			Causes: []errdef.ErrorNode{
+				{
+					Error: err2,
+					Causes: []errdef.ErrorNode{
+						{Error: err3},
+					},
+				},
+			},
+		}
+
+		value := node.LogValue()
+
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, nil))
+		logger.Info("test", slog.Any("node", value))
+
+		var result map[string]any
+		if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+			t.Fatalf("failed to unmarshal JSON: %v", err)
+		}
+
+		nodeData := result["node"].(map[string]any)
+
+		want := map[string]any{
+			"message": "level 1",
+			"type":    "*errors.errorString",
+			"causes": []any{
+				map[string]any{
+					"message": "level 2",
+					"type":    "*errors.errorString",
+					"causes": []any{
+						map[string]any{
+							"message": "level 3",
+							"type":    "*errors.errorString",
+						},
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(nodeData, want) {
+			t.Errorf("want node %+v, got %+v", want, nodeData)
+		}
+	})
+}
+
 type circularError struct {
 	msg   string
 	cause error
