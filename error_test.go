@@ -493,7 +493,7 @@ func TestError_UnwrapTree(t *testing.T) {
 	})
 }
 
-func TestDefinedError_Is(t *testing.T) {
+func TestError_Is(t *testing.T) {
 	t.Run("same instance", func(t *testing.T) {
 		def := errdef.Define("test_error")
 		err := def.New("test message")
@@ -531,7 +531,7 @@ func TestDefinedError_Is(t *testing.T) {
 	})
 }
 
-func TestDebugStacker_DebugStack(t *testing.T) {
+func TestError_DebugStack(t *testing.T) {
 	t.Run("debug stack format", func(t *testing.T) {
 		def := errdef.Define("test_error")
 		err := def.New("test message").(errdef.DebugStacker)
@@ -558,7 +558,7 @@ func TestDebugStacker_DebugStack(t *testing.T) {
 	})
 }
 
-func TestStackTracer_StackTrace(t *testing.T) {
+func TestError_StackTrace(t *testing.T) {
 	type stackTracer interface {
 		StackTrace() []uintptr
 	}
@@ -584,7 +584,7 @@ func TestStackTracer_StackTrace(t *testing.T) {
 	})
 }
 
-func TestCauser_Cause(t *testing.T) {
+func TestError_Cause(t *testing.T) {
 	type causer interface {
 		Cause() error
 	}
@@ -609,7 +609,7 @@ func TestCauser_Cause(t *testing.T) {
 	})
 }
 
-func TestFormatter_Format(t *testing.T) {
+func TestError_Format(t *testing.T) {
 	t.Run("default format", func(t *testing.T) {
 		def := errdef.Define("test_error")
 		err := def.New("test message")
@@ -799,7 +799,7 @@ func TestFormatter_Format(t *testing.T) {
 	})
 }
 
-func TestMarshaler_MarshalJSON(t *testing.T) {
+func TestError_MarshalJSON(t *testing.T) {
 	t.Run("basic json", func(t *testing.T) {
 		def := errdef.Define("test_error", errdef.NoTrace())
 		err := def.New("test message")
