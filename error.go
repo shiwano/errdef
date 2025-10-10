@@ -154,9 +154,6 @@ func (e *definedError) Stack() Stack {
 }
 
 func (e *definedError) Unwrap() []error {
-	if e.def.boundary {
-		return nil // Break the error chain.
-	}
 	if e.cause == nil {
 		return nil
 	}
@@ -203,9 +200,6 @@ func (e *definedError) StackTrace() []uintptr {
 }
 
 func (e *definedError) Cause() error {
-	if e.def.boundary {
-		return nil // Break the error chain.
-	}
 	return e.cause
 }
 

@@ -495,7 +495,6 @@ func main() {
 | `NoTrace()`                 | Disables stack trace collection for the error.           | -                |
 | `StackSkip(int)`            | Skips a specified number of frames during stack capture. | -                |
 | `StackDepth(int)`           | Sets the depth of the stack capture (default: 32).       | -                |
-| `Boundary()`                | Stops the error unwrapping chain at this point.          | -                |
 | `Formatter(f)`              | Overrides the default `fmt.Formatter` behavior.          | -                |
 | `JSONMarshaler(f)`          | Overrides the default `json.Marshaler` behavior.         | -                |
 | `LogValuer(f)`              | Overrides the default `slog.LogValuer` behavior.         | -                |

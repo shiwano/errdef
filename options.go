@@ -68,11 +68,6 @@ func StackDepth(depth int) Option {
 	return &stackDepth{depth: depth}
 }
 
-// Boundary stops the error unwrapping chain at this point.
-func Boundary() Option {
-	return &boundary{}
-}
-
 // Formatter overrides the default `fmt.Formatter` behavior.
 func Formatter(f func(err Error, s fmt.State, verb rune)) Option {
 	return &formatter{formatter: f}

@@ -160,16 +160,6 @@ func TestError_Unwrap(t *testing.T) {
 			t.Error("want unwrapped error to be the joined error")
 		}
 	})
-
-	t.Run("boundary breaks chain", func(t *testing.T) {
-		orig := errors.New("original error")
-		def := errdef.Define("boundary_error", errdef.Boundary())
-		wrapped := def.Wrap(orig).(errdef.Error)
-
-		if want, got := 0, len(wrapped.Unwrap()); got != want {
-			t.Errorf("want %d errors due to boundary, got %d", want, got)
-		}
-	})
 }
 
 func TestError_UnwrapTree(t *testing.T) {
@@ -615,16 +605,6 @@ func TestCauser_Cause(t *testing.T) {
 
 		if got := wrapped.Cause(); got != orig {
 			t.Error("want cause to be original error")
-		}
-	})
-
-	t.Run("boundary breaks chain", func(t *testing.T) {
-		cause := errors.New("original error")
-		def := errdef.Define("boundary_error", errdef.Boundary())
-		wrapped := def.Wrap(cause).(causer)
-
-		if got := wrapped.Cause(); got != nil {
-			t.Errorf("want no cause due to boundary, got %v", got)
 		}
 	})
 }

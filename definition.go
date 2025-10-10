@@ -26,7 +26,6 @@ type (
 		noTrace       bool
 		stackSkip     int
 		stackDepth    int
-		boundary      bool
 		formatter     func(err Error, s fmt.State, verb rune)
 		jsonMarshaler func(err Error) ([]byte, error)
 		logValuer     func(err Error) slog.Value

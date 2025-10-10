@@ -1,7 +1,6 @@
 package errdef_test
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -231,24 +230,6 @@ func TestStackDepth(t *testing.T) {
 			t.Errorf("want 2 stack frames, got %d", len(frames))
 		}
 	})
-}
-
-func TestBoundary(t *testing.T) {
-	orig := errors.New("original error")
-	def := errdef.Define("test", errdef.Boundary())
-	wrapped := def.Wrap(orig)
-
-	if errors.Unwrap(wrapped) != nil {
-		t.Error("want Unwrap to return nil when Boundary is set")
-	}
-
-	if errors.Is(wrapped, orig) {
-		t.Error("want Is relationship to be broken by boundary")
-	}
-
-	if wrapped.Error() != orig.Error() {
-		t.Errorf("want message %q, got %q", orig.Error(), wrapped.Error())
-	}
 }
 
 func TestFormatter(t *testing.T) {

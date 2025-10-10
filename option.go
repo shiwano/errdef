@@ -40,8 +40,6 @@ type (
 		depth int
 	}
 
-	boundary struct{}
-
 	formatter struct {
 		formatter func(err Error, s fmt.State, verb rune)
 	}
@@ -161,10 +159,6 @@ func (o *stackSkip) applyOption(d *Definition) {
 
 func (o *stackDepth) applyOption(d *Definition) {
 	d.stackDepth = o.depth
-}
-
-func (o *boundary) applyOption(d *Definition) {
-	d.boundary = true
 }
 
 func (o *formatter) applyOption(d *Definition) {

@@ -235,27 +235,12 @@ func BenchmarkErrdefWrapStackDepth1(b *testing.B) {
 	}
 }
 
-// errdef: JSON marshal deep chain without Boundary at all (10 levels)
-func BenchmarkErrdefJSONMarshalDeepChainNoBoundary(b *testing.B) {
+// errdef: JSON marshal deep chain (10 levels)
+func BenchmarkErrdefJSONMarshalDeepChain(b *testing.B) {
 	err := benchDef.New("level 1")
 	for range 9 {
 		err = benchDef.Wrap(err)
 	}
-	b.ResetTimer()
-	b.ReportAllocs()
-	for b.Loop() {
-		_, _ = err.(errdef.Error).(json.Marshaler).MarshalJSON()
-	}
-}
-
-// errdef: JSON marshal deep chain with Boundary at level 3 (10 levels total)
-func BenchmarkErrdefJSONMarshalDeepChainWithBoundary(b *testing.B) {
-	err := benchDef.New("level 1")
-	for range 8 {
-		err = benchDef.Wrap(err)
-	}
-	boundaryDef := errdef.Define("boundary", errdef.Boundary())
-	err = boundaryDef.Wrap(err)
 	b.ResetTimer()
 	b.ReportAllocs()
 	for b.Loop() {
