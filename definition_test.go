@@ -386,22 +386,19 @@ func TestDefinition_Join(t *testing.T) {
 	})
 }
 
-func TestDefinition_CapturePanic(t *testing.T) {
-	t.Run("capture string panic", func(t *testing.T) {
+func TestDefinition_Recover(t *testing.T) {
+	t.Run("recover string panic", func(t *testing.T) {
 		def := errdef.Define("panic_error")
-		var err error
-		if val, ok := def.CapturePanic(&err, "test panic"); !ok {
-			t.Fatal("want panic to be captured")
-		} else if val != "test panic" {
-			t.Errorf("want returned panic value %q, got %v", "test panic", val)
-		}
+		err := def.Recover(func() error {
+			panic("test panic")
+		})
 
 		if err == nil {
 			t.Fatal("want error to be set")
 		}
 
 		if !errors.Is(err, def) {
-			t.Error("want error to be wrapped by the definition")
+			t.Fatal("want error to be wrapped by the definition")
 		}
 		if err.Error() != "panic: test panic" {
 			t.Errorf("want error message %q, got %q", "panic: test panic", err.Error())
@@ -417,22 +414,19 @@ func TestDefinition_CapturePanic(t *testing.T) {
 		}
 	})
 
-	t.Run("capture error panic", func(t *testing.T) {
+	t.Run("recover error panic", func(t *testing.T) {
 		def := errdef.Define("panic_error")
 		panicValue := errors.New("panic error")
-		var err error
-		if val, ok := def.CapturePanic(&err, panicValue); !ok {
-			t.Fatal("want panic to be captured")
-		} else if val != panicValue {
-			t.Errorf("want returned panic value %v, got %v", panicValue, val)
-		}
+		err := def.Recover(func() error {
+			panic(panicValue)
+		})
 
 		if err == nil {
 			t.Fatal("want error to be set")
 		}
 
 		if !errors.Is(err, def) {
-			t.Error("want error to be wrapped by the definition")
+			t.Fatal("want error to be wrapped by the definition")
 		}
 		if err.Error() != "panic: panic error" {
 			t.Errorf("want error message %q, got %q", "panic: panic error", err.Error())
@@ -448,41 +442,51 @@ func TestDefinition_CapturePanic(t *testing.T) {
 		}
 	})
 
-	t.Run("nil panic value", func(t *testing.T) {
+	t.Run("no panic", func(t *testing.T) {
 		def := errdef.Define("panic_error")
-		var err error
-		if val, ok := def.CapturePanic(&err, nil); ok {
-			t.Error("want false when capturing nil panic value")
-		} else if val != nil {
-			t.Errorf("want returned panic value to be nil, got %v", val)
-		}
+		err := def.Recover(func() error {
+			return nil
+		})
 
 		if err != nil {
-			t.Errorf("want no error for nil panic value, got %v", err)
+			t.Errorf("want no error when no panic occurs, got %v", err)
+		}
+
+		if errors.Is(err, def) {
+			t.Error("want error not to match definition when no panic occurs")
 		}
 	})
 
-	t.Run("nil error pointer", func(t *testing.T) {
+	t.Run("return error without panic", func(t *testing.T) {
 		def := errdef.Define("panic_error")
-		if val, ok := def.CapturePanic(nil, "panic value"); ok {
-			t.Error("want false when capturing with nil error pointer")
-		} else if val != nil {
-			t.Errorf("want returned panic value to be nil, got %v", val)
+		returnedErr := errors.New("normal error")
+		err := def.Recover(func() error {
+			return returnedErr
+		})
+
+		if err != returnedErr {
+			t.Errorf("want returned error %v, got %v", returnedErr, err)
+		}
+
+		if errors.Is(err, def) {
+			t.Error("want error not to match definition when no panic occurs")
 		}
 	})
 
 	t.Run("with definition fields", func(t *testing.T) {
 		ctor, extr := errdef.DefineField[string]("context")
-		def := errdef.Define("panic_error").WithOptions(ctor("service_call"))
-		var err error
-		if val, ok := def.CapturePanic(&err, "service panic"); !ok {
-			t.Fatal("want panic to be captured")
-		} else if val != "service panic" {
-			t.Errorf("want returned panic value %q, got %v", "service panic", val)
-		}
+		originalDef := errdef.Define("panic_error")
+		def := originalDef.WithOptions(ctor("service_call"))
+		err := def.Recover(func() error {
+			panic("service panic")
+		})
 
 		if err == nil {
 			t.Fatal("want error to be set")
+		}
+
+		if !errors.Is(err, originalDef) {
+			t.Fatal("want error to match definition")
 		}
 
 		got, ok := extr(err)
@@ -503,48 +507,30 @@ func TestDefinition_CapturePanic(t *testing.T) {
 		}
 	})
 
-	t.Run("real panic scenario with definition", func(t *testing.T) {
-		def := errdef.Define("service_panic")
-		var (
-			err      error
-			panicVal any
-			captured bool
-		)
+	t.Run("nested recover", func(t *testing.T) {
+		defOuter := errdef.Define("outer_panic")
+		defInner := errdef.Define("inner_panic")
 
-		func() {
-			defer func() {
-				if val, ok := def.CapturePanic(&err, recover()); ok {
-					panicVal = val
-					captured = true
-				}
-			}()
-			panic("service crashed")
-		}()
+		outerErr := defOuter.Recover(func() error {
+			innerErr := defInner.Recover(func() error {
+				panic("actual panic")
+			})
+			if !errors.Is(innerErr, defInner) {
+				t.Error("want inner error to match inner definition")
+			}
+			return innerErr
+		})
 
-		if err == nil {
-			t.Fatal("want error to be set")
-		}
-		if !captured {
-			t.Fatal("want panic to be captured")
-		}
-		if panicVal != "service crashed" {
-			t.Errorf("want panic value %q, got %v", "service crashed", panicVal)
+		if errors.Is(outerErr, defOuter) {
+			t.Error("want outer error not to match outer definition (no panic at outer level)")
 		}
 
-		if !errors.Is(err, def) {
-			t.Error("want error to be wrapped by the definition")
-		}
-		if err.Error() != "panic: service crashed" {
-			t.Errorf("want error message %q, got %q", "panic: service crashed", err.Error())
+		if outerErr == nil {
+			t.Fatal("want error to be returned from inner")
 		}
 
-		var panicErr errdef.PanicError
-		if !errors.As(err, &panicErr) {
-			t.Fatal("want error to be a PanicError")
-		}
-
-		if panicErr.PanicValue() != "service crashed" {
-			t.Errorf("want panic value %q, got %v", "service crashed", panicErr.PanicValue())
+		if !errors.Is(outerErr, defInner) {
+			t.Error("want outer error to match inner definition")
 		}
 	})
 }

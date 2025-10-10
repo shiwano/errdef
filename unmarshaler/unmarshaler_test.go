@@ -1212,17 +1212,18 @@ func TestUnmarshaler_DefinitionAsSentinel(t *testing.T) {
 	})
 }
 
-func TestUnmarshaler_CapturePanic(t *testing.T) {
+func TestUnmarshaler_Recover(t *testing.T) {
 	t.Run("panic with error value", func(t *testing.T) {
 		def := errdef.Define("panic_error")
 		r := resolver.New(def)
 		u := unmarshaler.NewJSON(r)
 
 		panicValue := errors.New("original panic error")
-		var capturedErr error
-		def.CapturePanic(&capturedErr, panicValue)
+		recoveredErr := def.Recover(func() error {
+			panic(panicValue)
+		})
 
-		data, err := json.Marshal(capturedErr)
+		data, err := json.Marshal(recoveredErr)
 		if err != nil {
 			t.Fatalf("failed to marshal: %v", err)
 		}
@@ -1264,10 +1265,11 @@ func TestUnmarshaler_CapturePanic(t *testing.T) {
 		u := unmarshaler.NewJSON(r)
 
 		panicValue := "panic string message"
-		var capturedErr error
-		def.CapturePanic(&capturedErr, panicValue)
+		recoveredErr := def.Recover(func() error {
+			panic(panicValue)
+		})
 
-		data, err := json.Marshal(capturedErr)
+		data, err := json.Marshal(recoveredErr)
 		if err != nil {
 			t.Fatalf("failed to marshal: %v", err)
 		}
@@ -1301,10 +1303,11 @@ func TestUnmarshaler_CapturePanic(t *testing.T) {
 		u := unmarshaler.NewJSON(r)
 
 		panicValue := innerDef.New("inner error message")
-		var capturedErr error
-		def.CapturePanic(&capturedErr, panicValue)
+		recoveredErr := def.Recover(func() error {
+			panic(panicValue)
+		})
 
-		data, err := json.Marshal(capturedErr)
+		data, err := json.Marshal(recoveredErr)
 		if err != nil {
 			t.Fatalf("failed to marshal: %v", err)
 		}

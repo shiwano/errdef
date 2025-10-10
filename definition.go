@@ -52,11 +52,11 @@ type (
 		// Join creates a new error by joining multiple errors using this definition.
 		// Returns nil if all causes are nil.
 		Join(causes ...error) error
-		// CapturePanic captures a panic value and converts it to an error wrapped by this definition,
-		// and returns the original panic value and true.
-		// If errPtr is nil or panicValue is nil, this function does nothing and returns nil and false.
+		// Recover executes the given function and recovers from any panic that occurs within it.
+		// If a panic occurs, it wraps the panic as an error using this definition and returns it.
+		// If no panic occurs, it returns the function's return value as is.
 		// The resulting error implements PanicError interface to preserve the original panic value.
-		CapturePanic(errPtr *error, panicValue any) (any, bool)
+		Recover(fn func() error) error
 	}
 )
 
@@ -142,17 +142,22 @@ func (d *Definition) Join(causes ...error) error {
 	return newError(d, cause, cause.Error(), true, callersSkip)
 }
 
-// CapturePanic captures a panic value and converts it to an error wrapped by this definition,
-// and returns the original panic value and true.
-// If errPtr is nil or panicValue is nil, this function does nothing and returns nil and false.
+// Recover executes the given function and recovers from any panic that occurs within it.
+// If a panic occurs, it wraps the panic as an error using this definition and returns it.
+// If no panic occurs, it returns the function's return value as is.
 // The resulting error implements PanicError interface to preserve the original panic value.
-func (d *Definition) CapturePanic(errPtr *error, panicValue any) (any, bool) {
-	if panicValue == nil || errPtr == nil {
-		return nil, false
-	}
-	cause := newPanicError(panicValue)
-	*errPtr = d.Wrapf(cause, "panic: %s", cause.Error())
-	return panicValue, true
+func (d *Definition) Recover(fn func() error) error {
+	var err error
+	func() {
+		defer func() {
+			if panicValue := recover(); panicValue != nil {
+				cause := newPanicError(panicValue)
+				err = newError(d, cause, fmt.Sprintf("panic: %s", cause.Error()), false, callersSkip+2)
+			}
+		}()
+		err = fn()
+	}()
+	return err
 }
 
 // Is reports whether this definition matches the given error.

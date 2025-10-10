@@ -390,15 +390,16 @@ causes := err.(errdef.Error).Unwrap()
 ```go
 var ErrPanic = errdef.Define("panic", errdef.HTTPStatus(500))
 
-func processRequest(w http.ResponseWriter, r *http.Request) (err error) {
-    defer func() {
-        if panicVal, captured := ErrPanic.CapturePanic(&err, recover()); captured {
-           slog.Warn("a panic was captured", "panic_value", panicVal)
-           // ...
-        }
-    }()
-    maybePanic()
-    return nil
+func processRequest(w http.ResponseWriter, r *http.Request) error {
+    err := ErrPanic.Recover(func() error {
+        maybePanic()
+        return nil
+    })
+    if errors.Is(err, ErrPanic) {
+        slog.Warn("a panic was captured")
+        // Perform cleanup or additional logging
+    }
+    return err
 }
 
 if err := processRequest(w, r); err != nil {
@@ -627,7 +628,7 @@ Other operations also have measurable overhead:
 | Redaction                       |   ❌   |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       |       ✅        |
 | Structured JSON                 |   ❌   |     ❌     |       ⚠️ (Proto)       | ⚠️ (Logging) |   ❌   | ⚠️ (Formatted) |       ✅        |
 | `slog` Integration              |   ❌   |     ❌     |           ❌           |      ❌      |   ❌   |       ❌       |       ✅        |
-| Panic Capture                   |   ❌   |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       |       ✅        |
+| Panic Recovery                  |   ❌   |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       |       ✅        |
 | Multiple Causes (`errors.Join`) |   ✅   |     ❌     |           ✅           |      ✅      |   ✅   |       ✅       |       ✅        |
 | JSON Deserialization            |   ❌   |     ❌     |           ⚠️           |      ❌      |   ❌   |       ❌       |       ✅        |
 | Protobuf Deserialization        |   ❌   |     ❌     |           ✅           |      ❌      |   ❌   |       ❌       | ⚠️ (Extensible) |

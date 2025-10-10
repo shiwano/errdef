@@ -11,8 +11,9 @@ import (
 func TestPanicError_Error(t *testing.T) {
 	def := errdef.Define("test_error")
 	panicValue := errors.New("panic error")
-	var err error
-	def.CapturePanic(&err, panicValue)
+	err := def.Recover(func() error {
+		panic(panicValue)
+	})
 
 	var panicErr errdef.PanicError
 	if !errors.As(err, &panicErr) {
@@ -27,8 +28,9 @@ func TestPanicError_Error(t *testing.T) {
 func TestPanicError_PanicValue(t *testing.T) {
 	def := errdef.Define("test_error")
 	panicValue := errors.New("panic error")
-	var err error
-	def.CapturePanic(&err, panicValue)
+	err := def.Recover(func() error {
+		panic(panicValue)
+	})
 
 	var panicErr errdef.PanicError
 	if !errors.As(err, &panicErr) {
@@ -44,8 +46,9 @@ func TestPanicError_Unwrap(t *testing.T) {
 	t.Run("with error", func(t *testing.T) {
 		def := errdef.Define("test_error")
 		panicValue := errors.New("panic error")
-		var err error
-		def.CapturePanic(&err, panicValue)
+		err := def.Recover(func() error {
+			panic(panicValue)
+		})
 
 		var panicErr errdef.PanicError
 		if !errors.As(err, &panicErr) {
@@ -60,8 +63,9 @@ func TestPanicError_Unwrap(t *testing.T) {
 	t.Run("with non error", func(t *testing.T) {
 		def := errdef.Define("test_error")
 		panicValue := "panic string"
-		var err error
-		def.CapturePanic(&err, panicValue)
+		err := def.Recover(func() error {
+			panic(panicValue)
+		})
 
 		var panicErr errdef.PanicError
 		if !errors.As(err, &panicErr) {
@@ -133,8 +137,9 @@ func TestPanicError_Format(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			def := errdef.Define("test_error")
-			var err error
-			def.CapturePanic(&err, tt.panicValue)
+			err := def.Recover(func() error {
+				panic(tt.panicValue)
+			})
 
 			var panicErr errdef.PanicError
 			if !errors.As(err, &panicErr) {
