@@ -25,7 +25,7 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
   - [Context Integration](#context-integration)
   - [Redaction](#redaction)
   - [Joining Errors](#joining-errors)
-  - [Panic Handling](#panic-handling)
+  - [Panic Recovery](#panic-recovery)
   - [Error Resolution](#error-resolution)
   - [Error Deserialization](#error-deserialization)
   - [Ecosystem Integration](#ecosystem-integration)
@@ -383,7 +383,7 @@ causes := err.(errdef.Error).Unwrap()
 // causes: [l, r]
 ```
 
-### Panic Handling
+### Panic Recovery
 
 `errdef` provides a convenient way to convert panics into structured errors, ensuring that even unexpected failures are handled consistently.
 
