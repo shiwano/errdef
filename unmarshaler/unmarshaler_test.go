@@ -97,6 +97,10 @@ func TestUnmarshaler_Error_KindNotFound(t *testing.T) {
 	if !errors.Is(err, unmarshaler.ErrKindNotFound) {
 		t.Errorf("want ErrKindNotFound, got %v", err)
 	}
+
+	if got := unmarshaler.KindFromError.OrZero(err); got != "unknown_error" {
+		t.Errorf("want kind %q in error, got %q", "unknown_error", got)
+	}
 }
 
 func TestUnmarshaler_Causes_Single(t *testing.T) {
@@ -378,12 +382,12 @@ func TestUnmarshaler_Fields_TypeConversionFallback(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		if got, ok := userIDFrom(unmarshaled); !ok || got != "default_user" {
-			t.Errorf("want user_id to fallback to %q, got %q (ok=%v)", "default_user", got, ok)
+		if got := userIDFrom.OrZero(unmarshaled); got != "default_user" {
+			t.Errorf("want user_id to fallback to %q, got %q", "default_user", got)
 		}
 
-		if got, ok := countFrom(unmarshaled); !ok || got != 99 {
-			t.Errorf("want count to fallback to %d, got %d (ok=%v)", 99, got, ok)
+		if got := countFrom.OrZero(unmarshaled); got != 99 {
+			t.Errorf("want count to fallback to %d, got %d", 99, got)
 		}
 	})
 
@@ -402,12 +406,12 @@ func TestUnmarshaler_Fields_TypeConversionFallback(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		if got, ok := userIDFrom(unmarshaled); !ok || got != "actual_user" {
-			t.Errorf("want user_id %q, got %q (ok=%v)", "actual_user", got, ok)
+		if got := userIDFrom.OrZero(unmarshaled); got != "actual_user" {
+			t.Errorf("want user_id %q, got %q", "actual_user", got)
 		}
 
-		if got, ok := countFrom(unmarshaled); !ok || got != 42 {
-			t.Errorf("want count %d, got %d (ok=%v)", 42, got, ok)
+		if got := countFrom.OrZero(unmarshaled); got != 42 {
+			t.Errorf("want count %d, got %d", 42, got)
 		}
 	})
 
@@ -426,12 +430,12 @@ func TestUnmarshaler_Fields_TypeConversionFallback(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		if got, ok := userIDFrom(unmarshaled); !ok || got != "default_user" {
-			t.Errorf("want user_id to fallback to %q, got %q (ok=%v)", "default_user", got, ok)
+		if got := userIDFrom.OrZero(unmarshaled); got != "default_user" {
+			t.Errorf("want user_id to fallback to %q, got %q", "default_user", got)
 		}
 
-		if got, ok := countFrom(unmarshaled); !ok || got != 42 {
-			t.Errorf("want count %d, got %d (ok=%v)", 42, got, ok)
+		if got := countFrom.OrZero(unmarshaled); got != 42 {
+			t.Errorf("want count %d, got %d", 42, got)
 		}
 	})
 }
@@ -898,10 +902,7 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		got, ok := extraFieldFrom(unmarshaled)
-		if !ok {
-			t.Fatal("want extra field to be found")
-		}
+		got := extraFieldFrom.OrZero(unmarshaled)
 
 		if got != "extra value" {
 			t.Errorf("want %q, got %q", "extra value", got)
@@ -933,18 +934,12 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		got1, ok1 := field1From(unmarshaled)
-		if !ok1 {
-			t.Fatal("want field1 to be found")
-		}
+		got1 := field1From.OrZero(unmarshaled)
 		if got1 != "value1" {
 			t.Errorf("want field1 %q, got %q", "value1", got1)
 		}
 
-		got2, ok2 := field2From(unmarshaled)
-		if !ok2 {
-			t.Fatal("want field2 to be found")
-		}
+		got2 := field2From.OrZero(unmarshaled)
 		if got2 != 42 {
 			t.Errorf("want field2 %d, got %d", 42, got2)
 		}
@@ -970,10 +965,7 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		got, ok := intFieldFrom(unmarshaled)
-		if !ok {
-			t.Fatal("want number field to be found")
-		}
+		got := intFieldFrom.OrZero(unmarshaled)
 
 		if got != 100 {
 			t.Errorf("want %d, got %d", 100, got)
@@ -1008,10 +1000,7 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		got, ok := addressFieldFrom(unmarshaled)
-		if !ok {
-			t.Fatal("want address field to be found")
-		}
+		got := addressFieldFrom.OrZero(unmarshaled)
 
 		if got.Street != "123 Main St" || got.City != "Tokyo" {
 			t.Errorf("want {Street: \"123 Main St\", City: \"Tokyo\"}, got %+v", got)
@@ -1038,10 +1027,7 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		got, ok := idsFieldFrom(unmarshaled)
-		if !ok {
-			t.Fatal("want ids field to be found")
-		}
+		got := idsFieldFrom.OrZero(unmarshaled)
 
 		want := []int{1, 2, 3, 4, 5}
 		if !reflect.DeepEqual(got, want) {
@@ -1133,18 +1119,12 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		gotDefined, ok := definedFieldFrom(unmarshaled)
-		if !ok {
-			t.Fatal("want defined field to be found")
-		}
+		gotDefined := definedFieldFrom.OrZero(unmarshaled)
 		if gotDefined != "defined value" {
 			t.Errorf("want defined field %q, got %q", "defined value", gotDefined)
 		}
 
-		gotAdditional, ok := additionalFieldFrom(unmarshaled)
-		if !ok {
-			t.Fatal("want additional field to be found")
-		}
+		gotAdditional := additionalFieldFrom.OrZero(unmarshaled)
 		if gotAdditional != "additional value" {
 			t.Errorf("want additional field %q, got %q", "additional value", gotAdditional)
 		}
@@ -1202,10 +1182,7 @@ func TestUnmarshaler_DefinitionAsSentinel(t *testing.T) {
 			t.Fatalf("want 1 cause, got %d", len(causes))
 		}
 
-		code, ok := extr(causes[0])
-		if !ok {
-			t.Error("want field to be found in unmarshaled definition")
-		}
+		code := extr.OrZero(causes[0])
 		if code != 404 {
 			t.Errorf("want code to be 404, got %d", code)
 		}
