@@ -31,16 +31,30 @@ func WithStrictFields() Option {
 	}
 }
 
+// WithAdditionalFields returns an Option that registers additional field keys
+// that are not defined in the error definition but should be recognized during
+// unmarshaling.
+//
+// This option is useful when you need to unmarshal custom fields that are not
+// part of the definitions in Resolver. When used with WithStrictFields,
+// these additional fields will be allowed while other unknown fields will
+// trigger ErrUnknownField.
 func WithAdditionalFields(keys ...errdef.FieldKey) Option {
 	return func(u *Unmarshaler) {
 		u.additionalFieldKeys = append(u.additionalFieldKeys, keys...)
 	}
 }
 
-func WithStandardSentinelErrors() Option {
-	return WithSentinelErrors(standardSentinelErrors()...)
-}
-
+// WithSentinelErrors returns an Option that registers custom sentinel errors
+// to be recognized during unmarshaling.
+//
+// When unmarshaling error causes, if an error's type name and message match
+// a registered sentinel error, the original error instance will be restored
+// instead of creating a new unknown error wrapper. This is essential for
+// preserving error identity when using errors.Is() checks.
+//
+// The function panics if duplicate sentinel errors (same type and message)
+// are registered.
 func WithSentinelErrors(errors ...error) Option {
 	return func(u *Unmarshaler) {
 		if u.sentinelErrors == nil {
@@ -60,8 +74,16 @@ func WithSentinelErrors(errors ...error) Option {
 	}
 }
 
-func standardSentinelErrors() []error {
-	return []error{
+// WithStandardSentinelErrors returns an Option that registers commonly used
+// sentinel errors from the Go standard library (such as context.Canceled,
+// io.EOF, os.ErrNotExist, etc.).
+//
+// This is a convenience function that calls WithSentinelErrors with a predefined
+// set of standard errors. When unmarshaling, these sentinel errors will be
+// restored to their original error instances instead of being wrapped as
+// unknown errors.
+func WithStandardSentinelErrors() Option {
+	return WithSentinelErrors(
 		context.Canceled,
 		context.DeadlineExceeded,
 		csv.ErrBareQuote,
@@ -106,5 +128,5 @@ func standardSentinelErrors() []error {
 		zip.ErrAlgorithm,
 		zip.ErrChecksum,
 		zip.ErrFormat,
-	}
+	)
 }
