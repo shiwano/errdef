@@ -81,13 +81,13 @@ type (
 		TypeName() string
 	}
 
-	// errorEncoder defines methods for exporting error information in various formats.
-	// This interface is used internally to implement fmt.Formatter, json.Marshaler,
-	// and slog.LogValuer in the unmarshaler package.
-	errorEncoder interface {
+	// errorExporter defines methods for exporting error information in various formats.
+	// This interface is used internally in the unmarshaler package.
+	errorExporter interface {
 		ErrorFormatter(err Error, s fmt.State, verb rune)
 		ErrorJSONMarshaler(err Error) ([]byte, error)
 		ErrorLogValuer(err Error) slog.Value
+		ErrorTreeBuilder(errs []error) ([]ErrorNode, bool)
 	}
 
 	definedError struct {
@@ -113,7 +113,7 @@ var (
 	_ slog.LogValuer = (*definedError)(nil)
 	_ stackTracer    = (*definedError)(nil)
 	_ causer         = (*definedError)(nil)
-	_ errorEncoder   = (*definedError)(nil)
+	_ errorExporter  = (*definedError)(nil)
 	_ fieldsGetter   = (*definedError)(nil)
 
 	_ json.Marshaler = ErrorNode{}
@@ -169,10 +169,7 @@ func (e *definedError) Unwrap() []error {
 }
 
 func (e *definedError) UnwrapTree() ([]ErrorNode, bool) {
-	visited := make(map[uintptr]struct{})
-	nodes := buildErrorNodes(e.Unwrap(), visited)
-	_, hasCycle := visited[0]
-	return nodes, !hasCycle
+	return e.ErrorTreeBuilder(e.Unwrap())
 }
 
 func (e *definedError) Is(target error) bool {
@@ -323,6 +320,13 @@ func (e *definedError) ErrorLogValuer(err Error) slog.Value {
 		attrs = append(attrs, slog.Any("causes", causeMessages))
 	}
 	return slog.GroupValue(attrs...)
+}
+
+func (e *definedError) ErrorTreeBuilder(errs []error) ([]ErrorNode, bool) {
+	visited := make(map[uintptr]struct{})
+	nodes := buildErrorNodes(errs, visited)
+	_, hasCycle := visited[0]
+	return nodes, !hasCycle
 }
 
 // MarshalJSON implements json.Marshaler for ErrorNode.

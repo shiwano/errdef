@@ -34,10 +34,11 @@ type (
 		causes   []error
 	}
 
-	errorEncoder interface {
+	errorExporter interface {
 		ErrorFormatter(err errdef.Error, s fmt.State, verb rune)
 		ErrorJSONMarshaler(err errdef.Error) ([]byte, error)
 		ErrorLogValuer(err errdef.Error) slog.Value
+		ErrorTreeBuilder(errs []error) ([]errdef.ErrorNode, bool)
 	}
 
 	causer interface {
@@ -80,6 +81,10 @@ func (e *unmarshaledError) Unwrap() []error {
 	return e.causes
 }
 
+func (e *unmarshaledError) UnwrapTree() ([]errdef.ErrorNode, bool) {
+	return e.definedError.(errorExporter).ErrorTreeBuilder(e.causes)
+}
+
 func (e *unmarshaledError) UnknownFields() iter.Seq2[string, any] {
 	return func(yield func(string, any) bool) {
 		for k, v := range e.unknownFields {
@@ -108,21 +113,15 @@ func (e *unmarshaledError) GoString() string {
 }
 
 func (e *unmarshaledError) Format(s fmt.State, verb rune) {
-	e.definedError.(errorEncoder).ErrorFormatter(e, s, verb)
+	e.definedError.(errorExporter).ErrorFormatter(e, s, verb)
 }
 
 func (e *unmarshaledError) MarshalJSON() ([]byte, error) {
-	return e.definedError.(errorEncoder).ErrorJSONMarshaler(e)
+	return e.definedError.(errorExporter).ErrorJSONMarshaler(e)
 }
 
 func (e *unmarshaledError) LogValue() slog.Value {
-	return e.definedError.(errorEncoder).ErrorLogValuer(e)
-}
-
-func (e *unmarshaledError) UnwrapTree() ([]errdef.ErrorNode, bool) {
-	// Unmarshaled errors don't need cycle detection since they come from serialized data
-	// which shouldn't contain cycles
-	return buildCauseNodes(e.causes), true
+	return e.definedError.(errorExporter).ErrorLogValuer(e)
 }
 
 func (e *unmarshaledError) DebugStack() string {
@@ -158,35 +157,4 @@ func (e *unknownCauseError) TypeName() string {
 
 func (e *unknownCauseError) Unwrap() []error {
 	return e.causes
-}
-
-func buildCauseNodes(causes []error) []errdef.ErrorNode {
-	if len(causes) == 0 {
-		return nil
-	}
-
-	nodes := make([]errdef.ErrorNode, 0, len(causes))
-	for _, c := range causes {
-		if c == nil {
-			continue
-		}
-		nodes = append(nodes, buildCauseNode(c))
-	}
-	return nodes
-}
-
-func buildCauseNode(err error) errdef.ErrorNode {
-	var causes []error
-	if unwrapper, ok := err.(interface{ Unwrap() error }); ok {
-		if nested := unwrapper.Unwrap(); nested != nil {
-			causes = []error{nested}
-		}
-	} else if unwrapper, ok := err.(interface{ Unwrap() []error }); ok {
-		causes = unwrapper.Unwrap()
-	}
-
-	return errdef.ErrorNode{
-		Error:  err,
-		Causes: buildCauseNodes(causes),
-	}
 }
