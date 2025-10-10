@@ -19,7 +19,7 @@ import (
 // WithStrictMode returns an Option that enables strict validation mode.
 // When enabled, the unmarshaler performs strict validation on both fields and kinds:
 //   - Returns ErrUnknownField if it encounters a field that is not defined in
-//     the error definition or registered via WithAdditionalFields
+//     the error definition or registered via WithCustomFields
 //   - Returns ErrUnknownKind if it encounters an unknown kind, even when using
 //     a FallbackResolver
 //
@@ -34,17 +34,17 @@ func WithStrictMode() Option {
 	}
 }
 
-// WithAdditionalFields returns an Option that registers additional field keys
+// WithCustomFields returns an Option that registers custom field keys
 // that are not defined in the error definition but should be recognized during
 // unmarshaling.
 //
 // This option is useful when you need to unmarshal custom fields that are not
 // part of the error definition. When used with WithStrictMode,
-// these additional fields will be allowed while other unknown fields will
+// these custom fields will be allowed while other unknown fields will
 // trigger ErrUnknownField.
-func WithAdditionalFields(keys ...errdef.FieldKey) Option {
+func WithCustomFields(keys ...errdef.FieldKey) Option {
 	return func(u *Unmarshaler) {
-		u.additionalFieldKeys = append(u.additionalFieldKeys, keys...)
+		u.customFieldKeys = append(u.customFieldKeys, keys...)
 	}
 }
 
@@ -54,12 +54,12 @@ func WithAdditionalFields(keys ...errdef.FieldKey) Option {
 // This includes: http_status, log_level, trace_id, domain, user_hint, public,
 // retryable, retry_after, unreportable, exit_code, help_url.
 //
-// This is a convenience function that calls WithAdditionalFields with all
+// This is a convenience function that calls WithCustomFields with all
 // built-in field keys. When unmarshaling errors with built-in fields, these
 // fields will be properly recognized and accessible via their respective
 // extractors (e.g., errdef.HTTPStatusFrom, errdef.IsPublic).
 func WithBuiltinFields() Option {
-	return WithAdditionalFields(
+	return WithCustomFields(
 		errdef.HTTPStatus.Key(),
 		errdef.LogLevel.Key(),
 		errdef.TraceID.Key(),

@@ -11,11 +11,11 @@ import (
 type (
 	// Unmarshaler unmarshals serialized error data into UnmarshaledError.
 	Unmarshaler struct {
-		resolver            resolver.Resolver
-		decoder             Decoder
-		sentinelErrors      map[sentinelKey]error
-		additionalFieldKeys []errdef.FieldKey
-		strictMode          bool
+		resolver         resolver.Resolver
+		decoder          Decoder
+		sentinelErrors   map[sentinelKey]error
+		customFieldKeys  []errdef.FieldKey
+		strictMode       bool
 	}
 
 	// Option is a function type for customizing Unmarshaler configuration.
@@ -99,12 +99,12 @@ func (d *Unmarshaler) unmarshal(decoded *DecodedData) (UnmarshaledError, error) 
 				}
 			}
 
-			for _, additionalKey := range d.additionalFieldKeys {
-				if additionalKey.String() == fieldName {
-					if v, ok, err := tryConvertFieldValue(additionalKey, fieldValue); err != nil {
+			for _, customKey := range d.customFieldKeys {
+				if customKey.String() == fieldName {
+					if v, ok, err := tryConvertFieldValue(customKey, fieldValue); err != nil {
 						return nil, err
 					} else if ok {
-						fields[additionalKey] = v
+						fields[customKey] = v
 						matched = true
 						break
 					}

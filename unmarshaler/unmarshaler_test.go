@@ -881,13 +881,13 @@ func TestUnmarshaler_Causes_UnknownError_Recursive(t *testing.T) {
 	})
 }
 
-func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
-	t.Run("basic additional field key", func(t *testing.T) {
+func TestUnmarshaler_WithCustomFieldKeys(t *testing.T) {
+	t.Run("basic custom field key", func(t *testing.T) {
 		def := errdef.Define("test_error")
 		r := resolver.New(def)
 
 		extraField, extraFieldFrom := errdef.DefineField[string]("extra")
-		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(extraField.Key()))
+		u := unmarshaler.NewJSON(r, unmarshaler.WithCustomFields(extraField.Key()))
 
 		jsonData := `{
 			"message": "test message",
@@ -909,13 +909,13 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 		}
 	})
 
-	t.Run("multiple additional field keys", func(t *testing.T) {
+	t.Run("multiple custom field keys", func(t *testing.T) {
 		def := errdef.Define("test_error")
 		r := resolver.New(def)
 
 		field1, field1From := errdef.DefineField[string]("field1")
 		field2, field2From := errdef.DefineField[int]("field2")
-		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(
+		u := unmarshaler.NewJSON(r, unmarshaler.WithCustomFields(
 			field1.Key(),
 			field2.Key(),
 		))
@@ -950,7 +950,7 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 		r := resolver.New(def)
 
 		intField, intFieldFrom := errdef.DefineField[int]("number")
-		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(intField.Key()))
+		u := unmarshaler.NewJSON(r, unmarshaler.WithCustomFields(intField.Key()))
 
 		jsonData := `{
 			"message": "test message",
@@ -982,7 +982,7 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 		r := resolver.New(def)
 
 		addressField, addressFieldFrom := errdef.DefineField[Address]("address")
-		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(addressField.Key()))
+		u := unmarshaler.NewJSON(r, unmarshaler.WithCustomFields(addressField.Key()))
 
 		jsonData := `{
 			"message": "test message",
@@ -1012,7 +1012,7 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 		r := resolver.New(def)
 
 		idsField, idsFieldFrom := errdef.DefineField[[]int]("ids")
-		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(idsField.Key()))
+		u := unmarshaler.NewJSON(r, unmarshaler.WithCustomFields(idsField.Key()))
 
 		jsonData := `{
 			"message": "test message",
@@ -1040,7 +1040,7 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 		r := resolver.New(def)
 
 		intField, intFieldFrom := errdef.DefineField[int]("number")
-		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(intField.Key()))
+		u := unmarshaler.NewJSON(r, unmarshaler.WithCustomFields(intField.Key()))
 
 		jsonData := `{
 			"message": "test message",
@@ -1069,12 +1069,12 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 		}
 	})
 
-	t.Run("field not in additional keys goes to unknownFields", func(t *testing.T) {
+	t.Run("field not in custom keys goes to unknownFields", func(t *testing.T) {
 		def := errdef.Define("test_error")
 		r := resolver.New(def)
 
 		field1, _ := errdef.DefineField[string]("field1")
-		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(field1.Key()))
+		u := unmarshaler.NewJSON(r, unmarshaler.WithCustomFields(field1.Key()))
 
 		jsonData := `{
 			"message": "test message",
@@ -1097,20 +1097,20 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 		}
 	})
 
-	t.Run("mix of defined and additional fields", func(t *testing.T) {
+	t.Run("mix of defined and custom fields", func(t *testing.T) {
 		definedField, definedFieldFrom := errdef.DefineField[string]("defined")
 		def := errdef.Define("test_error", definedField("default"))
 		r := resolver.New(def)
 
-		additionalField, additionalFieldFrom := errdef.DefineField[string]("additional")
-		u := unmarshaler.NewJSON(r, unmarshaler.WithAdditionalFields(additionalField.Key()))
+		customField, customFieldFrom := errdef.DefineField[string]("custom")
+		u := unmarshaler.NewJSON(r, unmarshaler.WithCustomFields(customField.Key()))
 
 		jsonData := `{
 			"message": "test message",
 			"kind": "test_error",
 			"fields": {
 				"defined": "defined value",
-				"additional": "additional value"
+				"custom": "custom value"
 			}
 		}`
 
@@ -1124,9 +1124,9 @@ func TestUnmarshaler_WithAdditionalFieldKeys(t *testing.T) {
 			t.Errorf("want defined field %q, got %q", "defined value", gotDefined)
 		}
 
-		gotAdditional := additionalFieldFrom.OrZero(unmarshaled)
-		if gotAdditional != "additional value" {
-			t.Errorf("want additional field %q, got %q", "additional value", gotAdditional)
+		gotCustom := customFieldFrom.OrZero(unmarshaled)
+		if gotCustom != "custom value" {
+			t.Errorf("want custom field %q, got %q", "custom value", gotCustom)
 		}
 	})
 }
@@ -1381,21 +1381,21 @@ func TestUnmarshaler_WithStrictMode(t *testing.T) {
 		}
 	})
 
-	t.Run("allows additional fields with strict mode enabled", func(t *testing.T) {
+	t.Run("allows custom fields with strict mode enabled", func(t *testing.T) {
 		def := errdef.Define("test_error")
 		r := resolver.New(def)
 
-		additionalField, additionalFieldFrom := errdef.DefineField[string]("additional")
+		customField, customFieldFrom := errdef.DefineField[string]("custom")
 		u := unmarshaler.NewJSON(r,
 			unmarshaler.WithStrictMode(),
-			unmarshaler.WithAdditionalFields(additionalField.Key()),
+			unmarshaler.WithCustomFields(customField.Key()),
 		)
 
 		jsonData := `{
 			"message": "test message",
 			"kind": "test_error",
 			"fields": {
-				"additional": "value"
+				"custom": "value"
 			}
 		}`
 
@@ -1404,7 +1404,7 @@ func TestUnmarshaler_WithStrictMode(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		if got := additionalFieldFrom.OrZero(unmarshaled); got != "value" {
+		if got := customFieldFrom.OrZero(unmarshaled); got != "value" {
 			t.Errorf("want %q, got %q", "value", got)
 		}
 	})
