@@ -1409,3 +1409,137 @@ func TestUnmarshaler_WithStrictFields(t *testing.T) {
 		}
 	})
 }
+
+func TestUnmarshaler_WithBuiltinFields(t *testing.T) {
+	t.Run("unmarshal all built-in fields", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r, unmarshaler.WithBuiltinFields())
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "test_error",
+			"fields": {
+				"http_status": 500,
+				"trace_id": "trace-123",
+				"domain": "api",
+				"user_hint": "Please try again later",
+				"public": true,
+				"retryable": true,
+				"retry_after": 5000000000,
+				"unreportable": true,
+				"exit_code": 1,
+				"help_url": "https://example.com/help",
+				"details": { "key": "value" }
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		if got := errdef.HTTPStatusFrom.OrZero(unmarshaled); got != 500 {
+			t.Errorf("want http_status %d, got %d", 500, got)
+		}
+
+		if got := errdef.TraceIDFrom.OrZero(unmarshaled); got != "trace-123" {
+			t.Errorf("want trace_id %q, got %q", "trace-123", got)
+		}
+
+		if got := errdef.DomainFrom.OrZero(unmarshaled); got != "api" {
+			t.Errorf("want domain %q, got %q", "api", got)
+		}
+
+		if got := errdef.UserHintFrom.OrZero(unmarshaled); got != "Please try again later" {
+			t.Errorf("want user_hint %q, got %q", "Please try again later", got)
+		}
+
+		if got := errdef.IsPublic(unmarshaled); !got {
+			t.Error("want public to be true")
+		}
+
+		if got := errdef.IsRetryable(unmarshaled); !got {
+			t.Error("want retryable to be true")
+		}
+
+		if got := errdef.RetryAfterFrom.OrZero(unmarshaled); got != 5000000000 {
+			t.Errorf("want retry_after %d, got %d", 5000000000, got)
+		}
+
+		if got := errdef.IsUnreportable(unmarshaled); !got {
+			t.Error("want unreportable to be true")
+		}
+
+		if got := errdef.ExitCodeFrom.OrZero(unmarshaled); got != 1 {
+			t.Errorf("want exit_code %d, got %d", 1, got)
+		}
+
+		if got := errdef.HelpURLFrom.OrZero(unmarshaled); got != "https://example.com/help" {
+			t.Errorf("want help_url %q, got %q", "https://example.com/help", got)
+		}
+
+		if got := errdef.DetailsFrom.OrZero(unmarshaled); !reflect.DeepEqual(got, errdef.Details{"key": "value"}) {
+			t.Errorf("want details %v, got %v", errdef.Details{"key": "value"}, got)
+		}
+	})
+
+	t.Run("works with strict fields", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r,
+			unmarshaler.WithStrictFields(),
+			unmarshaler.WithBuiltinFields(),
+		)
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "test_error",
+			"fields": {
+				"http_status": 404,
+				"public": true
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		if got := errdef.HTTPStatusFrom.OrZero(unmarshaled); got != 404 {
+			t.Errorf("want http_status %d, got %d", 404, got)
+		}
+
+		if got := errdef.IsPublic(unmarshaled); !got {
+			t.Error("want public to be true")
+		}
+	})
+
+	t.Run("predefined field wins built-in field", func(t *testing.T) {
+		customHTTPStatus, customHTTPStatusFrom := errdef.DefineField[int]("http_status")
+		def := errdef.Define("test_error", customHTTPStatus(404))
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r, unmarshaler.WithBuiltinFields())
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "test_error",
+			"fields": {
+				"http_status": 404
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		if got := customHTTPStatusFrom.OrZero(unmarshaled); got != 404 {
+			t.Errorf("want custom http_status %d, got %d", 404, got)
+		}
+
+		if _, ok := errdef.HTTPStatusFrom(unmarshaled); ok {
+			t.Error("want http_status not to be from built-in field")
+		}
+	})
+}

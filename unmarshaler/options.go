@@ -130,3 +130,30 @@ func WithStandardSentinelErrors() Option {
 		zip.ErrFormat,
 	)
 }
+
+// WithBuiltinFields returns an Option that registers all built-in field keys
+// from the errdef package to be recognized during unmarshaling.
+//
+// This includes: http_status, log_level, trace_id, domain, user_hint, public,
+// retryable, retry_after, unreportable, exit_code, help_url.
+//
+// This is a convenience function that calls WithAdditionalFields with all
+// built-in field keys. When unmarshaling errors with built-in fields, these
+// fields will be properly recognized and accessible via their respective
+// extractors (e.g., errdef.HTTPStatusFrom, errdef.IsPublic).
+func WithBuiltinFields() Option {
+	return WithAdditionalFields(
+		errdef.HTTPStatus.Key(),
+		errdef.LogLevel.Key(),
+		errdef.TraceID.Key(),
+		errdef.Domain.Key(),
+		errdef.UserHint.Key(),
+		errdef.Public.Key(),
+		errdef.Retryable.Key(),
+		errdef.RetryAfter.Key(),
+		errdef.Unreportable.Key(),
+		errdef.ExitCode.Key(),
+		errdef.HelpURL.Key(),
+		errdef.Details{}.Key(),
+	)
+}
