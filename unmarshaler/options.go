@@ -16,6 +16,21 @@ import (
 	"github.com/shiwano/errdef"
 )
 
+// WithStrictFields returns an Option that enables strict field validation.
+// When enabled, the unmarshaler returns ErrUnknownField if it encounters
+// a field that is not defined in the error definition or registered via
+// WithAdditionalFields.
+//
+// This option is useful in development and testing environments to detect
+// unknown fields early, ensuring schema consistency between error producers
+// and consumers. In production environments, it's recommended to omit this
+// option to allow graceful handling of unknown fields from different versions.
+func WithStrictFields() Option {
+	return func(u *Unmarshaler) {
+		u.strictFields = true
+	}
+}
+
 func WithAdditionalFields(keys ...errdef.FieldKey) Option {
 	return func(u *Unmarshaler) {
 		u.additionalFieldKeys = append(u.additionalFieldKeys, keys...)

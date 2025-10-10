@@ -1347,3 +1347,88 @@ func TestUnmarshaler_Recover(t *testing.T) {
 		}
 	})
 }
+
+func TestUnmarshaler_WithStrictFields(t *testing.T) {
+	t.Run("returns error for unknown field with strict mode enabled", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r, unmarshaler.WithStrictFields())
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "test_error",
+			"fields": {
+				"unknown_field": "value"
+			}
+		}`
+
+		_, err := u.Unmarshal([]byte(jsonData))
+		if err == nil {
+			t.Fatal("want error for unknown field")
+		}
+
+		if !errors.Is(err, unmarshaler.ErrUnknownField) {
+			t.Errorf("want ErrUnknownField, got %v", err)
+		}
+
+		if got := unmarshaler.FieldNameFromError.OrZero(err); got != "unknown_field" {
+			t.Errorf("want field_name %q, got %q", "unknown_field", got)
+		}
+
+		if got := unmarshaler.KindFromError.OrZero(err); got != "test_error" {
+			t.Errorf("want kind %q, got %q", "test_error", got)
+		}
+	})
+
+	t.Run("allows known fields with strict mode enabled", func(t *testing.T) {
+		knownField, knownFieldFrom := errdef.DefineField[string]("known_field")
+		def := errdef.Define("test_error", knownField("default"))
+		r := resolver.New(def)
+		u := unmarshaler.NewJSON(r, unmarshaler.WithStrictFields())
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "test_error",
+			"fields": {
+				"known_field": "value"
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		if got := knownFieldFrom.OrZero(unmarshaled); got != "value" {
+			t.Errorf("want %q, got %q", "value", got)
+		}
+	})
+
+	t.Run("allows additional fields with strict mode enabled", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		r := resolver.New(def)
+
+		additionalField, additionalFieldFrom := errdef.DefineField[string]("additional")
+		u := unmarshaler.NewJSON(r,
+			unmarshaler.WithStrictFields(),
+			unmarshaler.WithAdditionalFields(additionalField.Key()),
+		)
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "test_error",
+			"fields": {
+				"additional": "value"
+			}
+		}`
+
+		unmarshaled, err := u.Unmarshal([]byte(jsonData))
+		if err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		if got := additionalFieldFrom.OrZero(unmarshaled); got != "value" {
+			t.Errorf("want %q, got %q", "value", got)
+		}
+	})
+}
