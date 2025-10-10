@@ -62,7 +62,7 @@ func TestUnmarshaler_Unmarshal(t *testing.T) {
 	})
 }
 
-func TestUnmarshaler_Error_DecodeFailure(t *testing.T) {
+func TestUnmarshaler_ErrDecodeFailure(t *testing.T) {
 	def := errdef.Define("test_error")
 	r := resolver.New(def)
 	u := unmarshaler.NewJSON(r)
@@ -79,7 +79,7 @@ func TestUnmarshaler_Error_DecodeFailure(t *testing.T) {
 	}
 }
 
-func TestUnmarshaler_Error_KindNotFound(t *testing.T) {
+func TestUnmarshaler_ErrUnknownKind(t *testing.T) {
 	def := errdef.Define("known_error")
 	r := resolver.New(def)
 	u := unmarshaler.NewJSON(r)
@@ -94,8 +94,8 @@ func TestUnmarshaler_Error_KindNotFound(t *testing.T) {
 		t.Fatal("want error for unknown kind")
 	}
 
-	if !errors.Is(err, unmarshaler.ErrKindNotFound) {
-		t.Errorf("want ErrKindNotFound, got %v", err)
+	if !errors.Is(err, unmarshaler.ErrUnknownKind) {
+		t.Errorf("want ErrUnknownKind, got %v", err)
 	}
 
 	if got := unmarshaler.KindFromError.OrZero(err); got != "unknown_error" {

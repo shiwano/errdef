@@ -211,7 +211,7 @@ func (d *Unmarshaler) resolveKind(kind errdef.Kind) (*errdef.Definition, error) 
 	}
 	def, ok := d.resolver.ResolveKindStrict(kind)
 	if !ok {
-		return nil, ErrKindNotFound.WithOptions(kindField(kind)).New("kind not found")
+		return nil, ErrUnknownKind.WithOptions(kindField(kind)).New("unknown kind")
 	}
 	return def, nil
 }

@@ -5,8 +5,8 @@ import "github.com/shiwano/errdef"
 var (
 	// ErrDecodeFailure is returned when the decoder fails to decode byte data.
 	ErrDecodeFailure = errdef.Define("errdef/unmarshaler.decode_failure", errdef.NoTrace())
-	// ErrKindNotFound is returned when the resolver cannot resolve the error kind.
-	ErrKindNotFound = errdef.Define("errdef/unmarshaler.kind_not_found", errdef.NoTrace())
+	// ErrUnknownKind is returned when the resolver cannot resolve the error kind.
+	ErrUnknownKind = errdef.Define("errdef/unmarshaler.unknown_kind", errdef.NoTrace())
 	// ErrUnknownField is returned when an unknown field is encountered in strict mode.
 	ErrUnknownField = errdef.Define("errdef/unmarshaler.unknown_field", errdef.NoTrace())
 	// ErrInternal is returned when an unexpected error occurs within the unmarshaler.
