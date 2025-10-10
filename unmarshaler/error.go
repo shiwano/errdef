@@ -78,7 +78,7 @@ func (e *unmarshaledError) Stack() errdef.Stack {
 }
 
 func (e *unmarshaledError) Unwrap() []error {
-	return e.causes
+	return e.causes[:]
 }
 
 func (e *unmarshaledError) UnwrapTree() ([]errdef.ErrorNode, bool) {
@@ -156,5 +156,5 @@ func (e *unknownCauseError) TypeName() string {
 }
 
 func (e *unknownCauseError) Unwrap() []error {
-	return e.causes
+	return e.causes[:]
 }
