@@ -160,7 +160,7 @@ func BenchmarkErrdefUnwrapTreeShallow(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for b.Loop() {
-		_ = err3.(errdef.Error).UnwrapTree()
+		_, _ = err3.(errdef.Error).UnwrapTree()
 	}
 }
 
@@ -173,7 +173,7 @@ func BenchmarkErrdefUnwrapTreeDeep(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for b.Loop() {
-		_ = err.(errdef.Error).UnwrapTree()
+		_, _ = err.(errdef.Error).UnwrapTree()
 	}
 }
 

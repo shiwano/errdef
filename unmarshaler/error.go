@@ -119,8 +119,10 @@ func (e *unmarshaledError) LogValue() slog.Value {
 	return e.definedError.(errorEncoder).ErrorLogValuer(e)
 }
 
-func (e *unmarshaledError) UnwrapTree() []errdef.ErrorNode {
-	return buildCauseNodes(e.causes)
+func (e *unmarshaledError) UnwrapTree() ([]errdef.ErrorNode, bool) {
+	// Unmarshaled errors don't need cycle detection since they come from serialized data
+	// which shouldn't contain cycles
+	return buildCauseNodes(e.causes), true
 }
 
 func (e *unmarshaledError) DebugStack() string {

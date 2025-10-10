@@ -177,7 +177,7 @@ func TestError_UnwrapTree(t *testing.T) {
 		def := errdef.Define("test_error")
 		err := def.New("test message").(errdef.Error)
 
-		tree := err.UnwrapTree()
+		tree, _ := err.UnwrapTree()
 		data, jsonErr := json.Marshal(tree)
 		if jsonErr != nil {
 			t.Fatalf("failed to marshal tree: %v", jsonErr)
@@ -199,7 +199,7 @@ func TestError_UnwrapTree(t *testing.T) {
 		cause := errors.New("original error")
 		wrapped := def.Wrap(cause).(errdef.Error)
 
-		tree := wrapped.UnwrapTree()
+		tree, _ := wrapped.UnwrapTree()
 		data, jsonErr := json.Marshal(tree)
 		if jsonErr != nil {
 			t.Fatalf("failed to marshal tree: %v", jsonErr)
@@ -228,7 +228,7 @@ func TestError_UnwrapTree(t *testing.T) {
 		wrappedErr := fmt.Errorf("wrapped: %w", baseErr)
 		err := def.Wrap(wrappedErr).(errdef.Error)
 
-		tree := err.UnwrapTree()
+		tree, _ := err.UnwrapTree()
 		data, jsonErr := json.Marshal(tree)
 		if jsonErr != nil {
 			t.Fatalf("failed to marshal tree: %v", jsonErr)
@@ -263,7 +263,7 @@ func TestError_UnwrapTree(t *testing.T) {
 		def := errdef.Define("test_error")
 		joined := def.Join(err1, err2).(errdef.Error)
 
-		tree := joined.UnwrapTree()
+		tree, _ := joined.UnwrapTree()
 		data, jsonErr := json.Marshal(tree)
 		if jsonErr != nil {
 			t.Fatalf("failed to marshal tree: %v", jsonErr)
@@ -299,7 +299,10 @@ func TestError_UnwrapTree(t *testing.T) {
 		def := errdef.Define("test_error")
 		wrapped := def.Wrap(ce1).(errdef.Error)
 
-		tree := wrapped.UnwrapTree()
+		tree, noCycle := wrapped.UnwrapTree()
+		if noCycle {
+			t.Error("want noCycle to be false when circular reference detected")
+		}
 		data, jsonErr := json.Marshal(tree)
 		if jsonErr != nil {
 			t.Fatalf("failed to marshal tree: %v", jsonErr)
@@ -337,7 +340,7 @@ func TestError_UnwrapTree(t *testing.T) {
 		joined := errors.Join(innerErr, stdErr)
 		outerErr := def2.Wrap(joined).(errdef.Error)
 
-		tree := outerErr.UnwrapTree()
+		tree, _ := outerErr.UnwrapTree()
 		data, jsonErr := json.Marshal(tree)
 		if jsonErr != nil {
 			t.Fatalf("failed to marshal tree: %v", jsonErr)
@@ -376,7 +379,7 @@ func TestError_UnwrapTree(t *testing.T) {
 
 		joined := def.Join(sentinelErr, sentinelErr, errors.New("other error")).(errdef.Error)
 
-		tree := joined.UnwrapTree()
+		tree, _ := joined.UnwrapTree()
 		data, jsonErr := json.Marshal(tree)
 		if jsonErr != nil {
 			t.Fatalf("failed to marshal tree: %v", jsonErr)
@@ -412,7 +415,7 @@ func TestError_UnwrapTree(t *testing.T) {
 		def := errdef.Define("test_error", errdef.NoTrace())
 		wrapped := def.Wrap(nilErr).(errdef.Error)
 
-		tree := wrapped.UnwrapTree()
+		tree, _ := wrapped.UnwrapTree()
 		data, jsonErr := json.Marshal(tree)
 		if jsonErr != nil {
 			t.Fatalf("failed to marshal tree: %v", jsonErr)
@@ -427,6 +430,70 @@ func TestError_UnwrapTree(t *testing.T) {
 			map[string]any{
 				"message": "nil receiver error",
 				"type":    "*errdef_test.nilReceiverError",
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", got, want)
+		}
+	})
+
+	t.Run("shared error (not circular)", func(t *testing.T) {
+		err1 := errors.New("err1")
+		err2 := fmt.Errorf("err2: %w", err1)
+		wrap1 := fmt.Errorf("wrap1: %w", err2)
+		wrap2 := fmt.Errorf("wrap2: %w", err2)
+
+		def := errdef.Define("test_error", errdef.NoTrace())
+		joined := def.Join(wrap1, wrap2).(errdef.Error)
+
+		tree, noCycle := joined.UnwrapTree()
+		if !noCycle {
+			t.Error("want noCycle to be true")
+		}
+
+		data, jsonErr := json.Marshal(tree)
+		if jsonErr != nil {
+			t.Fatalf("failed to marshal tree: %v", jsonErr)
+		}
+
+		var got []any
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		want := []any{
+			map[string]any{
+				"message": "wrap1: err2: err1",
+				"type":    "*fmt.wrapError",
+				"causes": []any{
+					map[string]any{
+						"message": "err2: err1",
+						"type":    "*fmt.wrapError",
+						"causes": []any{
+							map[string]any{
+								"message": "err1",
+								"type":    "*errors.errorString",
+							},
+						},
+					},
+				},
+			},
+			map[string]any{
+				"message": "wrap2: err2: err1",
+				"type":    "*fmt.wrapError",
+				"causes": []any{
+					map[string]any{
+						"message": "err2: err1",
+						"type":    "*fmt.wrapError",
+						"causes": []any{
+							map[string]any{
+								"message": "err1",
+								"type":    "*errors.errorString",
+							},
+						},
+					},
+				},
 			},
 		}
 
@@ -1568,7 +1635,7 @@ func TestErrorNode_MarshalJSON(t *testing.T) {
 		def := errdef.Define("test_error", errdef.NoTrace())
 		wrapped := def.Wrap(ce1).(errdef.Error)
 
-		tree := wrapped.UnwrapTree()
+		tree, _ := wrapped.UnwrapTree()
 		data, err := json.Marshal(tree)
 		if err != nil {
 			t.Fatalf("want no error, got %v", err)

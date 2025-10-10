@@ -39,8 +39,11 @@ type (
 		Stack() Stack
 		// Unwrap returns the errors that this error wraps.
 		Unwrap() []error
-		// UnwrapTree returns all causes as a tree structure with cycle detection already performed.
-		UnwrapTree() []ErrorNode
+		// UnwrapTree returns all causes as a tree structure.
+		// When a circular reference is detected, the node that would create the cycle
+		// is excluded, ensuring the result remains acyclic.
+		// The second return value is false if a circular reference was detected.
+		UnwrapTree() (nodes []ErrorNode, noCycle bool)
 	}
 
 	// DebugStacker returns a string that resembles the output of debug.Stack().
@@ -165,9 +168,11 @@ func (e *definedError) Unwrap() []error {
 	return []error{e.cause}
 }
 
-func (e *definedError) UnwrapTree() []ErrorNode {
+func (e *definedError) UnwrapTree() ([]ErrorNode, bool) {
 	visited := make(map[uintptr]struct{})
-	return buildErrorNodes(e.Unwrap(), visited)
+	nodes := buildErrorNodes(e.Unwrap(), visited)
+	_, hasCycle := visited[0]
+	return nodes, !hasCycle
 }
 
 func (e *definedError) Is(target error) bool {
@@ -237,7 +242,7 @@ func (e *definedError) ErrorFormatter(err Error, s fmt.State, verb rune) {
 	case 'v':
 		switch {
 		case s.Flag('+'):
-			causes := err.UnwrapTree()
+			causes, _ := err.UnwrapTree()
 			formatErrorDetails(err, s, "", len(causes) > 0)
 
 			if len(causes) > 0 {
@@ -270,6 +275,7 @@ func (e *definedError) ErrorJSONMarshaler(err Error) ([]byte, error) {
 		fields = err.Fields()
 	}
 
+	causes, _ := err.UnwrapTree()
 	return json.Marshal(struct {
 		Message string      `json:"message"`
 		Kind    string      `json:"kind,omitempty"`
@@ -281,7 +287,7 @@ func (e *definedError) ErrorJSONMarshaler(err Error) ([]byte, error) {
 		Kind:    string(err.Kind()),
 		Fields:  fields,
 		Stack:   err.Stack().Frames(),
-		Causes:  err.UnwrapTree(),
+		Causes:  causes,
 	})
 }
 
@@ -383,11 +389,19 @@ func buildErrorNode(err error, visited map[uintptr]struct{}) (ErrorNode, bool) {
 		}, true
 	}
 
-	var ptr uintptr
 	if val.Kind() == reflect.Pointer || val.Kind() == reflect.Interface ||
 		val.Kind() == reflect.Map || val.Kind() == reflect.Slice ||
 		val.Kind() == reflect.Chan || val.Kind() == reflect.Func {
-		ptr = val.Pointer()
+		ptr := val.Pointer()
+		if ptr != 0 {
+			if _, ok := visited[ptr]; ok {
+				visited[0] = struct{}{} // Mark that a cycle was detected
+				return ErrorNode{}, false
+			}
+
+			visited[ptr] = struct{}{}
+			defer delete(visited, ptr) // Remove from visited after processing this path
+		}
 	}
 
 	var causes []error
@@ -397,13 +411,6 @@ func buildErrorNode(err error, visited map[uintptr]struct{}) (ErrorNode, bool) {
 		}
 	} else if unwrapper, ok := err.(interface{ Unwrap() []error }); ok {
 		causes = unwrapper.Unwrap()
-	}
-
-	if len(causes) > 0 && ptr != 0 {
-		if _, ok := visited[ptr]; ok {
-			return ErrorNode{}, false // Circular reference detected
-		}
-		visited[ptr] = struct{}{}
 	}
 
 	return ErrorNode{
