@@ -80,7 +80,26 @@ func main() {
 }
 ```
 
-> **Note:** `errors.Is` compares the identity of a definition, not its kind string (e.g. `"not_found"`).
+> **Note:** Both `errors.Is` and field extractors compare **identities**, not string names.
+> Each call to `errdef.Define` or `errdef.DefineField` creates a unique identity, even if the kind or field name is the same.
+>
+> ```go
+> // Different definitions with the same kind string
+> ErrNotFound1 := errdef.Define("not_found")
+> ErrNotFound2 := errdef.Define("not_found")
+>
+> err1 := ErrNotFound1.New("not found")
+> errors.Is(err1, ErrNotFound1) // true
+> errors.Is(err1, ErrNotFound2) // false - different definition
+>
+> // Different field definitions with the same name
+> UserID1, UserID1From := errdef.DefineField[string]("user_id")
+> UserID2, UserID2From := errdef.DefineField[string]("user_id")
+>
+> err2 := ErrNotFound1.WithOptions(UserID1("u123")).New("not found")
+> _, ok := UserID1From(err2) // ok: true
+> _, ok = UserID2From(err2)  // ok: false - different field
+> ```
 
 ## Features
 
@@ -282,11 +301,9 @@ codeWithDefault := ErrorCodeFrom.WithDefault(9999)
 // codeWithDefault(errWithoutCode) -> 9999
 ```
 
-#### Extractor Search Policy
-
-Extractors follow the same rules as `errors.As`.
-They search the error chain and extract the value from the first matching `errdef.Error`, then stop searching.
-If you need inner fields at the outer layer, prefer explicitly copying the needed fields when wrapping.
+> **Note:** Extractors follow the same rules as `errors.As`.
+> They search the error chain and extract the value from the first matching `errdef.Error`, then stop searching.
+> If you need inner fields at the outer layer, prefer explicitly copying the needed fields when wrapping.
 
 ### Free-Form Details
 
@@ -332,7 +349,7 @@ func someHandler(ctx context.Context) error {
 
 ### Redaction
 
-Wrap secrets (tokens, emails, IDs, etc.) with `Redacted[T]` to ensure they always render as `"[REDACTED]"` in logs and serialized output (`fmt`, `json`, `slog`).
+Wrap secrets (tokens, emails, IDs, etc.) with `Redacted[T]` to ensure they always render as `"[REDACTED]"` in logs and serialized output (`fmt`, `json`, `slog`, `encoding`).
 The original value remains accessible via `.Value()` for internal use.
 
 ```go
