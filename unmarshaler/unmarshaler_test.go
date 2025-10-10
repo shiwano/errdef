@@ -1325,11 +1325,11 @@ func TestUnmarshaler_Recover(t *testing.T) {
 	})
 }
 
-func TestUnmarshaler_WithStrictFields(t *testing.T) {
+func TestUnmarshaler_WithStrictMode(t *testing.T) {
 	t.Run("returns error for unknown field with strict mode enabled", func(t *testing.T) {
 		def := errdef.Define("test_error")
 		r := resolver.New(def)
-		u := unmarshaler.NewJSON(r, unmarshaler.WithStrictFields())
+		u := unmarshaler.NewJSON(r, unmarshaler.WithStrictMode())
 
 		jsonData := `{
 			"message": "test message",
@@ -1361,7 +1361,7 @@ func TestUnmarshaler_WithStrictFields(t *testing.T) {
 		knownField, knownFieldFrom := errdef.DefineField[string]("known_field")
 		def := errdef.Define("test_error", knownField("default"))
 		r := resolver.New(def)
-		u := unmarshaler.NewJSON(r, unmarshaler.WithStrictFields())
+		u := unmarshaler.NewJSON(r, unmarshaler.WithStrictMode())
 
 		jsonData := `{
 			"message": "test message",
@@ -1387,7 +1387,7 @@ func TestUnmarshaler_WithStrictFields(t *testing.T) {
 
 		additionalField, additionalFieldFrom := errdef.DefineField[string]("additional")
 		u := unmarshaler.NewJSON(r,
-			unmarshaler.WithStrictFields(),
+			unmarshaler.WithStrictMode(),
 			unmarshaler.WithAdditionalFields(additionalField.Key()),
 		)
 
@@ -1406,6 +1406,31 @@ func TestUnmarshaler_WithStrictFields(t *testing.T) {
 
 		if got := additionalFieldFrom.OrZero(unmarshaled); got != "value" {
 			t.Errorf("want %q, got %q", "value", got)
+		}
+	})
+
+	t.Run("returns error for unknown kind with strict mode enabled and FallbackResolver", func(t *testing.T) {
+		knownDef := errdef.Define("known_error")
+		fallbackDef := errdef.Define("")
+		r := resolver.New(knownDef).WithFallback(fallbackDef)
+		u := unmarshaler.NewJSON(r, unmarshaler.WithStrictMode())
+
+		jsonData := `{
+			"message": "test message",
+			"kind": "unknown_error"
+		}`
+
+		_, err := u.Unmarshal([]byte(jsonData))
+		if err == nil {
+			t.Fatal("want error for unknown kind with strict mode enabled")
+		}
+
+		if !errors.Is(err, unmarshaler.ErrUnknownKind) {
+			t.Errorf("want ErrUnknownKind, got %v", err)
+		}
+
+		if got := unmarshaler.KindFromError.OrZero(err); got != "unknown_error" {
+			t.Errorf("want kind %q in error, got %q", "unknown_error", got)
 		}
 	})
 }
@@ -1488,7 +1513,7 @@ func TestUnmarshaler_WithBuiltinFields(t *testing.T) {
 		def := errdef.Define("test_error")
 		r := resolver.New(def)
 		u := unmarshaler.NewJSON(r,
-			unmarshaler.WithStrictFields(),
+			unmarshaler.WithStrictMode(),
 			unmarshaler.WithBuiltinFields(),
 		)
 

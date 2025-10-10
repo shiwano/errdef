@@ -15,7 +15,7 @@ type (
 		decoder             Decoder
 		sentinelErrors      map[sentinelKey]error
 		additionalFieldKeys []errdef.FieldKey
-		strictFields        bool
+		strictMode          bool
 	}
 
 	// Option is a function type for customizing Unmarshaler configuration.
@@ -111,7 +111,7 @@ func (d *Unmarshaler) unmarshal(decoded *DecodedData) (UnmarshaledError, error) 
 				}
 			}
 
-			if !matched && d.strictFields {
+			if !matched && d.strictMode {
 				return nil, ErrUnknownField.WithOptions(
 					fieldNameField(fieldName),
 					kindField(decoded.Kind),
@@ -207,6 +207,13 @@ func (d *Unmarshaler) resolveDefinitionFromMessage(msg string) (*errdef.Definiti
 
 func (d *Unmarshaler) resolveKind(kind errdef.Kind) (*errdef.Definition, error) {
 	if fallback, ok := d.resolver.(*resolver.FallbackResolver); ok {
+		if d.strictMode {
+			def, ok := fallback.ResolveKindStrict(kind)
+			if !ok {
+				return nil, ErrUnknownKind.WithOptions(kindField(kind)).New("unknown kind")
+			}
+			return def, nil
+		}
 		return fallback.ResolveKind(kind), nil
 	}
 	def, ok := d.resolver.ResolveKindStrict(kind)
