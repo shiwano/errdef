@@ -622,7 +622,6 @@ Other operations also have measurable overhead:
 | Feature                         | stdlib | pkg/errors | cockroach<br>db/errors | eris         | errorx | merry v2       | errdef          |
 |---------------------------------|:------:|:----------:|:----------------------:|:------------:|:------:|:--------------:|:---------------:|
 | `errors.Is`/`As` Compatibility  |   ✅   |     ✅     |           ✅           |      ✅      |   ✅   |       ✅       |       ✅        |
-| Def/Instance Separation         |   ❌   |     ❌     |           ❌           |      ❌      |   ❌   |       ❌       |       ✅        |
 | Automatic Stack Traces          |   ❌   |     ✅     |           ✅           |      ✅      |   ✅   |       ✅       |       ✅        |
 | Stack Control (Disable/Depth)   |   ❌   |     ❌     |           ⚠️           |      ❌      |   ❌   |       ✅       |       ✅        |
 | Structured Data                 |   ❌   |     ❌     |           ⚠️           |      ❌      |   ⚠️   |       ⚠️       | ✅ (Type-Safe)  |
