@@ -8,7 +8,7 @@
 It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`, `fmt.Formatter`, `json.Marshaler`, and `slog.LogValuer` — while adding fields, stack traces, and flexible error composition.
 
 > **Status:** The core API is stable, but minor breaking changes may occur before v1.0.0.
->
+
 > **Requirements:** Go 1.25+
 
 ## Table of Contents
@@ -243,7 +243,8 @@ This is useful for creating options with predefined or dynamically generated val
 
 ```go
 var (
-    ErrorCodeAmountTooLarge = ErrorCode.WithValue(2002)
+    errorCode, _            = errdef.DefineField[int]("error_code")
+    ErrorCodeAmountTooLarge = errorCode.WithValue(2002)
 
     errorUniqueID, _ = errdef.DefineField[string]("error_unique_id")
     ErrorUniqueID    = errorUniqueID.WithValueFunc(func() string {
@@ -251,7 +252,7 @@ var (
     })
 )
 
-err := ErrPaymentFailed.With(
+err := ErrPaymentFailed.WithOptions(
     ErrorCodeAmountTooLarge(),
     ErrorUniqueID(),
 ).New("amount too large")
@@ -277,7 +278,7 @@ fallbackCode := ErrorCodeFrom.OrFallback(errWithoutCode, func(err error) int {
 // fallbackCode: 10000
 
 codeWithDefault := ErrorCodeFrom.WithDefault(9999)
-// codeWithDefault(errWithCode) -> 2001
+// codeWithDefault(errWithCode)    -> 2001
 // codeWithDefault(errWithoutCode) -> 9999
 ```
 
@@ -303,7 +304,7 @@ details := errdef.DetailsFrom.OrZero(err)
 // }
 ```
 
-> **Note:** `Details` is a `map[string]any` type, allowing you to attach arbitrary key-value pairs.
+> **Note:** `Details` is derived from a `map[string]any` type and implements `Option`, allowing you to attach arbitrary key-value pairs.
 
 ### Context Integration
 
@@ -503,93 +504,15 @@ func main() {
 
 > **Last updated:** 2025-10-10
 
-`errdef` adds structured error handling on top of Go's standard library. Here's the measured overhead:
+`errdef` adds structured error handling on top of Go's standard library. Here are the key performance metrics:
 
-| Operation        | stdlib  | errdef (default) | errdef (NoTrace) |
-|------------------|---------|------------------|------------------|
-| New              | ~16 ns  | ~287 ns          | ~27 ns           |
-| Wrap             | ~104 ns | ~289 ns          | ~28 ns           |
-| Memory per error | 16-56 B | ~336 B           | ~80 B            |
+| Operation | stdlib  | errdef (NoTrace) | errdef (default) | errdef (dynamic field) |
+|-----------|---------|------------------|------------------|------------------------|
+| New       | ~16 ns  | ~27 ns           | ~287 ns          | ~477 ns                |
+| Wrap      | ~104 ns | ~28 ns           | ~289 ns          | ~479 ns                |
+| Memory    | 16-56 B | ~80 B            | ~336 B           | ~896 B                 |
 
-> Apple M1 Pro, Go 1.25, GOMAXPROCS=1, Stack depth: 32, Memory: benchmem B/op, stdlib: errors.New() / fmt.Errorf("%w")
-
-The main performance cost comes from stack trace capture. Without stack traces, `errdef` adds minimal overhead compared to the standard library.
-
-### When to Use NoTrace()
-
-Stack trace capture takes ~260 ns per error. Use `NoTrace()` to optimize hot paths:
-
-```go
-// ✅ Hot paths (loops, frequently called functions)
-var ErrValidation = errdef.Define("validation", errdef.NoTrace())
-for _, item := range items {
-    if err := validate(item); err != nil {
-        return ErrValidation.Wrap(err) // Fast: ~28 ns overhead
-    }
-}
-
-// ✅ Long-lived errors (cached, stored in memory)
-var ErrCacheExpired = errdef.Define("cache_expired", errdef.NoTrace())
-var cachedErrors = map[string]error{
-    "expired": ErrCacheExpired.New("cache entry expired"),
-}
-
-// ❌ API boundaries, critical errors (keep stack traces!)
-var ErrDatabaseFailure = errdef.Define("db_failure") // ~287 ns overhead
-```
-
-### Performance Best Practices
-
-1. **Default is fine for most cases**: The ~300 ns overhead is negligible unless you're creating thousands of errors per second.
-2. **Optimize hot paths**: Use `NoTrace()` in tight loops or high-frequency code paths where errors are common.
-3. **Minimize dynamic fields**: Using `With()` or `WithOptions()` adds ~190 ns base overhead plus ~50-90 ns per field. For hot paths where fields are constant, prefer defining errors with fields upfront:
-
-   ```go
-   // ✅ Faster: Attach fields to definition upfront
-   var ErrValidation = errdef.Define("validation", errdef.HTTPStatus(400))
-   for _, item := range items {
-       _ = ErrValidation.New("invalid")
-   }
-
-   // ❌ Slower: Attach dynamic fields in hot path
-   var ErrValidation = errdef.Define("validation")
-   for _, item := range items {
-       _ = ErrValidation.WithOptions(errdef.HTTPStatus(400)).New("invalid")
-   }
-   ```
-
-4. **Limit stack depth**: For hot paths where you still want to capture the error origin, use `StackDepth(1)` to keep just the first frame:
-
-   ```go
-   var ErrShallow = errdef.Define("error", errdef.StackDepth(1)) // ~177 ns, ~88 B
-   ```
-
-5. **Break error chains for serialization**: Use `Boundary()` at API boundaries to reduce JSON size and marshal time:
-
-   ```go
-   var ErrAPI = errdef.Define("api_error", errdef.Boundary())
-   err := ErrAPI.Wrap(deepInternalError) // Chain stops here for serialization
-   json.Marshal(err)
-   // Deep chain (10 levels): ~137 µs, ~45 KB
-   // With Boundary (1 level): ~1.4 µs, ~1160 B (99% faster, 97% smaller)
-   ```
-
-### Additional Operations
-
-Other operations also have measurable overhead:
-
-| Operation                              | Time        | Memory |
-|----------------------------------------|-------------|--------|
-| Field extraction                       | ~220 ns     | 32 B   |
-| `slog.LogValue`                        | ~331 ns     | 544 B  |
-| Resolver (kind lookup)                 | ~6-8 ns     | 0 B    |
-| Resolver (field lookup)                | ~213-243 ns | 544 B  |
-| JSON marshal (simple)                  | ~2.1 µs     | 1.7 KB |
-| JSON marshal (NoTrace)                 | ~878 ns     | 752 B  |
-| JSON marshal (deep chain, 10 levels)   | ~162 µs     | 53 KB  |
-| JSON unmarshal (simple)                | ~5.8 µs     | 2.7 KB |
-| JSON unmarshal (deep chain, 10 levels) | ~65 µs      | 47 KB  |
-| JSON round-trip (marshal + unmarshal)  | ~11.8 µs    | 5.6 KB |
+> **Note:** Benchmarked on Apple M1 Pro, Go 1.25 (stack depth: 32)
 
 ### How to Run the Benchmarks
 
@@ -597,7 +520,78 @@ Other operations also have measurable overhead:
 GOMAXPROCS=1 go test -bench=. -benchmem -benchtime=3s ./...
 ```
 
+### Performance Best Practices
+
 In practice, error handling is rarely the bottleneck. Focus on correctness first, then optimize if profiling shows that error creation is a significant cost.
+
+1. **Default is fine for most cases**: The ~300 ns overhead is negligible unless you're creating thousands of errors per second.
+2. **Disable stack traces in hot paths**: Stack trace capture takes ~260 ns per error. Use `NoTrace()` in tight loops or high-frequency code paths where errors are common:
+
+   ```go
+   // ✅ Hot paths (loops, frequently called functions)
+   var ErrValidation = errdef.Define("validation", errdef.NoTrace())
+   for _, item := range items {
+       if err := validate(item); err != nil {
+           return ErrValidation.Wrap(err) // Fast: ~28 ns, ~80 B
+       }
+   }
+
+   // ❌ API boundaries, critical errors (keep stack traces!)
+   var ErrDatabaseFailure = errdef.Define("db_failure") // ~287 ns, ~336 B
+   ```
+
+3. **Minimize dynamic fields**: Using `With()` or `WithOptions()` adds ~190 ns base overhead plus ~50-90 ns per field. For hot paths where fields are constant, prefer defining errors with fields upfront:
+
+   ```go
+   // ✅ Attach fields to definition upfront
+   var ErrInvalidInput = errdef.Define("invalid_input", errdef.HTTPStatus(400), errdef.NoWrap())
+   for _, input := range inputs {
+       if !input.IsValid() {
+           return ErrInvalidInput.New("invalid") // Fast: ~27 ns, ~80 B
+       }
+   }
+
+   // ❌ Attach fields dynamically in hot path
+   var ErrInvalidInput = errdef.Define("invalid_input", errdef.NoWrap())
+   for _, input := range inputs {
+       if !input.IsValid() {
+           return ErrInvalidInput.WithOptions(errdef.HTTPStatus(400)).New("invalid") // ~220 ns, ~640 B
+       }
+   }
+   ```
+
+4. **Limit stack depth**: For hot paths where you still want to capture the error origin, use `StackDepth(1)` to keep just the first frame:
+
+   ```go
+   // ✅ Capture only the immediate origin
+   var ErrDBQuery = errdef.Define("db_query", errdef.StackDepth(1))
+   if err := db.Query(...); err != nil {
+       return ErrDBQuery.Wrap(err) // Fast: ~177 ns, ~88 B
+   }
+
+   // ❌ Keep full stack trace (default depth: 32)
+   var ErrDBQuery = errdef.Define("db_query")
+   if err := db.Query(...); err != nil {
+       return ErrDBQuery.Wrap(err)) // ~287 ns, ~336 B
+   }
+   ```
+
+### Additional Operations
+
+Other operations also have measurable overhead:
+
+| Operation                      | Time        | Memory |
+|--------------------------------|-------------|--------|
+| Detailed Error Formatting      | ~1370 ns    | 1240 B |
+| Structured Logging (`slog`)    | ~331 ns     | 544 B  |
+| Field Extraction               | ~220 ns     | 32 B   |
+| Resolver (kind lookup)         | ~6-8 ns     | 0 B    |
+| Resolver (field lookup)        | ~213-243 ns | 544 B  |
+| JSON Marshaling (NoTrace)      | ~878 ns     | 752 B  |
+| JSON Marshaling (simple)       | ~2.1 µs     | 1.7 KB |
+| JSON Marshaling (deep chain)   | ~162 µs     | 53 KB  |
+| JSON unmarshaling (simple)     | ~5.8 µs     | 2.7 KB |
+| JSON unmarshaling (deep chain) | ~65 µs      | 47 KB  |
 
 ## Library Comparison
 
