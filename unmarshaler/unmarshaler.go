@@ -10,16 +10,28 @@ import (
 
 type (
 	// Unmarshaler unmarshals serialized error data into UnmarshaledError.
-	Unmarshaler struct {
-		resolver        resolver.Resolver
-		decoder         Decoder
+	//
+	// The type parameter T specifies the input data type that the decoder accepts.
+	// This allows type-safe deserialization from various formats beyond []byte,
+	// such as Protocol Buffers messages or other structured data types.
+	//
+	// Common usage:
+	//   - For JSON: Use NewJSON which returns *Unmarshaler[[]byte]
+	//   - For custom formats: Use New with a custom Decoder[T]
+	Unmarshaler[T any] struct {
+		*unmarshaler
+		resolver resolver.Resolver
+		decoder  Decoder[T]
+	}
+
+	// Option is a function type for customizing Unmarshaler configuration.
+	Option func(*unmarshaler)
+
+	unmarshaler struct {
 		sentinelErrors  map[sentinelKey]error
 		customFieldKeys []errdef.FieldKey
 		strictMode      bool
 	}
-
-	// Option is a function type for customizing Unmarshaler configuration.
-	Option func(*Unmarshaler)
 
 	sentinelKey struct {
 		typeName string
@@ -34,24 +46,35 @@ const (
 )
 
 // New creates a new Unmarshaler with the given resolver, decoder, and options.
-func New(resolver resolver.Resolver, decoder Decoder, opts ...Option) *Unmarshaler {
-	u := &Unmarshaler{
-		resolver: resolver,
-		decoder:  decoder,
+//
+// The type parameter T is inferred from the decoder's input type, ensuring
+// type-safe unmarshaling. The decoder function converts input data of type T
+// into a DecodedData structure.
+//
+// For JSON deserialization, consider using NewJSON instead of New directly.
+func New[T any](resolver resolver.Resolver, decoder Decoder[T], opts ...Option) *Unmarshaler[T] {
+	u := &Unmarshaler[T]{
+		unmarshaler: &unmarshaler{},
+		resolver:    resolver,
+		decoder:     decoder,
 	}
 	for _, opt := range opts {
-		opt(u)
+		opt(u.unmarshaler)
 	}
 	return u
 }
 
 // NewJSON creates a new Unmarshaler with a JSON decoder.
-func NewJSON(resolver resolver.Resolver, opts ...Option) *Unmarshaler {
+func NewJSON(resolver resolver.Resolver, opts ...Option) *Unmarshaler[[]byte] {
 	return New(resolver, jsonDecoder, opts...)
 }
 
-// Unmarshal deserializes the given byte data into an UnmarshaledError.
-func (d *Unmarshaler) Unmarshal(data []byte) (UnmarshaledError, error) {
+// Unmarshal deserializes the given data into an UnmarshaledError.
+//
+// The input type T is determined by the decoder provided to New.
+// For Unmarshaler[[]byte] (e.g., from NewJSON), this accepts byte slices.
+// For custom types (e.g., Unmarshaler[*ErrorProto]), this accepts those types directly.
+func (d *Unmarshaler[T]) Unmarshal(data T) (UnmarshaledError, error) {
 	decoded, err := d.decoder(data)
 	if err != nil {
 		return nil, ErrDecodeFailure.Wrap(err)
@@ -59,7 +82,7 @@ func (d *Unmarshaler) Unmarshal(data []byte) (UnmarshaledError, error) {
 	return d.unmarshal(decoded)
 }
 
-func (d *Unmarshaler) unmarshal(decoded *DecodedData) (UnmarshaledError, error) {
+func (d *Unmarshaler[T]) unmarshal(decoded *DecodedData) (UnmarshaledError, error) {
 	def, err := d.resolveKind(errdef.Kind(decoded.Kind))
 	if err != nil {
 		return nil, err
@@ -140,7 +163,7 @@ func (d *Unmarshaler) unmarshal(decoded *DecodedData) (UnmarshaledError, error) 
 	}, nil
 }
 
-func (d *Unmarshaler) unmarshalCause(causeData map[string]any) (error, error) {
+func (d *Unmarshaler[T]) unmarshalCause(causeData map[string]any) (error, error) {
 	causeDecoded := mapToDecodedData(causeData)
 
 	cause, err := d.unmarshal(causeDecoded)
@@ -197,7 +220,7 @@ func (d *Unmarshaler) unmarshalCause(causeData map[string]any) (error, error) {
 	return cause, nil
 }
 
-func (d *Unmarshaler) resolveDefinitionFromMessage(msg string) (*errdef.Definition, bool) {
+func (d *Unmarshaler[T]) resolveDefinitionFromMessage(msg string) (*errdef.Definition, bool) {
 	kind := errdef.Kind(msg)
 	if kind == errdefDefinitionEmptyKindMessage {
 		kind = ""
@@ -205,7 +228,7 @@ func (d *Unmarshaler) resolveDefinitionFromMessage(msg string) (*errdef.Definiti
 	return d.resolver.ResolveKindStrict(kind)
 }
 
-func (d *Unmarshaler) resolveKind(kind errdef.Kind) (*errdef.Definition, error) {
+func (d *Unmarshaler[T]) resolveKind(kind errdef.Kind) (*errdef.Definition, error) {
 	if fallback, ok := d.resolver.(*resolver.FallbackResolver); ok {
 		if d.strictMode {
 			def, ok := fallback.ResolveKindStrict(kind)

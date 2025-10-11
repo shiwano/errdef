@@ -7,19 +7,14 @@ import (
 )
 
 type (
-	// Decoder is a function that decodes error data from bytes into DecodedData.
-	// Custom decoders can be implemented to support different formats (e.g., JSON, XML, protobuf).
+	// Decoder is a function that decodes error data of type T into DecodedData.
 	//
-	// Example JSON decoder:
-	//
-	//	func jsonDecoder(data []byte) (*DecodedData, error) {
-	//		var decoded DecodedData
-	//		if err := json.Unmarshal(data, &decoded); err != nil {
-	//			return nil, err
-	//		}
-	//		return &decoded, nil
-	//	}
-	Decoder func(data []byte) (*DecodedData, error)
+	// The type parameter T specifies the input data type, enabling type-safe
+	// deserialization from various formats beyond []byte. Common examples include:
+	//   - []byte for JSON, XML, or other text-based formats
+	//   - Protocol Buffers messages (e.g., *ErrorProto)
+	//   - Custom structured data types
+	Decoder[T any] func(data T) (*DecodedData, error)
 
 	// DecodedData represents the decoded error information that will be unmarshaled
 	// into an error instance. This structure is designed to be flexible enough to

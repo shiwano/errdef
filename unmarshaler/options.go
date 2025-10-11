@@ -29,7 +29,7 @@ import (
 // this option to allow graceful handling of unknown fields and kinds from
 // different versions.
 func WithStrictMode() Option {
-	return func(u *Unmarshaler) {
+	return func(u *unmarshaler) {
 		u.strictMode = true
 	}
 }
@@ -43,7 +43,7 @@ func WithStrictMode() Option {
 // these custom fields will be allowed while other unknown fields will
 // trigger ErrUnknownField.
 func WithCustomFields(keys ...errdef.FieldKey) Option {
-	return func(u *Unmarshaler) {
+	return func(u *unmarshaler) {
 		u.customFieldKeys = append(u.customFieldKeys, keys...)
 	}
 }
@@ -86,7 +86,7 @@ func WithBuiltinFields() Option {
 // The function panics if duplicate sentinel errors (same type and message)
 // are registered.
 func WithSentinelErrors(errors ...error) Option {
-	return func(u *Unmarshaler) {
+	return func(u *unmarshaler) {
 		if u.sentinelErrors == nil {
 			u.sentinelErrors = make(map[sentinelKey]error)
 		}
