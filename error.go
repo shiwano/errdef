@@ -85,7 +85,7 @@ type (
 	// This interface is used internally in the unmarshaler package.
 	errorExporter interface {
 		ErrorFormatter(err Error, s fmt.State, verb rune)
-		ErrorJSONMarshaler(err Error, causes []ErrorNode) ([]byte, error)
+		ErrorJSONMarshaler(err Error) ([]byte, error)
 		ErrorLogValuer(err Error) slog.Value
 		ErrorTreeBuilder(errs []error) ([]ErrorNode, bool)
 	}
@@ -101,6 +101,20 @@ type (
 	errorTypeNamer struct {
 		msg      string
 		typeName string
+	}
+
+	jsonErrorData struct {
+		Message string      `json:"message"`
+		Kind    string      `json:"kind,omitempty"`
+		Fields  Fields      `json:"fields,omitempty"`
+		Stack   []Frame     `json:"stack,omitempty"`
+		Causes  []ErrorNode `json:"causes,omitempty"`
+	}
+
+	jsonCauseData struct {
+		Message string      `json:"message"`
+		Type    string      `json:"type"`
+		Causes  []ErrorNode `json:"causes,omitempty"`
 	}
 )
 
@@ -166,11 +180,7 @@ func (e *definedError) Unwrap() []error {
 }
 
 func (e *definedError) UnwrapTree() ([]ErrorNode, bool) {
-	errs := e.Unwrap()
-	if len(errs) == 0 {
-		return nil, true
-	}
-	return e.ErrorTreeBuilder(errs)
+	return e.ErrorTreeBuilder(e.Unwrap())
 }
 
 func (e *definedError) Is(target error) bool {
@@ -220,7 +230,7 @@ func (e *definedError) Format(s fmt.State, verb rune) {
 }
 
 func (e *definedError) MarshalJSON() ([]byte, error) {
-	return e.ErrorJSONMarshaler(e, nil)
+	return e.ErrorJSONMarshaler(e)
 }
 
 func (e *definedError) LogValue() slog.Value {
@@ -260,7 +270,7 @@ func (e *definedError) ErrorFormatter(err Error, s fmt.State, verb rune) {
 	}
 }
 
-func (e *definedError) ErrorJSONMarshaler(err Error, causes []ErrorNode) ([]byte, error) {
+func (e *definedError) ErrorJSONMarshaler(err Error) ([]byte, error) {
 	if e.def.jsonMarshaler != nil {
 		return e.def.jsonMarshaler(e)
 	}
@@ -269,18 +279,8 @@ func (e *definedError) ErrorJSONMarshaler(err Error, causes []ErrorNode) ([]byte
 	if err.Fields().Len() > 0 {
 		fields = err.Fields()
 	}
-
-	if len(causes) == 0 {
-		causes, _ = err.UnwrapTree()
-	}
-
-	return json.Marshal(struct {
-		Message string      `json:"message"`
-		Kind    string      `json:"kind,omitempty"`
-		Fields  Fields      `json:"fields,omitempty"`
-		Stack   []Frame     `json:"stack,omitempty"`
-		Causes  []ErrorNode `json:"causes,omitempty"`
-	}{
+	causes, _ := err.UnwrapTree()
+	return json.Marshal(jsonErrorData{
 		Message: err.Error(),
 		Kind:    string(err.Kind()),
 		Fields:  fields,
@@ -332,25 +332,28 @@ func (e *definedError) ErrorTreeBuilder(errs []error) ([]ErrorNode, bool) {
 
 // MarshalJSON implements json.Marshaler for ErrorNode.
 func (n ErrorNode) MarshalJSON() ([]byte, error) {
-	switch te := n.Error.(type) {
+	switch err := n.Error.(type) {
 	case Error:
-		return te.(errorExporter).ErrorJSONMarshaler(te, n.Causes)
+		var fields Fields
+		if err.Fields().Len() > 0 {
+			fields = err.Fields()
+		}
+		causes, _ := err.UnwrapTree()
+		return json.Marshal(jsonErrorData{
+			Message: err.Error(),
+			Kind:    string(err.Kind()),
+			Fields:  fields,
+			Stack:   err.Stack().Frames(),
+			Causes:  causes,
+		})
 	case ErrorTypeNamer:
-		return json.Marshal(struct {
-			Message string      `json:"message"`
-			Type    string      `json:"type"`
-			Causes  []ErrorNode `json:"causes,omitempty"`
-		}{
-			Message: te.Error(),
-			Type:    te.TypeName(),
+		return json.Marshal(jsonCauseData{
+			Message: err.Error(),
+			Type:    err.TypeName(),
 			Causes:  n.Causes,
 		})
 	default:
-		return json.Marshal(struct {
-			Message string      `json:"message"`
-			Type    string      `json:"type"`
-			Causes  []ErrorNode `json:"causes,omitempty"`
-		}{
+		return json.Marshal(jsonCauseData{
 			Message: n.Error.Error(),
 			Type:    fmt.Sprintf("%T", n.Error),
 			Causes:  n.Causes,

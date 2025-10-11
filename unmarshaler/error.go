@@ -36,7 +36,7 @@ type (
 
 	errorExporter interface {
 		ErrorFormatter(err errdef.Error, s fmt.State, verb rune)
-		ErrorJSONMarshaler(err errdef.Error, causes []errdef.ErrorNode) ([]byte, error)
+		ErrorJSONMarshaler(err errdef.Error) ([]byte, error)
 		ErrorLogValuer(err errdef.Error) slog.Value
 		ErrorTreeBuilder(errs []error) ([]errdef.ErrorNode, bool)
 	}
@@ -54,7 +54,6 @@ var (
 	_ json.Marshaler      = (*unmarshaledError)(nil)
 	_ slog.LogValuer      = (*unmarshaledError)(nil)
 	_ causer              = (*unmarshaledError)(nil)
-	_ errorExporter       = (*unmarshaledError)(nil)
 
 	_ errdef.ErrorTypeNamer = (*unknownCauseError)(nil)
 )
@@ -83,9 +82,6 @@ func (e *unmarshaledError) Unwrap() []error {
 }
 
 func (e *unmarshaledError) UnwrapTree() ([]errdef.ErrorNode, bool) {
-	if len(e.causes) == 0 {
-		return nil, true
-	}
 	return e.definedError.(errorExporter).ErrorTreeBuilder(e.causes)
 }
 
@@ -121,7 +117,7 @@ func (e *unmarshaledError) Format(s fmt.State, verb rune) {
 }
 
 func (e *unmarshaledError) MarshalJSON() ([]byte, error) {
-	return e.definedError.(errorExporter).ErrorJSONMarshaler(e, nil)
+	return e.definedError.(errorExporter).ErrorJSONMarshaler(e)
 }
 
 func (e *unmarshaledError) LogValue() slog.Value {
@@ -149,22 +145,6 @@ func (e *unmarshaledError) Cause() error {
 		return nil
 	}
 	return e.causes[0] // return the first cause only
-}
-
-func (e *unmarshaledError) ErrorFormatter(err errdef.Error, s fmt.State, verb rune) {
-	e.definedError.(errorExporter).ErrorFormatter(e, s, verb)
-}
-
-func (e *unmarshaledError) ErrorJSONMarshaler(err errdef.Error, causes []errdef.ErrorNode) ([]byte, error) {
-	return e.definedError.(errorExporter).ErrorJSONMarshaler(e, causes)
-}
-
-func (e *unmarshaledError) ErrorLogValuer(err errdef.Error) slog.Value {
-	return e.definedError.(errorExporter).ErrorLogValuer(e)
-}
-
-func (e *unmarshaledError) ErrorTreeBuilder(errs []error) ([]errdef.ErrorNode, bool) {
-	return e.definedError.(errorExporter).ErrorTreeBuilder(errs)
 }
 
 func (e *unknownCauseError) Error() string {
