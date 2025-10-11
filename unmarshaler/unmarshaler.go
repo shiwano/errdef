@@ -115,13 +115,6 @@ func (d *Unmarshaler[T]) unmarshal(decoded *DecodedData) (UnmarshaledError, erro
 		}
 
 		if !matched {
-			if len(keys) > 0 {
-				if value, ok := def.Fields().Get(keys[0]); ok {
-					fields[keys[0]] = value
-					continue
-				}
-			}
-
 			for _, customKey := range d.customFieldKeys {
 				if customKey.String() == fieldName {
 					if v, ok, err := tryConvertFieldValue(customKey, fieldValue); err != nil {

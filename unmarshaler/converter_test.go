@@ -2,6 +2,7 @@ package unmarshaler_test
 
 import (
 	"encoding/json"
+	"maps"
 	"reflect"
 	"testing"
 
@@ -120,10 +121,9 @@ func TestTryConvertFloat64(t *testing.T) {
 				t.Fatalf("failed to unmarshal: %v", err)
 			}
 
-			fields := unmarshaled.Fields()
-			keys := fields.FindKeys("test")
-
 			if tt.wantOk {
+				fields := unmarshaled.Fields()
+				keys := fields.FindKeys("test")
 				val, ok := fields.Get(keys[0])
 				if !ok {
 					t.Error("want field to be accessible")
@@ -134,16 +134,21 @@ func TestTryConvertFloat64(t *testing.T) {
 				if reflect.ValueOf(val.Value()).IsZero() {
 					t.Errorf("want value to be non-zero, got zero value %v", val.Value())
 				}
+
+				if _, ok := maps.Collect(unmarshaled.UnknownFields())["test"]; ok {
+					t.Error("want field not to be in unknownFields")
+				}
 			} else {
-				val, ok := fields.Get(keys[0])
+				val, ok := maps.Collect(unmarshaled.UnknownFields())["test"]
 				if !ok {
-					t.Error("want field to be accessible")
-				}
-				if reflect.TypeOf(val.Value()) != reflect.TypeOf(tt.fieldType) {
-					t.Errorf("want default value with type %T, got %T", tt.fieldType, val.Value())
-				}
-				if !reflect.ValueOf(val.Value()).IsZero() {
-					t.Errorf("want default value to be zero value, got %v", val.Value())
+					t.Error("want field to be in unknownFields")
+				} else {
+					if reflect.TypeOf(val) != reflect.TypeOf(tt.input) {
+						t.Errorf("want original value type %T, got %T", tt.input, val)
+					}
+					if val != tt.input {
+						t.Errorf("want original value %v, got %v", tt.input, val)
+					}
 				}
 			}
 		})
@@ -662,13 +667,22 @@ func TestTryConvertFieldValue(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		got, ok := intFrom(unmarshaled)
-		if !ok {
-			t.Fatal("want field to be found")
+		_, ok := intFrom(unmarshaled)
+		if ok {
+			t.Error("want field not to be converted")
 		}
 
-		if got != 99 {
-			t.Errorf("want default value %d, got %d", 99, got)
+		fields := unmarshaled.Fields()
+		keys := fields.FindKeys("test")
+		if len(keys) == 0 {
+			t.Fatal("want field to be in unknownFields")
+		}
+		val, ok := fields.Get(keys[0])
+		if !ok {
+			t.Fatal("want field to be accessible")
+		}
+		if val.Value() != "not a number" {
+			t.Errorf("want original value %q, got %v", "not a number", val.Value())
 		}
 	})
 }
@@ -765,13 +779,22 @@ func TestTryConvertNilValue(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		got, ok := configFrom(unmarshaled)
-		if !ok {
-			t.Fatal("want field to be found")
+		_, ok := configFrom(unmarshaled)
+		if ok {
+			t.Error("want field not to be converted from nil")
 		}
 
-		if got.Value != "default" {
-			t.Errorf("want default value, got %v", got)
+		fields := unmarshaled.Fields()
+		keys := fields.FindKeys("config")
+		if len(keys) == 0 {
+			t.Fatal("want field to be in unknownFields")
+		}
+		val, ok := fields.Get(keys[0])
+		if !ok {
+			t.Fatal("want field to be accessible")
+		}
+		if val.Value() != nil {
+			t.Errorf("want nil value, got %v", val.Value())
 		}
 	})
 
@@ -794,14 +817,22 @@ func TestTryConvertNilValue(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		got, ok := idsFrom(unmarshaled)
-		if !ok {
-			t.Fatal("want field to be found")
+		_, ok := idsFrom(unmarshaled)
+		if ok {
+			t.Error("want field not to be converted from nil")
 		}
 
-		want := []int{1, 2, 3}
-		if !reflect.DeepEqual(got, want) {
-			t.Errorf("want default value %v, got %v", want, got)
+		fields := unmarshaled.Fields()
+		keys := fields.FindKeys("ids")
+		if len(keys) == 0 {
+			t.Fatal("want field to be in unknownFields")
+		}
+		val, ok := fields.Get(keys[0])
+		if !ok {
+			t.Fatal("want field to be accessible")
+		}
+		if val.Value() != nil {
+			t.Errorf("want nil value, got %v", val.Value())
 		}
 	})
 
@@ -827,17 +858,22 @@ func TestTryConvertNilValue(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		got, ok := userIDFrom(unmarshaled)
+		_, ok := userIDFrom(unmarshaled)
+		if ok {
+			t.Error("want field not to be converted from nil")
+		}
+
+		fields := unmarshaled.Fields()
+		keys := fields.FindKeys("user_id")
+		if len(keys) == 0 {
+			t.Fatal("want field to be in unknownFields")
+		}
+		val, ok := fields.Get(keys[0])
 		if !ok {
-			t.Fatal("want field to be found")
+			t.Fatal("want field to be accessible")
 		}
-
-		if got == nil {
-			t.Fatal("want non-nil default pointer")
-		}
-
-		if *got != "default" {
-			t.Errorf("want default value %q, got %q", "default", *got)
+		if val.Value() != nil {
+			t.Errorf("want nil value, got %v", val.Value())
 		}
 	})
 }
