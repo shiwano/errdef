@@ -133,8 +133,11 @@ func (d *Unmarshaler[T]) unmarshal(decoded *DecodedData) (UnmarshaledError, erro
 					}
 				}
 			}
+			if matched {
+				continue
+			}
 
-			if !matched && d.strictMode {
+			if d.strictMode {
 				return nil, ErrUnknownField.WithOptions(
 					fieldNameField(fieldName),
 					kindField(decoded.Kind),
