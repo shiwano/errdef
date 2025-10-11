@@ -538,7 +538,7 @@ func TestError_DebugStack(t *testing.T) {
 
 		debugStack := err.DebugStack()
 
-		want := "test message\n\ngoroutine 1 [running]:\ngithub.com/shiwano/errdef_test.TestDebugStacker_DebugStack.func1()"
+		want := "test message\n\ngoroutine 1 [running]:\ngithub.com/shiwano/errdef_test.TestError_DebugStack.func1()"
 		if !strings.HasPrefix(debugStack, want) {
 			t.Errorf("want debug stack to start with %q, but got: %q", want, debugStack)
 		}
@@ -1018,8 +1018,8 @@ func TestError_MarshalJSON(t *testing.T) {
 		}
 
 		funcName, _ := frame0["func"].(string)
-		if !strings.Contains(funcName, "TestMarshaler_MarshalJSON") {
-			t.Errorf("want function name to contain TestMarshaler_MarshalJSON, got %q", funcName)
+		if !strings.Contains(funcName, "TestError_MarshalJSON") {
+			t.Errorf("want function name to contain TestError_MarshalJSON, got %q", funcName)
 		}
 	})
 
