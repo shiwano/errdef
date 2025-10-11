@@ -361,7 +361,11 @@ func (e ErrorNode) LogValue() slog.Value {
 			slog.String("message", te.Error()),
 		}
 		if len(e.Causes) > 0 {
-			attrs = append(attrs, slog.Any("causes", e.Causes))
+			causes := make([]any, len(e.Causes))
+			for i, cause := range e.Causes {
+				causes[i] = slogValueToAny(cause.LogValue())
+			}
+			attrs = append(attrs, slog.Any("causes", causes))
 		}
 		return slog.GroupValue(attrs...)
 	default:
@@ -369,9 +373,26 @@ func (e ErrorNode) LogValue() slog.Value {
 			slog.String("message", e.Error.Error()),
 		}
 		if len(e.Causes) > 0 {
-			attrs = append(attrs, slog.Any("causes", e.Causes))
+			causes := make([]any, len(e.Causes))
+			for i, cause := range e.Causes {
+				causes[i] = slogValueToAny(cause.LogValue())
+			}
+			attrs = append(attrs, slog.Any("causes", causes))
 		}
 		return slog.GroupValue(attrs...)
+	}
+}
+
+func slogValueToAny(v slog.Value) any {
+	switch v.Kind() {
+	case slog.KindGroup:
+		result := make(map[string]any)
+		for _, attr := range v.Group() {
+			result[attr.Key] = slogValueToAny(attr.Value)
+		}
+		return result
+	default:
+		return v.Any()
 	}
 }
 
