@@ -499,7 +499,7 @@ func main() {
 > }
 >
 > // Use it with the unmarshaler
-> u := unmarshaler.New(resolver, errorProtoDecoder)
+> u := unmarshaler.New(resolver, protoDecoder)
 > restored, _ := u.Unmarshal(msg)
 > ```
 >
