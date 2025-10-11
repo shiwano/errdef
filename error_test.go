@@ -1673,7 +1673,6 @@ func TestErrorNode_LogValue(t *testing.T) {
 
 		want := map[string]any{
 			"message": "test error",
-			"type":    "*errors.errorString",
 		}
 
 		if !reflect.DeepEqual(nodeData, want) {
@@ -1707,11 +1706,9 @@ func TestErrorNode_LogValue(t *testing.T) {
 
 		want := map[string]any{
 			"message": "wrapped: standard error",
-			"type":    "*fmt.wrapError",
 			"causes": []any{
 				map[string]any{
 					"message": "standard error",
-					"type":    "*errors.errorString",
 				},
 			},
 		}
@@ -1784,15 +1781,12 @@ func TestErrorNode_LogValue(t *testing.T) {
 
 		want := map[string]any{
 			"message": "level 1",
-			"type":    "*errors.errorString",
 			"causes": []any{
 				map[string]any{
 					"message": "level 2",
-					"type":    "*errors.errorString",
 					"causes": []any{
 						map[string]any{
 							"message": "level 3",
-							"type":    "*errors.errorString",
 						},
 					},
 				},

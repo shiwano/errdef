@@ -359,7 +359,6 @@ func (e ErrorNode) LogValue() slog.Value {
 	case ErrorTypeNamer:
 		attrs := []slog.Attr{
 			slog.String("message", te.Error()),
-			slog.String("type", te.TypeName()),
 		}
 		if len(e.Causes) > 0 {
 			attrs = append(attrs, slog.Any("causes", e.Causes))
@@ -368,7 +367,6 @@ func (e ErrorNode) LogValue() slog.Value {
 	default:
 		attrs := []slog.Attr{
 			slog.String("message", e.Error.Error()),
-			slog.String("type", fmt.Sprintf("%T", e.Error)),
 		}
 		if len(e.Causes) > 0 {
 			attrs = append(attrs, slog.Any("causes", e.Causes))
