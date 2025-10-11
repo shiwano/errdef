@@ -476,7 +476,10 @@ func main() {
 
     // Deserialize JSON back into an errdef.Error
     r := resolver.New(ErrNotFound)
-    u := unmarshaler.NewJSON(r, unmarshaler.WithStandardSentinelErrors())
+    u := unmarshaler.NewJSON(r,
+        unmarshaler.WithBuiltinFields(),
+        unmarshaler.WithStandardSentinelErrors(),
+    )
     restored, _ := u.Unmarshal(data)
 
     fmt.Println(restored.Kind())             // "not_found"
@@ -485,6 +488,22 @@ func main() {
     fmt.Println(errors.Is(restored, io.EOF)) // true
 }
 ```
+
+> **Note:** The `unmarshaler` package is designed to work with any serialization format, not just JSON.
+> You can implement custom `Decoder` functions for formats like Protocol Buffers, XML, MessagePack, or any proprietary format.
+>
+> ```go
+> // Custom decoder for your format
+> func protoDecoder(msg *ErrorProto) (*unmarshaler.DecodedData, error) {
+>     return convertToDecodedData(msg), nil
+> }
+>
+> // Use it with the unmarshaler
+> u := unmarshaler.New(resolver, errorProtoDecoder)
+> restored, _ := u.Unmarshal(msg)
+> ```
+>
+> For a complete example with Protocol Buffers including marshal functions and full round-trip demonstration, see [examples/protobuf](./examples/protobuf/).
 
 ### Ecosystem Integration
 

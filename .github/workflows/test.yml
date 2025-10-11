@@ -22,16 +22,29 @@ jobs:
       with:
         go-version: ${{ matrix.go-version }}
 
-    - name: Run tests
-      run: go test -v ./...
-
-    - name: Check formatting
+    - name: Run tests for all modules
       run: |
-        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
-          echo "The following files are not formatted:"
-          gofmt -s -l .
-          exit 1
-        fi
+        for dir in $(find . -name go.mod -exec dirname {} \;); do
+          echo "Testing in $dir"
+          (cd "$dir" && go test -v ./...)
+        done
 
-    - name: Run go vet
-      run: go vet ./...
+    - name: Check formatting for all modules
+      run: |
+        for dir in $(find . -name go.mod -exec dirname {} \;); do
+          echo "Checking format in $dir"
+          (cd "$dir" && \
+            if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+              echo "The following files are not formatted:"
+              gofmt -s -l .
+              exit 1
+            fi
+          )
+        done
+
+    - name: Run go vet for all modules
+      run: |
+        for dir in $(find . -name go.mod -exec dirname {} \;); do
+          echo "Running vet in $dir"
+          (cd "$dir" && go vet ./...)
+        done
