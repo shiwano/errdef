@@ -11,11 +11,11 @@ import (
 type (
 	// Unmarshaler unmarshals serialized error data into UnmarshaledError.
 	Unmarshaler struct {
-		resolver         resolver.Resolver
-		decoder          Decoder
-		sentinelErrors   map[sentinelKey]error
-		customFieldKeys  []errdef.FieldKey
-		strictMode       bool
+		resolver        resolver.Resolver
+		decoder         Decoder
+		sentinelErrors  map[sentinelKey]error
+		customFieldKeys []errdef.FieldKey
+		strictMode      bool
 	}
 
 	// Option is a function type for customizing Unmarshaler configuration.
