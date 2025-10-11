@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 	"reflect"
+	"strconv"
 
 	"github.com/shiwano/errdef"
 )
@@ -21,6 +22,12 @@ func tryConvertFieldValue(fk errdef.FieldKey, value any) (errdef.FieldValue, boo
 	switch tv := value.(type) {
 	case float64:
 		if v, ok, err := tryConvertFloat64(fk, tv, targetType); err != nil {
+			return nil, false, err
+		} else if ok {
+			return v, true, nil
+		}
+	case int64:
+		if v, ok, err := tryConvertInt64(fk, tv, targetType); err != nil {
 			return nil, false, err
 		} else if ok {
 			return v, true, nil
@@ -115,6 +122,81 @@ func tryConvertFloat64(fk errdef.FieldKey, f64 float64, targetType reflect.Type)
 
 	case reflect.Float64:
 		val := reflect.ValueOf(f64).Convert(targetType).Interface()
+		v, ok := fk.NewValue(val)
+		return v, ok, nil
+	}
+
+	return nil, false, nil
+}
+
+func tryConvertInt64(fk errdef.FieldKey, i64 int64, targetType reflect.Type) (errdef.FieldValue, bool, error) {
+	kind := targetType.Kind()
+
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		var min, max int64
+		switch kind {
+		case reflect.Int:
+			if strconv.IntSize == 64 {
+				min, max = math.MinInt64, math.MaxInt64
+			} else {
+				min, max = math.MinInt32, math.MaxInt32
+			}
+		case reflect.Int8:
+			min, max = math.MinInt8, math.MaxInt8
+		case reflect.Int16:
+			min, max = math.MinInt16, math.MaxInt16
+		case reflect.Int32:
+			min, max = math.MinInt32, math.MaxInt32
+		case reflect.Int64:
+			min, max = math.MinInt64, math.MaxInt64
+		}
+		if i64 < min || i64 > max {
+			return nil, false, nil
+		}
+		val := reflect.ValueOf(i64).Convert(targetType).Interface()
+		v, ok := fk.NewValue(val)
+		return v, ok, nil
+
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		if i64 < 0 {
+			return nil, false, nil
+		}
+		var max uint64
+		switch kind {
+		case reflect.Uint:
+			if strconv.IntSize == 64 {
+				max = math.MaxUint64
+			} else {
+				max = math.MaxUint32
+			}
+		case reflect.Uint8:
+			max = math.MaxUint8
+		case reflect.Uint16:
+			max = math.MaxUint16
+		case reflect.Uint32:
+			max = math.MaxUint32
+		case reflect.Uint64:
+			max = math.MaxUint64
+		}
+		if uint64(i64) > max {
+			return nil, false, nil
+		}
+		val := reflect.ValueOf(i64).Convert(targetType).Interface()
+		v, ok := fk.NewValue(val)
+		return v, ok, nil
+
+	case reflect.Float32:
+		f32 := float32(i64)
+		if int64(f32) != i64 {
+			return nil, false, nil
+		}
+		val := reflect.ValueOf(f32).Convert(targetType).Interface()
+		v, ok := fk.NewValue(val)
+		return v, ok, nil
+
+	case reflect.Float64:
+		val := reflect.ValueOf(float64(i64)).Convert(targetType).Interface()
 		v, ok := fk.NewValue(val)
 		return v, ok, nil
 	}

@@ -217,6 +217,140 @@ func TestTryConvertFloat64(t *testing.T) {
 	})
 }
 
+func TestTryConvertInt64(t *testing.T) {
+	tests := []struct {
+		name      string
+		fieldType any
+		input     int64
+		wantOk    bool
+	}{
+		{"int valid", int(0), 100, true},
+		{"int8 valid", int8(0), 127, true},
+		{"int16 valid", int16(0), 32767, true},
+		{"int32 valid", int32(0), 2147483647, true},
+		{"int64 valid", int64(0), 9223372036854775807, true},
+
+		{"int8 overflow positive", int8(0), 128, false},
+		{"int8 overflow negative", int8(0), -129, false},
+		{"int16 overflow positive", int16(0), 32768, false},
+		{"int16 overflow negative", int16(0), -32769, false},
+		{"int32 overflow positive", int32(0), 2147483648, false},
+		{"int32 overflow negative", int32(0), -2147483649, false},
+
+		{"uint valid", uint(0), 100, true},
+		{"uint8 valid", uint8(0), 255, true},
+		{"uint16 valid", uint16(0), 65535, true},
+		{"uint32 valid", uint32(0), 4294967295, true},
+		{"uint64 valid", uint64(0), 9223372036854775807, true},
+
+		{"uint negative", uint(0), -1, false},
+		{"uint8 negative", uint8(0), -1, false},
+		{"uint16 negative", uint16(0), -1, false},
+		{"uint32 negative", uint32(0), -1, false},
+		{"uint64 negative", uint64(0), -1, false},
+
+		{"uint8 overflow", uint8(0), 256, false},
+		{"uint16 overflow", uint16(0), 65536, false},
+		{"uint32 overflow", uint32(0), 4294967296, false},
+
+		{"float32 valid small", float32(0), 100, true},
+		{"float64 valid", float64(0), 123456789, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			jsonData := map[string]any{
+				"message": "test",
+				"kind":    "test_error",
+				"fields": map[string]any{
+					"test": tt.input,
+				},
+			}
+
+			data, err := json.Marshal(jsonData)
+			if err != nil {
+				t.Fatalf("failed to marshal: %v", err)
+			}
+
+			var def *errdef.Definition
+			switch tt.fieldType.(type) {
+			case int:
+				ctor, _ := errdef.DefineField[int]("test")
+				def = errdef.Define("test_error", ctor(0))
+			case int8:
+				ctor, _ := errdef.DefineField[int8]("test")
+				def = errdef.Define("test_error", ctor(0))
+			case int16:
+				ctor, _ := errdef.DefineField[int16]("test")
+				def = errdef.Define("test_error", ctor(0))
+			case int32:
+				ctor, _ := errdef.DefineField[int32]("test")
+				def = errdef.Define("test_error", ctor(0))
+			case int64:
+				ctor, _ := errdef.DefineField[int64]("test")
+				def = errdef.Define("test_error", ctor(0))
+			case uint:
+				ctor, _ := errdef.DefineField[uint]("test")
+				def = errdef.Define("test_error", ctor(0))
+			case uint8:
+				ctor, _ := errdef.DefineField[uint8]("test")
+				def = errdef.Define("test_error", ctor(0))
+			case uint16:
+				ctor, _ := errdef.DefineField[uint16]("test")
+				def = errdef.Define("test_error", ctor(0))
+			case uint32:
+				ctor, _ := errdef.DefineField[uint32]("test")
+				def = errdef.Define("test_error", ctor(0))
+			case uint64:
+				ctor, _ := errdef.DefineField[uint64]("test")
+				def = errdef.Define("test_error", ctor(0))
+			case float32:
+				ctor, _ := errdef.DefineField[float32]("test")
+				def = errdef.Define("test_error", ctor(0))
+			case float64:
+				ctor, _ := errdef.DefineField[float64]("test")
+				def = errdef.Define("test_error", ctor(0))
+			}
+
+			resolverWithField := resolver.New(def)
+			u := unmarshaler.NewJSON(resolverWithField)
+
+			unmarshaled, err := u.Unmarshal(data)
+			if err != nil {
+				t.Fatalf("failed to unmarshal: %v", err)
+			}
+
+			if tt.wantOk {
+				fields := unmarshaled.Fields()
+				keys := fields.FindKeys("test")
+				val, ok := fields.Get(keys[0])
+				if !ok {
+					t.Error("want field to be accessible")
+				}
+				if reflect.TypeOf(val.Value()) != reflect.TypeOf(tt.fieldType) {
+					t.Errorf("want type %T, got %T", tt.fieldType, val.Value())
+				}
+				if reflect.ValueOf(val.Value()).IsZero() {
+					t.Errorf("want value to be non-zero, got zero value %v", val.Value())
+				}
+
+				if _, ok := maps.Collect(unmarshaled.UnknownFields())["test"]; ok {
+					t.Error("want field not to be in unknownFields")
+				}
+			} else {
+				val, ok := maps.Collect(unmarshaled.UnknownFields())["test"]
+				if !ok {
+					t.Error("want field to be in unknownFields")
+				} else {
+					if val != float64(tt.input) && val != tt.input {
+						t.Errorf("want original value %v, got %v", tt.input, val)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestTryConvertMapToStruct(t *testing.T) {
 	type Address struct {
 		Street string `json:"street"`
