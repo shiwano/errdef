@@ -66,7 +66,7 @@ func New[T any](resolver resolver.Resolver, decoder Decoder[T], opts ...Option) 
 
 // NewJSON creates a new Unmarshaler with a JSON decoder.
 func NewJSON(resolver resolver.Resolver, opts ...Option) *Unmarshaler[[]byte] {
-	return New(resolver, jsonDecoder, opts...)
+	return New(resolver, jsonToDecodedData, opts...)
 }
 
 // Unmarshal deserializes the given data into an UnmarshaledError.

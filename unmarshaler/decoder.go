@@ -60,7 +60,7 @@ type (
 	}
 )
 
-func jsonDecoder(data []byte) (*DecodedData, error) {
+func jsonToDecodedData(data []byte) (*DecodedData, error) {
 	var decoded DecodedData
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		return nil, err
