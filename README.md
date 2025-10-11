@@ -521,7 +521,7 @@ func main() {
 
 ## Performance
 
-> **Last updated:** 2025-10-10
+> **Last updated:** 2025-10-11
 
 `errdef` adds structured error handling on top of Go's standard library. Here are the key performance metrics:
 
@@ -608,7 +608,7 @@ Other operations also have measurable overhead:
 | Resolver (field lookup)        | ~213-243 ns | 544 B  |
 | JSON Marshaling (NoTrace)      | ~878 ns     | 752 B  |
 | JSON Marshaling (simple)       | ~2.1 µs     | 1.7 KB |
-| JSON Marshaling (deep chain)   | ~162 µs     | 53 KB  |
+| JSON Marshaling (deep chain)   | ~130 µs     | 42 KB  |
 | JSON unmarshaling (simple)     | ~5.8 µs     | 2.7 KB |
 | JSON unmarshaling (deep chain) | ~65 µs      | 47 KB  |
 
