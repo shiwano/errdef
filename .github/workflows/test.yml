@@ -24,14 +24,16 @@ jobs:
 
     - name: Run tests for all modules
       run: |
-        for dir in $(find . -name go.mod -exec dirname {} \;); do
+        find . -name go.mod -print0 | while IFS= read -r -d '' modfile; do
+          dir=$(dirname "$modfile")
           echo "Testing in $dir"
           (cd "$dir" && go test -v ./...)
         done
 
     - name: Check formatting for all modules
       run: |
-        for dir in $(find . -name go.mod -exec dirname {} \;); do
+        find . -name go.mod -print0 | while IFS= read -r -d '' modfile; do
+          dir=$(dirname "$modfile")
           echo "Checking format in $dir"
           (cd "$dir" && \
             if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
@@ -44,7 +46,8 @@ jobs:
 
     - name: Run go vet for all modules
       run: |
-        for dir in $(find . -name go.mod -exec dirname {} \;); do
+        find . -name go.mod -print0 | while IFS= read -r -d '' modfile; do
+          dir=$(dirname "$modfile")
           echo "Running vet in $dir"
           (cd "$dir" && go vet ./...)
         done
