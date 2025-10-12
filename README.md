@@ -31,10 +31,9 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
   - [Error Deserialization](#error-deserialization)
   - [Ecosystem Integration](#ecosystem-integration)
   - [Built-in Options](#built-in-options)
+- [Examples](#examples)
 - [Performance](#performance)
 - [Library Comparison](#library-comparison)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Getting Started
 
@@ -500,7 +499,8 @@ func main() {
 >
 > // Use it with the unmarshaler
 > u := unmarshaler.New(resolver, protoDecoder)
-> restored, _ := u.Unmarshal(msg)
+> msg := createProtoMessage() // *ErrorProto
+> restored, _ := u.Unmarshal(msg) // Type-safe: accepts *ErrorProto by generics
 > ```
 >
 > For a complete example with Protocol Buffers including marshal functions and full round-trip demonstration, see [examples/protobuf](./examples/protobuf/).
@@ -537,6 +537,11 @@ func main() {
 | `Formatter(f)`              | Overrides the default `fmt.Formatter` behavior.          | -                |
 | `JSONMarshaler(f)`          | Overrides the default `json.Marshaler` behavior.         | -                |
 | `LogValuer(f)`              | Overrides the default `slog.LogValuer` behavior.         | -                |
+
+## Examples
+
+- **[HTTP API Server](./examples/http_api/)** - Error handling in REST APIs
+- **[Protocol Buffers](./examples/protobuf/)** - Custom serialization with protobuf
 
 ## Performance
 
