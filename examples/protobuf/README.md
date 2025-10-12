@@ -13,7 +13,6 @@ func protoDecoder(msg *ErrorProto) (*unmarshaler.DecodedData, error) {
     Kind:    errdef.Kind(msg.Kind),
   }
 
-  // Convert fields
   if len(msg.Fields) > 0 {
     d.Fields = make(map[string]any)
     for k, v := range msg.Fields {
@@ -25,7 +24,6 @@ func protoDecoder(msg *ErrorProto) (*unmarshaler.DecodedData, error) {
     }
   }
 
-  // Convert stack trace
   if len(msg.Stack) > 0 {
     d.Stack = make([]errdef.Frame, len(msg.Stack))
     for i, frame := range msg.Stack {
@@ -37,15 +35,14 @@ func protoDecoder(msg *ErrorProto) (*unmarshaler.DecodedData, error) {
     }
   }
 
-  // Convert causes
   if len(msg.Causes) > 0 {
-    d.Causes = make([]map[string]any, len(msg.Causes))
+    d.Causes = make([]*unmarshaler.DecodedData, len(msg.Causes))
     for i, cause := range msg.Causes {
-      causeMap, err := causeProtoToMap(cause)
+      causeData, err := causeProtoToDecodedData(cause)
       if err != nil {
         return nil, err
       }
-      d.Causes[i] = causeMap
+      d.Causes[i] = causeData
     }
   }
   return d, nil
