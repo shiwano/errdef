@@ -378,7 +378,11 @@ func TestUnmarshaler_Fields_Redacted(t *testing.T) {
 	}
 
 	t.Run("redacted field is accessible via Fields.Get", func(t *testing.T) {
-		if value, ok := unmarshaled.Fields().Get(password.Key()); !ok {
+		keys := unmarshaled.Fields().FindKeys("password")
+		if len(keys) == 0 {
+			t.Fatal("want password field to be found")
+		}
+		if value, ok := unmarshaled.Fields().Get(keys[0]); !ok {
 			t.Error("want password to be accessible via Fields.Get")
 		} else if value.Value() != "[REDACTED]" {
 			t.Errorf("want password value %q, got %q", "[REDACTED]", value.Value())

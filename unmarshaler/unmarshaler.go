@@ -99,6 +99,8 @@ func (d *Unmarshaler[T]) unmarshal(decoded *DecodedData) (UnmarshaledError, erro
 		keys := def.Fields().FindKeys(fieldName)
 		matched := false
 
+		// Redacted fields are stored in unknownFields to preserve their type information loss.
+		// They can be accessed via FindKeys() followed by Get() with the returned unmarshaledFieldKey.
 		if s, ok := fieldValue.(string); ok && s == redactedStr {
 			unknownFields[fieldName] = fieldValue
 			continue
