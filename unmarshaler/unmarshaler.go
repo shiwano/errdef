@@ -1,6 +1,7 @@
 package unmarshaler
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 
@@ -42,7 +43,11 @@ type (
 const (
 	errdefDefinitionTypeName         = "*errdef.Definition"
 	errdefDefinitionEmptyKindMessage = "<unnamed>"
-	redactedStr                      = "[REDACTED]"
+)
+
+var (
+	redactedStr   = errdef.Redact[any](nil).String()
+	redactedBytes = []byte("\"" + redactedStr + "\"")
 )
 
 // New creates a new Unmarshaler with the given resolver, decoder, and options.
@@ -101,9 +106,17 @@ func (d *Unmarshaler[T]) unmarshal(decoded *DecodedData) (UnmarshaledError, erro
 
 		// Redacted fields are stored in unknownFields to preserve their type information loss.
 		// They can be accessed via FindKeys() followed by Get() with the returned unmarshaledFieldKey.
-		if s, ok := fieldValue.(string); ok && s == redactedStr {
-			unknownFields[fieldName] = fieldValue
-			continue
+		switch v := fieldValue.(type) {
+		case string:
+			if v == redactedStr {
+				unknownFields[fieldName] = redactedStr
+				continue
+			}
+		case []byte:
+			if bytes.Equal(v, redactedBytes) {
+				unknownFields[fieldName] = redactedStr
+				continue
+			}
 		}
 
 		for _, key := range keys {
