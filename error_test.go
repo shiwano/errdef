@@ -1526,7 +1526,7 @@ func TestErrorNode_MarshalJSON(t *testing.T) {
 
 		node := errdef.ErrorNode{
 			Error: wrappedErr,
-			Causes: []errdef.ErrorNode{
+			Causes: []*errdef.ErrorNode{
 				{Error: stdErr},
 			},
 		}
@@ -1564,10 +1564,10 @@ func TestErrorNode_MarshalJSON(t *testing.T) {
 
 		node := errdef.ErrorNode{
 			Error: err1,
-			Causes: []errdef.ErrorNode{
+			Causes: []*errdef.ErrorNode{
 				{
 					Error: err2,
-					Causes: []errdef.ErrorNode{
+					Causes: []*errdef.ErrorNode{
 						{Error: err3},
 					},
 				},
@@ -1686,7 +1686,7 @@ func TestErrorNode_LogValue(t *testing.T) {
 
 		node := errdef.ErrorNode{
 			Error: wrappedErr,
-			Causes: []errdef.ErrorNode{
+			Causes: []*errdef.ErrorNode{
 				{Error: stdErr},
 			},
 		}
@@ -1756,10 +1756,10 @@ func TestErrorNode_LogValue(t *testing.T) {
 
 		node := errdef.ErrorNode{
 			Error: err1,
-			Causes: []errdef.ErrorNode{
+			Causes: []*errdef.ErrorNode{
 				{
 					Error: err2,
-					Causes: []errdef.ErrorNode{
+					Causes: []*errdef.ErrorNode{
 						{Error: err3},
 					},
 				},

@@ -43,7 +43,7 @@ type (
 		// When a circular reference is detected, the node that would create the cycle
 		// is excluded, ensuring the result remains acyclic.
 		// The second return value is false if a circular reference was detected.
-		UnwrapTree() (nodes []ErrorNode, noCycle bool)
+		UnwrapTree() (nodes []*ErrorNode, noCycle bool)
 	}
 
 	// ErrorNode represents a node in the cause tree with cycle detection already performed.
@@ -51,7 +51,7 @@ type (
 		// Error is the error at this node.
 		Error error
 		// Causes are the nested causes of this error.
-		Causes []ErrorNode
+		Causes []*ErrorNode
 	}
 
 	// ErrorTypeNamer is a simple error implementation that wraps a message and a type name.
@@ -87,7 +87,7 @@ type (
 		ErrorFormatter(err Error, s fmt.State, verb rune)
 		ErrorJSONMarshaler(err Error) ([]byte, error)
 		ErrorLogValuer(err Error) slog.Value
-		ErrorTreeBuilder(errs []error) ([]ErrorNode, bool)
+		ErrorTreeBuilder(errs []error) ([]*ErrorNode, bool)
 	}
 
 	definedError struct {
@@ -104,17 +104,17 @@ type (
 	}
 
 	jsonErrorData struct {
-		Message string      `json:"message"`
-		Kind    string      `json:"kind,omitempty"`
-		Fields  Fields      `json:"fields,omitempty"`
-		Stack   []Frame     `json:"stack,omitempty"`
-		Causes  []ErrorNode `json:"causes,omitempty"`
+		Message string       `json:"message"`
+		Kind    string       `json:"kind,omitempty"`
+		Fields  Fields       `json:"fields,omitempty"`
+		Stack   []Frame      `json:"stack,omitempty"`
+		Causes  []*ErrorNode `json:"causes,omitempty"`
 	}
 
 	jsonCauseData struct {
-		Message string      `json:"message"`
-		Type    string      `json:"type"`
-		Causes  []ErrorNode `json:"causes,omitempty"`
+		Message string       `json:"message"`
+		Type    string       `json:"type"`
+		Causes  []*ErrorNode `json:"causes,omitempty"`
 	}
 )
 
@@ -179,7 +179,7 @@ func (e *definedError) Unwrap() []error {
 	return []error{e.cause}
 }
 
-func (e *definedError) UnwrapTree() ([]ErrorNode, bool) {
+func (e *definedError) UnwrapTree() ([]*ErrorNode, bool) {
 	return e.ErrorTreeBuilder(e.Unwrap())
 }
 
@@ -323,7 +323,7 @@ func (e *definedError) ErrorLogValuer(err Error) slog.Value {
 	return slog.GroupValue(attrs...)
 }
 
-func (e *definedError) ErrorTreeBuilder(errs []error) ([]ErrorNode, bool) {
+func (e *definedError) ErrorTreeBuilder(errs []error) ([]*ErrorNode, bool) {
 	visited := make(map[uintptr]struct{})
 	nodes := buildErrorNodes(errs, visited)
 	_, hasCycle := visited[0]
@@ -414,12 +414,12 @@ func (e errorTypeNamer) TypeName() string {
 	return e.typeName
 }
 
-func buildErrorNodes(causes []error, visited map[uintptr]struct{}) []ErrorNode {
+func buildErrorNodes(causes []error, visited map[uintptr]struct{}) []*ErrorNode {
 	if len(causes) == 0 {
 		return nil
 	}
 
-	nodes := make([]ErrorNode, 0, len(causes))
+	nodes := make([]*ErrorNode, 0, len(causes))
 	for _, c := range causes {
 		if c == nil {
 			continue
@@ -431,10 +431,10 @@ func buildErrorNodes(causes []error, visited map[uintptr]struct{}) []ErrorNode {
 	return nodes
 }
 
-func buildErrorNode(err error, visited map[uintptr]struct{}) (ErrorNode, bool) {
+func buildErrorNode(err error, visited map[uintptr]struct{}) (*ErrorNode, bool) {
 	val := reflect.ValueOf(err)
 	if !val.IsValid() {
-		return ErrorNode{
+		return &ErrorNode{
 			Error: errorTypeNamer{
 				msg:      "<invalid>",
 				typeName: fmt.Sprintf("%T", err),
@@ -449,7 +449,7 @@ func buildErrorNode(err error, visited map[uintptr]struct{}) (ErrorNode, bool) {
 		if ptr != 0 {
 			if _, ok := visited[ptr]; ok {
 				visited[0] = struct{}{} // Mark that a cycle was detected
-				return ErrorNode{}, false
+				return nil, false
 			}
 
 			visited[ptr] = struct{}{}
@@ -466,7 +466,7 @@ func buildErrorNode(err error, visited map[uintptr]struct{}) (ErrorNode, bool) {
 		causes = unwrapper.Unwrap()
 	}
 
-	return ErrorNode{
+	return &ErrorNode{
 		Error:  err,
 		Causes: buildErrorNodes(causes, visited),
 	}, true
@@ -549,7 +549,7 @@ func formatCausesHeader(s io.Writer, indent string, count int) {
 	_, _ = io.WriteString(s, ")")
 }
 
-func formatErrorNodes(nodes []ErrorNode, s io.Writer, indent string) {
+func formatErrorNodes(nodes []*ErrorNode, s io.Writer, indent string) {
 	for i, node := range nodes {
 		_, _ = io.WriteString(s, "\n")
 		_, _ = io.WriteString(s, indent)

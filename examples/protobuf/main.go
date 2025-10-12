@@ -97,7 +97,7 @@ func marshalProto(e errdef.Error) ([]byte, error) {
 	return proto.Marshal(msg)
 }
 
-func errorNodeToCauseProto(node errdef.ErrorNode) (*CauseProto, error) {
+func errorNodeToCauseProto(node *errdef.ErrorNode) (*CauseProto, error) {
 	cp := &CauseProto{
 		Message: node.Error.Error(),
 	}
