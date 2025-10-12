@@ -161,38 +161,30 @@ func (d *Unmarshaler[T]) unmarshal(decoded *DecodedData) (UnmarshaledError, erro
 	}, nil
 }
 
-func (d *Unmarshaler[T]) unmarshalCause(causeData map[string]any) (error, error) {
-	causeDecoded := mapToDecodedData(causeData)
-
-	cause, err := d.unmarshal(causeDecoded)
+func (d *Unmarshaler[T]) unmarshalCause(causeData *DecodedData) (error, error) {
+	cause, err := d.unmarshal(causeData)
 	if err != nil {
 		if errors.Is(err, ErrInternal) {
 			return nil, ErrInternal.Wrapf(err, "failed to unmarshal cause data")
 		}
 
-		msg, hasMessage := causeData["message"].(string)
-		if !hasMessage {
-			msg = fmt.Sprintf("<unknown: %v>", causeData)
+		msg := causeData.Message
+		if msg == "" {
+			msg = fmt.Sprintf("<unknown: %+v>", causeData)
 		}
 
-		typeName, hasTypeName := causeData["type"].(string)
-		if !hasTypeName {
+		typeName := causeData.Type
+		if typeName == "" {
 			typeName = "<unknown>"
 		}
 
 		var nestedCauses []error
-		if causesData, hasCauses := causeData["causes"].([]any); hasCauses {
-			for _, nestedCauseData := range causesData {
-				nestedCauseMap, ok := nestedCauseData.(map[string]any)
-				if !ok {
-					continue
-				}
-				nestedCause, err := d.unmarshalCause(nestedCauseMap)
-				if err != nil {
-					return nil, err
-				}
-				nestedCauses = append(nestedCauses, nestedCause)
+		for _, nestedCauseData := range causeData.Causes {
+			nestedCause, err := d.unmarshalCause(nestedCauseData)
+			if err != nil {
+				return nil, err
 			}
+			nestedCauses = append(nestedCauses, nestedCause)
 		}
 
 		if len(nestedCauses) == 0 {

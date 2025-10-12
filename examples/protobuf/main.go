@@ -174,13 +174,55 @@ func protoDecoder(msg *ErrorProto) (*unmarshaler.DecodedData, error) {
 	}
 
 	if len(msg.Causes) > 0 {
-		d.Causes = make([]map[string]any, len(msg.Causes))
+		d.Causes = make([]*unmarshaler.DecodedData, len(msg.Causes))
 		for i, cause := range msg.Causes {
-			causeMap, err := causeProtoToMap(cause)
+			causeData, err := causeProtoToDecodedData(cause)
 			if err != nil {
 				return nil, err
 			}
-			d.Causes[i] = causeMap
+			d.Causes[i] = causeData
+		}
+	}
+	return d, nil
+}
+
+func causeProtoToDecodedData(cp *CauseProto) (*unmarshaler.DecodedData, error) {
+	d := &unmarshaler.DecodedData{
+		Message: cp.Message,
+		Kind:    errdef.Kind(cp.Kind),
+		Type:    cp.Type,
+	}
+
+	if len(cp.Fields) > 0 {
+		d.Fields = make(map[string]any)
+		for k, v := range cp.Fields {
+			fv, err := fieldValueToAny(v)
+			if err != nil {
+				return nil, err
+			}
+			d.Fields[k] = fv
+		}
+	}
+
+	if len(cp.Stack) > 0 {
+		d.Stack = make([]errdef.Frame, len(cp.Stack))
+		for i, frame := range cp.Stack {
+			d.Stack[i] = errdef.Frame{
+				Func: frame.Func,
+				File: frame.File,
+				Line: int(frame.Line),
+			}
+		}
+	}
+
+	if len(cp.Causes) > 0 {
+		d.Causes = make([]*unmarshaler.DecodedData, len(cp.Causes))
+		for i, cause := range cp.Causes {
+			causeData, err := causeProtoToDecodedData(cause)
+			if err != nil {
+				return nil, err
+			}
+			d.Causes[i] = causeData
 		}
 	}
 	return d, nil
@@ -252,55 +294,4 @@ func fieldValueToAny(fv *FieldValue) (any, error) {
 	default:
 		return nil, fmt.Errorf("unknown field value type: %T", fv.Value)
 	}
-}
-
-func causeProtoToMap(cp *CauseProto) (map[string]any, error) {
-	m := make(map[string]any)
-
-	if cp.Message != "" {
-		m["message"] = cp.Message
-	}
-	if cp.Kind != "" {
-		m["kind"] = cp.Kind
-	}
-	if cp.Type != "" {
-		m["type"] = cp.Type
-	}
-
-	if len(cp.Fields) > 0 {
-		fields := make(map[string]any)
-		for k, v := range cp.Fields {
-			fv, err := fieldValueToAny(v)
-			if err != nil {
-				return nil, err
-			}
-			fields[k] = fv
-		}
-		m["fields"] = fields
-	}
-
-	if len(cp.Stack) > 0 {
-		stack := make([]any, len(cp.Stack))
-		for i, frame := range cp.Stack {
-			stack[i] = map[string]any{
-				"func": frame.Func,
-				"file": frame.File,
-				"line": float64(frame.Line),
-			}
-		}
-		m["stack"] = stack
-	}
-
-	if len(cp.Causes) > 0 {
-		causes := make([]any, len(cp.Causes))
-		for i, cause := range cp.Causes {
-			causeMap, err := causeProtoToMap(cause)
-			if err != nil {
-				return nil, err
-			}
-			causes[i] = causeMap
-		}
-		m["causes"] = causes
-	}
-	return m, nil
 }

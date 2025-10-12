@@ -57,17 +57,13 @@ func xmlDecoder(data []byte) (*unmarshaler.DecodedData, error) {
 	}
 
 	if len(xmlData.Causes) > 0 {
-		decoded.Causes = make([]map[string]any, len(xmlData.Causes))
+		decoded.Causes = make([]*unmarshaler.DecodedData, len(xmlData.Causes))
 		for i, c := range xmlData.Causes {
-			cause := map[string]any{
-				"message": c.Message,
-				"kind":    c.Kind,
-			}
-			if c.Type != "" {
-				cause["type"] = c.Type
-			}
-			if c.Fields != nil {
-				cause["fields"] = c.Fields
+			cause := &unmarshaler.DecodedData{
+				Message: c.Message,
+				Kind:    errdef.Kind(c.Kind),
+				Type:    c.Type,
+				Fields:  c.Fields,
 			}
 			decoded.Causes[i] = cause
 		}
@@ -243,9 +239,9 @@ func TestXMLDecoder_UnknownCauseError_WithoutMessage(t *testing.T) {
 		return &unmarshaler.DecodedData{
 			Message: "outer message",
 			Kind:    "test_error",
-			Causes: []map[string]any{
+			Causes: []*unmarshaler.DecodedData{
 				{
-					"type": "CustomError",
+					Type: "CustomError",
 				},
 			},
 		}, nil
@@ -263,7 +259,7 @@ func TestXMLDecoder_UnknownCauseError_WithoutMessage(t *testing.T) {
 	}
 
 	got := causes[0].Error()
-	want := "<unknown: map[type:CustomError]>"
+	want := "<unknown: &{Message: Kind: Type:CustomError Fields:map[] Stack:[] Causes:[]}>"
 	if got != want {
 		t.Errorf("want cause message %q, got %q", want, got)
 	}
