@@ -35,11 +35,11 @@ func (f *fields) Get(key errdef.FieldKey) (errdef.FieldValue, bool) {
 	if v, ok := f.fields[key]; ok {
 		return v, true
 	}
-	// Only allow access to unknownFields via unmarshaledFieldKey.
-	// To access unknown or redacted fields, use FindKeys to get the appropriate key first.
-	if _, ok := key.(unmarshaledFieldKey); ok {
-		if v, ok := f.unknownFields[key.String()]; ok {
+	if v, ok := f.unknownFields[key.String()]; ok {
+		if _, ok := key.(unmarshaledFieldKey); ok {
 			return &unmarshaledFieldValue{value: v}, true
+		} else if tv, ok, err := tryConvertFieldValue(key, v); ok && err == nil {
+			return tv, true
 		}
 	}
 	return nil, false
