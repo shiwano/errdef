@@ -46,6 +46,20 @@ type (
 		UnwrapTree() (nodes []ErrorNode, noCycle bool)
 	}
 
+	// ErrorNode represents a node in the cause tree with cycle detection already performed.
+	ErrorNode struct {
+		// Error is the error at this node.
+		Error error
+		// Causes are the nested causes of this error.
+		Causes []ErrorNode
+	}
+
+	// ErrorTypeNamer is a simple error implementation that wraps a message and a type name.
+	ErrorTypeNamer interface {
+		error
+		TypeName() string
+	}
+
 	// DebugStacker returns a string that resembles the output of debug.Stack().
 	// This is useful for integrating with Google Cloud Error Reporting.
 	// See: https://cloud.google.com/error-reporting/reference/rest/v1beta1/projects.events/report#ReportedErrorEvent
@@ -65,20 +79,6 @@ type (
 	// See: https://github.com/golang/go/issues/31778
 	causer interface {
 		Cause() error
-	}
-
-	// ErrorNode represents a node in the cause tree with cycle detection already performed.
-	ErrorNode struct {
-		// Error is the error at this node.
-		Error error
-		// Causes are the nested causes of this error.
-		Causes []ErrorNode
-	}
-
-	// ErrorTypeNamer is a simple error implementation that wraps a message and a type name.
-	ErrorTypeNamer interface {
-		error
-		TypeName() string
 	}
 
 	// errorExporter defines methods for exporting error information in various formats.
