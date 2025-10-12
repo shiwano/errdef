@@ -39,6 +39,7 @@ func TestFields_Defined(t *testing.T) {
 }
 
 func TestFields_Unknown(t *testing.T) {
+	_, anotherFieldFrom := errdef.DefineField[int]("another_field")
 	def := errdef.Define("test_error")
 	r := resolver.New(def)
 	u := unmarshaler.NewJSON(r)
@@ -74,6 +75,11 @@ func TestFields_Unknown(t *testing.T) {
 
 	if value.Value() != "unknown_value" {
 		t.Errorf("want value %q, got %v", "unknown_value", value.Value())
+	}
+
+	anotherValue, ok := anotherFieldFrom(unmarshaled)
+	if !ok || anotherValue != 123 {
+		t.Errorf("want another_field %d, got %d (ok=%v)", 123, anotherValue, ok)
 	}
 }
 
