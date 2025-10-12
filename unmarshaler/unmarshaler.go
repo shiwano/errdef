@@ -40,10 +40,7 @@ type (
 	}
 )
 
-const (
-	errdefDefinitionTypeName         = "*errdef.Definition"
-	errdefDefinitionEmptyKindMessage = "<unnamed>"
-)
+const errdefDefinitionTypeName = "*errdef.Definition"
 
 var (
 	redactedStr   = errdef.Redact[any](nil).String()
@@ -224,11 +221,7 @@ func (d *Unmarshaler[T]) unmarshalCause(causeData *DecodedData) (error, error) {
 }
 
 func (d *Unmarshaler[T]) resolveDefinitionFromMessage(msg string) (*errdef.Definition, bool) {
-	kind := errdef.Kind(msg)
-	if kind == errdefDefinitionEmptyKindMessage {
-		kind = ""
-	}
-	return d.resolver.ResolveKindStrict(kind)
+	return d.resolver.ResolveKindStrict(errdef.Kind(msg))
 }
 
 func (d *Unmarshaler[T]) resolveKind(kind errdef.Kind) (*errdef.Definition, error) {

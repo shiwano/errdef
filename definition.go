@@ -74,9 +74,6 @@ func (d *Definition) Kind() Kind {
 // Error returns the string representation of this error definition.
 // This makes Definition implement the error interface.
 func (d *Definition) Error() string {
-	if d.kind == "" {
-		return "<unnamed>"
-	}
 	return string(d.kind)
 }
 

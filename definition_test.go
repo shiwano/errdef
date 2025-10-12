@@ -19,22 +19,12 @@ func TestDefinition_Kind(t *testing.T) {
 }
 
 func TestDefinition_Error(t *testing.T) {
-	t.Run("with kind", func(t *testing.T) {
-		kind := errdef.Kind("test_error")
-		def := errdef.Define(kind)
+	kind := errdef.Kind("test_error")
+	def := errdef.Define(kind)
 
-		if def.Error() != "test_error" {
-			t.Errorf("want error string %q, got %q", "test_error", def.Error())
-		}
-	})
-
-	t.Run("empty kind", func(t *testing.T) {
-		def := errdef.Define("")
-
-		if def.Error() != "<unnamed>" {
-			t.Errorf("want error string %q, got %q", "<unnamed>", def.Error())
-		}
-	})
+	if def.Error() != "test_error" {
+		t.Errorf("want error string %q, got %q", "test_error", def.Error())
+	}
 }
 
 func TestDefinition_With(t *testing.T) {
