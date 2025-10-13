@@ -27,6 +27,7 @@ func main() {
 	fmt.Printf("original error: %+v\n", orig)
 	fmt.Printf("original error user_id: %s\n", UserIDFrom.OrZero(orig))
 	fmt.Printf("original error details: %+v\n", errdef.DetailsFrom.OrZero(orig))
+	fmt.Printf("original error is ErrNotFound: %v\n", errors.Is(orig, ErrNotFound))
 	fmt.Printf("original error is io.EOF: %v\n", errors.Is(orig, io.EOF))
 
 	protoBytes, err := marshalProto(orig.(errdef.Error))
@@ -53,6 +54,7 @@ func main() {
 	fmt.Printf("restored error: %+v\n", restored)
 	fmt.Printf("restored error user_id: %s\n", UserIDFrom.OrZero(restored))
 	fmt.Printf("restored error details: %+v\n", errdef.DetailsFrom.OrZero(restored))
+	fmt.Printf("restored error is ErrNotFound: %v\n", errors.Is(restored, ErrNotFound))
 	fmt.Printf("restored error is io.EOF: %v\n", errors.Is(restored, io.EOF))
 }
 
