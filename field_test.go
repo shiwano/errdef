@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"log/slog"
-	"maps"
 	"reflect"
 	"testing"
 
@@ -29,14 +28,18 @@ func TestFields_Get(t *testing.T) {
 	})
 
 	t.Run("non-existing key", func(t *testing.T) {
+		ctor, _ := errdef.DefineField[string]("test_field")
 		def := errdef.Define("test_error")
 		err := def.New("test message")
 
 		fields := err.(errdef.Error).Fields()
 
-		collected := maps.Collect(fields.All())
-		if len(collected) != 0 {
-			t.Errorf("want 0 fields, got %d", len(collected))
+		value, ok := fields.Get(ctor.Key())
+		if ok {
+			t.Fatal("want field to not be found via Fields.Get")
+		}
+		if value != nil {
+			t.Errorf("want nil value for non-existing field, got %v", value)
 		}
 	})
 

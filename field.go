@@ -89,7 +89,10 @@ func newFields() *fields {
 
 func (f *fields) Get(key FieldKey) (FieldValue, bool) {
 	v, ok := f.data[key]
-	return v.value, ok
+	if !ok {
+		return nil, false
+	}
+	return v.value, true
 }
 
 func (f *fields) FindKeys(name string) []FieldKey {
