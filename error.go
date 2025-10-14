@@ -42,16 +42,22 @@ type (
 		// UnwrapTree returns all causes as a tree structure.
 		// When a circular reference is detected, the node that would create the cycle
 		// is excluded, ensuring the result remains acyclic.
-		// The second return value is false if a circular reference was detected.
-		UnwrapTree() (nodes []*ErrorNode, noCycle bool)
+		UnwrapTree() ErrorNodes
 	}
+
+	ErrorNodes []*ErrorNode
 
 	// ErrorNode represents a node in the cause tree with cycle detection already performed.
 	ErrorNode struct {
 		// Error is the error at this node.
 		Error error
 		// Causes are the nested causes of this error.
-		Causes []*ErrorNode
+		Causes ErrorNodes
+
+		// ptr is the pointer value of the error, used internally for cycle detection.
+		ptr uintptr
+		// visited is used internally to track visited errors during tree construction.
+		visited map[uintptr]uintptr
 	}
 
 	// ErrorTypeNamer is a simple error implementation that wraps a message and a type name.
@@ -87,7 +93,7 @@ type (
 		ErrorFormatter(err Error, s fmt.State, verb rune)
 		ErrorJSONMarshaler(err Error) ([]byte, error)
 		ErrorLogValuer(err Error) slog.Value
-		ErrorTreeBuilder(errs []error) ([]*ErrorNode, bool)
+		ErrorTreeBuilder(errs []error) ErrorNodes
 	}
 
 	definedError struct {
@@ -96,11 +102,6 @@ type (
 		cause  error
 		stack  stack
 		joined bool
-	}
-
-	errorTypeNamer struct {
-		msg      string
-		typeName string
 	}
 
 	jsonErrorData struct {
@@ -130,7 +131,8 @@ var (
 	_ errorExporter  = (*definedError)(nil)
 	_ fieldsGetter   = (*definedError)(nil)
 
-	_ json.Marshaler = ErrorNode{}
+	_ json.Marshaler = (*ErrorNode)(nil)
+	_ slog.LogValuer = (*ErrorNode)(nil)
 )
 
 func newError(d *Definition, cause error, msg string, joined bool, stackSkip int) error {
@@ -179,7 +181,7 @@ func (e *definedError) Unwrap() []error {
 	return []error{e.cause}
 }
 
-func (e *definedError) UnwrapTree() ([]*ErrorNode, bool) {
+func (e *definedError) UnwrapTree() ErrorNodes {
 	return e.ErrorTreeBuilder(e.Unwrap())
 }
 
@@ -247,7 +249,7 @@ func (e *definedError) ErrorFormatter(err Error, s fmt.State, verb rune) {
 	case 'v':
 		switch {
 		case s.Flag('+'):
-			causes, _ := err.UnwrapTree()
+			causes := err.UnwrapTree()
 			formatErrorDetails(err, s, "", len(causes) > 0)
 
 			if len(causes) > 0 {
@@ -279,13 +281,12 @@ func (e *definedError) ErrorJSONMarshaler(err Error) ([]byte, error) {
 	if err.Fields().Len() > 0 {
 		fields = err.Fields()
 	}
-	causes, _ := err.UnwrapTree()
 	return json.Marshal(jsonErrorData{
 		Message: err.Error(),
 		Kind:    string(err.Kind()),
 		Fields:  fields,
 		Stack:   err.Stack().Frames(),
-		Causes:  causes,
+		Causes:  err.UnwrapTree(),
 	})
 }
 
@@ -323,28 +324,50 @@ func (e *definedError) ErrorLogValuer(err Error) slog.Value {
 	return slog.GroupValue(attrs...)
 }
 
-func (e *definedError) ErrorTreeBuilder(errs []error) ([]*ErrorNode, bool) {
-	visited := make(map[uintptr]struct{})
+func (e *definedError) ErrorTreeBuilder(errs []error) ErrorNodes {
+	visited := make(map[uintptr]uintptr)
 	nodes := buildErrorNodes(errs, visited)
-	_, hasCycle := visited[0]
-	return nodes, !hasCycle
+	return nodes
+}
+
+func (ns ErrorNodes) HasCycle() bool {
+	for _, n := range ns {
+		if n.IsCyclic() {
+			return true
+		}
+		if n.Causes.HasCycle() {
+			return true
+		}
+	}
+	return false
+}
+
+// IsCyclic returns true if this node is part of a cycle in the error tree.
+func (n *ErrorNode) IsCyclic() bool {
+	if n.ptr == 0 {
+		return false
+	}
+	ptr, hasCycle := n.visited[0]
+	if !hasCycle {
+		return false
+	}
+	return n.ptr == ptr
 }
 
 // MarshalJSON implements json.Marshaler for ErrorNode.
-func (n ErrorNode) MarshalJSON() ([]byte, error) {
+func (n *ErrorNode) MarshalJSON() ([]byte, error) {
 	switch err := n.Error.(type) {
 	case Error:
 		var fields Fields
 		if err.Fields().Len() > 0 {
 			fields = err.Fields()
 		}
-		causes, _ := err.UnwrapTree()
 		return json.Marshal(jsonErrorData{
 			Message: err.Error(),
 			Kind:    string(err.Kind()),
 			Fields:  fields,
 			Stack:   err.Stack().Frames(),
-			Causes:  causes,
+			Causes:  n.Causes,
 		})
 	case ErrorTypeNamer:
 		return json.Marshal(jsonCauseData{
@@ -362,7 +385,7 @@ func (n ErrorNode) MarshalJSON() ([]byte, error) {
 }
 
 // LogValue implements slog.LogValuer for ErrorNode.
-func (e ErrorNode) LogValue() slog.Value {
+func (e *ErrorNode) LogValue() slog.Value {
 	switch te := e.Error.(type) {
 	case Error:
 		return te.(slog.LogValuer).LogValue()
@@ -406,15 +429,7 @@ func slogValueToAny(v slog.Value) any {
 	}
 }
 
-func (e errorTypeNamer) Error() string {
-	return e.msg
-}
-
-func (e errorTypeNamer) TypeName() string {
-	return e.typeName
-}
-
-func buildErrorNodes(causes []error, visited map[uintptr]struct{}) []*ErrorNode {
+func buildErrorNodes(causes []error, visited map[uintptr]uintptr) []*ErrorNode {
 	if len(causes) == 0 {
 		return nil
 	}
@@ -431,28 +446,24 @@ func buildErrorNodes(causes []error, visited map[uintptr]struct{}) []*ErrorNode 
 	return nodes
 }
 
-func buildErrorNode(err error, visited map[uintptr]struct{}) (*ErrorNode, bool) {
+func buildErrorNode(err error, visited map[uintptr]uintptr) (*ErrorNode, bool) {
 	val := reflect.ValueOf(err)
 	if !val.IsValid() {
-		return &ErrorNode{
-			Error: errorTypeNamer{
-				msg:      "<invalid>",
-				typeName: fmt.Sprintf("%T", err),
-			},
-		}, true
+		return nil, false
 	}
 
+	var ptr uintptr
 	if val.Kind() == reflect.Pointer || val.Kind() == reflect.Interface ||
 		val.Kind() == reflect.Map || val.Kind() == reflect.Slice ||
 		val.Kind() == reflect.Chan || val.Kind() == reflect.Func {
-		ptr := val.Pointer()
+		ptr = val.Pointer()
 		if ptr != 0 {
 			if _, ok := visited[ptr]; ok {
-				visited[0] = struct{}{} // Mark that a cycle was detected
+				visited[0] = ptr
 				return nil, false
 			}
 
-			visited[ptr] = struct{}{}
+			visited[ptr] = ptr
 			defer delete(visited, ptr) // Remove from visited after processing this path
 		}
 	}
@@ -467,8 +478,10 @@ func buildErrorNode(err error, visited map[uintptr]struct{}) (*ErrorNode, bool) 
 	}
 
 	return &ErrorNode{
-		Error:  err,
-		Causes: buildErrorNodes(causes, visited),
+		Error:   err,
+		Causes:  buildErrorNodes(causes, visited),
+		ptr:     ptr,
+		visited: visited,
 	}, true
 }
 

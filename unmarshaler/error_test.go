@@ -233,7 +233,7 @@ func TestUnmarshaledError_UnwrapTree(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		tree, _ := unmarshaled.UnwrapTree()
+		tree := unmarshaled.UnwrapTree()
 		treeData, jsonErr := json.Marshal(tree)
 		if jsonErr != nil {
 			t.Fatalf("failed to marshal tree: %v", jsonErr)
@@ -269,7 +269,7 @@ func TestUnmarshaledError_UnwrapTree(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		tree, _ := unmarshaled.UnwrapTree()
+		tree := unmarshaled.UnwrapTree()
 		treeData, jsonErr := json.Marshal(tree)
 		if jsonErr != nil {
 			t.Fatalf("failed to marshal tree: %v", jsonErr)
@@ -328,7 +328,7 @@ func TestUnmarshaledError_UnwrapTree(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		tree, _ := unmarshaled.UnwrapTree()
+		tree := unmarshaled.UnwrapTree()
 		treeData, jsonErr := json.Marshal(tree)
 		if jsonErr != nil {
 			t.Fatalf("failed to marshal tree: %v", jsonErr)
@@ -383,7 +383,7 @@ func TestUnmarshaledError_UnwrapTree(t *testing.T) {
 			t.Fatalf("failed to unmarshal: %v", err)
 		}
 
-		tree, _ := unmarshaled.UnwrapTree()
+		tree := unmarshaled.UnwrapTree()
 		treeData, jsonErr := json.Marshal(tree)
 		if jsonErr != nil {
 			t.Fatalf("failed to marshal tree: %v", jsonErr)
