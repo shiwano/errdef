@@ -28,6 +28,8 @@ type (
 		Sorted() iter.Seq2[FieldKey, FieldValue]
 		// Len returns the number of fields.
 		Len() int
+		// IsZero checks if there are no fields.
+		IsZero() bool
 	}
 
 	// FieldKey represents a key for structured error fields.
@@ -125,6 +127,10 @@ func (f *fields) Sorted() iter.Seq2[FieldKey, FieldValue] {
 
 func (f *fields) Len() int {
 	return len(f.data)
+}
+
+func (f *fields) IsZero() bool {
+	return len(f.data) == 0
 }
 
 func (f *fields) MarshalJSON() ([]byte, error) {

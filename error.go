@@ -83,11 +83,11 @@ type (
 	}
 
 	jsonErrorData struct {
-		Message string       `json:"message"`
-		Kind    string       `json:"kind,omitempty"`
-		Fields  Fields       `json:"fields,omitempty"`
-		Stack   []Frame      `json:"stack,omitempty"`
-		Causes  []*ErrorNode `json:"causes,omitempty"`
+		Message string     `json:"message"`
+		Kind    string     `json:"kind,omitempty"`
+		Fields  Fields     `json:"fields,omitempty,omitzero"`
+		Stack   []Frame    `json:"stack,omitempty"`
+		Causes  ErrorNodes `json:"causes,omitempty"`
 	}
 )
 
@@ -246,14 +246,10 @@ func (e *definedError) ErrorJSONMarshaler(err Error) ([]byte, error) {
 		return e.def.jsonMarshaler(e)
 	}
 
-	var fields Fields
-	if err.Fields().Len() > 0 {
-		fields = err.Fields()
-	}
 	return json.Marshal(jsonErrorData{
 		Message: err.Error(),
 		Kind:    string(err.Kind()),
-		Fields:  fields,
+		Fields:  err.Fields(),
 		Stack:   err.Stack().Frames(),
 		Causes:  err.UnwrapTree(),
 	})

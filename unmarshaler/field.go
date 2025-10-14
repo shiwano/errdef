@@ -107,6 +107,10 @@ func (f *fields) Len() int {
 	return len(f.fields) + len(f.unknownFields)
 }
 
+func (f *fields) IsZero() bool {
+	return len(f.fields)+len(f.unknownFields) == 0
+}
+
 func (f *fields) MarshalJSON() ([]byte, error) {
 	result := make(map[string]any)
 	for k, v := range f.Sorted() {

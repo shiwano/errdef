@@ -97,14 +97,10 @@ func (n *ErrorNode) IsCyclic() bool {
 func (n *ErrorNode) MarshalJSON() ([]byte, error) {
 	switch err := n.Error.(type) {
 	case Error:
-		var fields Fields
-		if err.Fields().Len() > 0 {
-			fields = err.Fields()
-		}
 		return json.Marshal(jsonErrorData{
 			Message: err.Error(),
 			Kind:    string(err.Kind()),
-			Fields:  fields,
+			Fields:  err.Fields(),
 			Stack:   err.Stack().Frames(),
 			Causes:  n.Causes,
 		})
