@@ -44,6 +44,7 @@ var (
 	_ slog.LogValuer = (*ErrorNode)(nil)
 )
 
+// HasCycle returns true if any node in the error tree contains a cycle.
 func (ns ErrorNodes) HasCycle() bool {
 	for _, n := range ns {
 		if n.IsCyclic() {

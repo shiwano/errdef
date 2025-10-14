@@ -12,6 +12,101 @@ import (
 	"github.com/shiwano/errdef"
 )
 
+func TestErrorNodes_Walk(t *testing.T) {
+	type walkResult struct {
+		depth int
+		msg   string
+	}
+
+	err1 := errors.New("error 1")
+	err2 := errors.New("error 2")
+	err3 := errors.New("error 3")
+	err4 := errors.New("error 4")
+	err5 := errors.New("error 5")
+
+	tests := []struct {
+		name  string
+		nodes errdef.ErrorNodes
+		want  []walkResult
+	}{
+		{
+			name: "single node",
+			nodes: errdef.ErrorNodes{
+				{Error: err1},
+			},
+			want: []walkResult{
+				{0, "error 1"},
+			},
+		},
+		{
+			name: "nested nodes",
+			nodes: errdef.ErrorNodes{
+				{
+					Error: err1,
+					Causes: errdef.ErrorNodes{
+						{Error: err2},
+					},
+				},
+			},
+			want: []walkResult{
+				{0, "error 1"},
+				{1, "error 2"},
+			},
+		},
+		{
+			name: "multiple sibling nodes",
+			nodes: errdef.ErrorNodes{
+				{Error: err1},
+				{Error: err2},
+				{Error: err3},
+			},
+			want: []walkResult{
+				{0, "error 1"},
+				{0, "error 2"},
+				{0, "error 3"},
+			},
+		},
+		{
+			name: "complex multi-level tree",
+			nodes: errdef.ErrorNodes{
+				{
+					Error: err1,
+					Causes: errdef.ErrorNodes{
+						{
+							Error: err2,
+							Causes: errdef.ErrorNodes{
+								{Error: err3},
+							},
+						},
+						{Error: err4},
+					},
+				},
+				{Error: err5},
+			},
+			want: []walkResult{
+				{0, "error 1"},
+				{1, "error 2"},
+				{2, "error 3"},
+				{1, "error 4"},
+				{0, "error 5"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var collected []walkResult
+			for depth, node := range tt.nodes.Walk() {
+				collected = append(collected, walkResult{depth, node.Error.Error()})
+			}
+
+			if !reflect.DeepEqual(collected, tt.want) {
+				t.Errorf("walk mismatch:\ngot:  %+v\nwant: %+v", collected, tt.want)
+			}
+		})
+	}
+}
+
 func TestErrorNode_MarshalJSON(t *testing.T) {
 	t.Run("simple error node", func(t *testing.T) {
 		node := &errdef.ErrorNode{
@@ -315,99 +410,4 @@ func TestErrorNode_LogValue(t *testing.T) {
 			t.Errorf("want node %+v, got %+v", want, nodeData)
 		}
 	})
-}
-
-func TestErrorNodes_Walk(t *testing.T) {
-	type walkResult struct {
-		depth int
-		msg   string
-	}
-
-	err1 := errors.New("error 1")
-	err2 := errors.New("error 2")
-	err3 := errors.New("error 3")
-	err4 := errors.New("error 4")
-	err5 := errors.New("error 5")
-
-	tests := []struct {
-		name  string
-		nodes errdef.ErrorNodes
-		want  []walkResult
-	}{
-		{
-			name: "single node",
-			nodes: errdef.ErrorNodes{
-				{Error: err1},
-			},
-			want: []walkResult{
-				{0, "error 1"},
-			},
-		},
-		{
-			name: "nested nodes",
-			nodes: errdef.ErrorNodes{
-				{
-					Error: err1,
-					Causes: errdef.ErrorNodes{
-						{Error: err2},
-					},
-				},
-			},
-			want: []walkResult{
-				{0, "error 1"},
-				{1, "error 2"},
-			},
-		},
-		{
-			name: "multiple sibling nodes",
-			nodes: errdef.ErrorNodes{
-				{Error: err1},
-				{Error: err2},
-				{Error: err3},
-			},
-			want: []walkResult{
-				{0, "error 1"},
-				{0, "error 2"},
-				{0, "error 3"},
-			},
-		},
-		{
-			name: "complex multi-level tree",
-			nodes: errdef.ErrorNodes{
-				{
-					Error: err1,
-					Causes: errdef.ErrorNodes{
-						{
-							Error: err2,
-							Causes: errdef.ErrorNodes{
-								{Error: err3},
-							},
-						},
-						{Error: err4},
-					},
-				},
-				{Error: err5},
-			},
-			want: []walkResult{
-				{0, "error 1"},
-				{1, "error 2"},
-				{2, "error 3"},
-				{1, "error 4"},
-				{0, "error 5"},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var collected []walkResult
-			for depth, node := range tt.nodes.Walk() {
-				collected = append(collected, walkResult{depth, node.Error.Error()})
-			}
-
-			if !reflect.DeepEqual(collected, tt.want) {
-				t.Errorf("walk mismatch:\ngot:  %+v\nwant: %+v", collected, tt.want)
-			}
-		})
-	}
 }
