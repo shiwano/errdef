@@ -252,7 +252,7 @@ For more advanced control, you can:
 - **Log the full causes tree**: The `ErrorNode` type also implements `slog.LogValuer`.
 
   ```go
-  nodes, _ := err.(errdef.Error).UnwrapTree()
+  nodes := err.(errdef.Error).UnwrapTree()
   slog.Error("...", "causes", nodes)
   ```
 
