@@ -19,18 +19,18 @@ var (
 )
 
 func main() {
-	orig := ErrNotFound.WithOptions(
+	original := ErrNotFound.WithOptions(
 		UserID("u123"),
 		errdef.Details{"info": "additional info"},
 	).Wrapf(io.EOF, "user not found")
 
-	fmt.Printf("original error: %+v\n", orig)
-	fmt.Printf("original error user_id: %s\n", UserIDFrom.OrZero(orig))
-	fmt.Printf("original error details: %+v\n", errdef.DetailsFrom.OrZero(orig))
-	fmt.Printf("original error is ErrNotFound: %v\n", errors.Is(orig, ErrNotFound))
-	fmt.Printf("original error is io.EOF: %v\n", errors.Is(orig, io.EOF))
+	fmt.Printf("original error: %+v\n", original)
+	fmt.Printf("original error user_id: %s\n", UserIDFrom.OrZero(original))
+	fmt.Printf("original error details: %+v\n", errdef.DetailsFrom.OrZero(original))
+	fmt.Printf("original error is ErrNotFound: %v\n", errors.Is(original, ErrNotFound))
+	fmt.Printf("original error is io.EOF: %v\n", errors.Is(original, io.EOF))
 
-	protoBytes, err := marshalProto(orig.(errdef.Error))
+	protoBytes, err := marshalProto(original.(errdef.Error))
 	if err != nil {
 		panic(err)
 	}
@@ -85,7 +85,7 @@ func marshalProto(e errdef.Error) ([]byte, error) {
 		}
 	}
 
-	causes, _ := e.UnwrapTree()
+	causes := e.UnwrapTree()
 	if len(causes) > 0 {
 		msg.Causes = make([]*CauseProto, len(causes))
 		for i, node := range causes {
