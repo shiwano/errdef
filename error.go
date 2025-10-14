@@ -506,7 +506,7 @@ func formatErrorDetails(err Error, s io.Writer, indent string, hasCauses bool) {
 		_, _ = io.WriteString(s, "\n")
 		_, _ = io.WriteString(s, indent)
 		_, _ = io.WriteString(s, "fields:")
-		for k, v := range err.Fields().SortedSeq() {
+		for k, v := range err.Fields().Sorted() {
 			_, _ = io.WriteString(s, "\n")
 			_, _ = io.WriteString(s, indent)
 			_, _ = io.WriteString(s, "  ")

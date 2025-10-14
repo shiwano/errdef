@@ -22,10 +22,10 @@ type (
 		Get(key FieldKey) (FieldValue, bool)
 		// FindKeys finds all keys that match the given name.
 		FindKeys(name string) []FieldKey
-		// Seq returns an iterator over all key-value pairs.
-		Seq() iter.Seq2[FieldKey, FieldValue]
-		// SortedSeq returns an iterator over all key-value pairs sorted by insertion order.
-		SortedSeq() iter.Seq2[FieldKey, FieldValue]
+		// All returns an iterator over all key-value pairs.
+		All() iter.Seq2[FieldKey, FieldValue]
+		// Sorted returns an iterator over all key-value pairs sorted by insertion order.
+		Sorted() iter.Seq2[FieldKey, FieldValue]
 		// Len returns the number of fields.
 		Len() int
 	}
@@ -100,7 +100,7 @@ func (f *fields) FindKeys(name string) []FieldKey {
 	return keys
 }
 
-func (f fields) Seq() iter.Seq2[FieldKey, FieldValue] {
+func (f fields) All() iter.Seq2[FieldKey, FieldValue] {
 	return func(yield func(key FieldKey, value FieldValue) bool) {
 		for k, v := range f.data {
 			if !yield(k, v.value) {
@@ -110,7 +110,7 @@ func (f fields) Seq() iter.Seq2[FieldKey, FieldValue] {
 	}
 }
 
-func (f *fields) SortedSeq() iter.Seq2[FieldKey, FieldValue] {
+func (f *fields) Sorted() iter.Seq2[FieldKey, FieldValue] {
 	return func(yield func(key FieldKey, value FieldValue) bool) {
 		for _, k := range slices.SortedFunc(maps.Keys(f.data), func(a, b FieldKey) int {
 			return cmp.Compare(f.data[a].index, f.data[b].index)
@@ -129,7 +129,7 @@ func (f *fields) Len() int {
 
 func (f *fields) MarshalJSON() ([]byte, error) {
 	fields := make(map[string]any, len(f.data))
-	for k, v := range f.SortedSeq() {
+	for k, v := range f.Sorted() {
 		// If multiple fields have the same name,
 		// the last one in insertion order will be used.
 		fields[k.String()] = v.Value()
@@ -139,7 +139,7 @@ func (f *fields) MarshalJSON() ([]byte, error) {
 
 func (f *fields) LogValue() slog.Value {
 	attrs := make([]slog.Attr, 0, f.Len())
-	for k, v := range f.SortedSeq() {
+	for k, v := range f.Sorted() {
 		// If multiple fields have the same name,
 		// the last one in insertion order will be used.
 		attrs = append(attrs, slog.Any(k.String(), v.Value()))

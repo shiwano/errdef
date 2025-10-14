@@ -123,7 +123,7 @@ func TestFields_Mixed(t *testing.T) {
 	}
 }
 
-func TestFields_Seq(t *testing.T) {
+func TestFields_All(t *testing.T) {
 	userID, _ := errdef.DefineField[string]("user_id")
 	countField, _ := errdef.DefineField[int]("count")
 	def := errdef.Define("test_error", userID("user123"), countField(42))
@@ -143,7 +143,7 @@ func TestFields_Seq(t *testing.T) {
 
 	fields := unmarshaled.Fields()
 	fieldCount := 0
-	for k, v := range fields.Seq() {
+	for k, v := range fields.All() {
 		if k.String() == "user_id" {
 			if v.Value() != "user123" {
 				t.Errorf("want user_id %q, got %v", "user123", v.Value())
@@ -157,7 +157,7 @@ func TestFields_Seq(t *testing.T) {
 	}
 }
 
-func TestFields_SortedSeq(t *testing.T) {
+func TestFields_Sorted(t *testing.T) {
 	userID, _ := errdef.DefineField[string]("user_id")
 	countField, _ := errdef.DefineField[int]("count")
 	def := errdef.Define("test_error", userID("user123"), countField(42))
@@ -177,7 +177,7 @@ func TestFields_SortedSeq(t *testing.T) {
 
 	fields := unmarshaled.Fields()
 	var keys []string
-	for k := range fields.SortedSeq() {
+	for k := range fields.Sorted() {
 		keys = append(keys, k.String())
 	}
 

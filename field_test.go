@@ -34,7 +34,7 @@ func TestFields_Get(t *testing.T) {
 
 		fields := err.(errdef.Error).Fields()
 
-		collected := maps.Collect(fields.Seq())
+		collected := maps.Collect(fields.All())
 		if len(collected) != 0 {
 			t.Errorf("want 0 fields, got %d", len(collected))
 		}
@@ -77,7 +77,7 @@ func TestFields_FindKeys(t *testing.T) {
 	}
 }
 
-func TestFields_Seq(t *testing.T) {
+func TestFields_All(t *testing.T) {
 	ctor1, _ := errdef.DefineField[string]("field1")
 	ctor2, _ := errdef.DefineField[int]("field2")
 	ctor3, _ := errdef.DefineField[bool]("field3")
@@ -92,7 +92,7 @@ func TestFields_Seq(t *testing.T) {
 	fields := err.(errdef.Error).Fields()
 
 	collected := make(map[string]any)
-	for key, value := range fields.Seq() {
+	for key, value := range fields.All() {
 		collected[key.String()] = value.Value()
 	}
 
@@ -107,7 +107,7 @@ func TestFields_Seq(t *testing.T) {
 	}
 }
 
-func TestFields_SortedSeq(t *testing.T) {
+func TestFields_Sorted(t *testing.T) {
 	t.Run("basic sorting", func(t *testing.T) {
 		ctor1, _ := errdef.DefineField[string]("c_field")
 		ctor2, _ := errdef.DefineField[int]("a_field")
@@ -124,7 +124,7 @@ func TestFields_SortedSeq(t *testing.T) {
 
 		var keys []string
 		var values []any
-		for key, value := range fields.SortedSeq() {
+		for key, value := range fields.Sorted() {
 			keys = append(keys, key.String())
 			values = append(values, value.Value())
 		}
@@ -158,7 +158,7 @@ func TestFields_SortedSeq(t *testing.T) {
 
 		var key1 []string
 		var value1 []any
-		for key, value := range fields.SortedSeq() {
+		for key, value := range fields.Sorted() {
 			key1 = append(key1, key.String())
 			value1 = append(value1, value.Value())
 		}
@@ -166,7 +166,7 @@ func TestFields_SortedSeq(t *testing.T) {
 		for range 10 {
 			var key2 []string
 			var value2 []any
-			for key, value := range fields.SortedSeq() {
+			for key, value := range fields.Sorted() {
 				key2 = append(key2, key.String())
 				value2 = append(value2, value.Value())
 			}

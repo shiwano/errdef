@@ -51,7 +51,7 @@ func TestError_Fields(t *testing.T) {
 		err := def.New("test message").(errdef.Error)
 
 		fields := err.Fields()
-		collected := maps.Collect(fields.Seq())
+		collected := maps.Collect(fields.All())
 
 		if want, got := 0, len(collected); got != want {
 			t.Errorf("want %d fields, got %d", want, got)
@@ -64,7 +64,7 @@ func TestError_Fields(t *testing.T) {
 		err := def.New("test message").(errdef.Error)
 
 		fields := err.Fields()
-		collected := maps.Collect(fields.Seq())
+		collected := maps.Collect(fields.All())
 
 		if want, got := 1, len(collected); got != want {
 			t.Errorf("want %d field, got %d", want, got)
