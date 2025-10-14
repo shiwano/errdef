@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"iter"
 	"log/slog"
 	"reflect"
 	"runtime"
@@ -45,6 +46,7 @@ type (
 		UnwrapTree() ErrorNodes
 	}
 
+	// ErrorNodes is a slice of error nodes representing an error tree structure.
 	ErrorNodes []*ErrorNode
 
 	// ErrorNode represents a node in the cause tree with cycle detection already performed.
@@ -340,6 +342,30 @@ func (ns ErrorNodes) HasCycle() bool {
 		}
 	}
 	return false
+}
+
+// Walk returns an iterator that traverses the error tree in depth-first order.
+// The iterator yields pairs of depth (int) and node (*ErrorNode) for each error in the tree.
+func (ns ErrorNodes) Walk() iter.Seq2[int, *ErrorNode] {
+	return func(yield func(int, *ErrorNode) bool) {
+		for _, n := range ns {
+			if !n.walk(0, yield) {
+				return
+			}
+		}
+	}
+}
+
+func (n *ErrorNode) walk(depth int, yield func(int, *ErrorNode) bool) bool {
+	if !yield(depth, n) {
+		return false
+	}
+	for _, cause := range n.Causes {
+		if !cause.walk(depth+1, yield) {
+			return false
+		}
+	}
+	return true
 }
 
 // IsCyclic returns true if this node is part of a cycle in the error tree.
