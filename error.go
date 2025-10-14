@@ -375,3 +375,30 @@ func formatCausesHeader(s io.Writer, indent string, count int) {
 	}
 	_, _ = io.WriteString(s, ")")
 }
+
+func formatErrorNodes(nodes []*ErrorNode, s io.Writer, indent string) {
+	for i, node := range nodes {
+		_, _ = io.WriteString(s, "\n")
+		_, _ = io.WriteString(s, indent)
+		_, _ = io.WriteString(s, "[")
+		_, _ = io.WriteString(s, strconv.Itoa(i+1))
+		_, _ = io.WriteString(s, "] ")
+
+		if err, ok := node.Error.(Error); ok {
+			formatErrorDetails(err, s, indent+"    ", len(node.Causes) > 0)
+		} else {
+			_, _ = io.WriteString(s, node.Error.Error())
+
+			if len(node.Causes) > 0 {
+				_, _ = io.WriteString(s, "\n")
+				_, _ = io.WriteString(s, indent)
+				_, _ = io.WriteString(s, "    ---")
+			}
+		}
+
+		if len(node.Causes) > 0 {
+			formatCausesHeader(s, indent+"    ", len(node.Causes))
+			formatErrorNodes(node.Causes, s, indent+"    ")
+		}
+	}
+}
