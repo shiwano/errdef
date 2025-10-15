@@ -89,7 +89,7 @@ func marshalProto(e errdef.Error) ([]byte, error) {
 	if len(causes) > 0 {
 		msg.Causes = make([]*CauseProto, len(causes))
 		for i, node := range causes {
-			causeProto, err := errorNodeToCauseProto(node)
+			causeProto, err := nodeToCauseProto(node)
 			if err != nil {
 				return nil, err
 			}
@@ -99,7 +99,7 @@ func marshalProto(e errdef.Error) ([]byte, error) {
 	return proto.Marshal(msg)
 }
 
-func errorNodeToCauseProto(node *errdef.ErrorNode) (*CauseProto, error) {
+func nodeToCauseProto(node *errdef.Node) (*CauseProto, error) {
 	cp := &CauseProto{
 		Message: node.Error.Error(),
 	}
@@ -137,7 +137,7 @@ func errorNodeToCauseProto(node *errdef.ErrorNode) (*CauseProto, error) {
 	if len(node.Causes) > 0 {
 		cp.Causes = make([]*CauseProto, len(node.Causes))
 		for i, cause := range node.Causes {
-			causeProto, err := errorNodeToCauseProto(cause)
+			causeProto, err := nodeToCauseProto(cause)
 			if err != nil {
 				return nil, err
 			}

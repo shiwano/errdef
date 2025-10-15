@@ -41,7 +41,7 @@ type (
 		// UnwrapTree returns all causes as a tree structure.
 		// When a circular reference is detected, the node that would create the cycle
 		// is excluded, ensuring the result remains acyclic.
-		UnwrapTree() ErrorNodes
+		UnwrapTree() Nodes
 	}
 
 	// DebugStacker returns a string that resembles the output of debug.Stack().
@@ -71,7 +71,7 @@ type (
 		ErrorFormatter(err Error, s fmt.State, verb rune)
 		ErrorJSONMarshaler(err Error) ([]byte, error)
 		ErrorLogValuer(err Error) slog.Value
-		ErrorTreeBuilder(errs []error) ErrorNodes
+		ErrorTreeBuilder(errs []error) Nodes
 	}
 
 	definedError struct {
@@ -83,11 +83,11 @@ type (
 	}
 
 	jsonErrorData struct {
-		Message string     `json:"message"`
-		Kind    string     `json:"kind,omitempty"`
-		Fields  Fields     `json:"fields,omitempty,omitzero"`
-		Stack   []Frame    `json:"stack,omitempty"`
-		Causes  ErrorNodes `json:"causes,omitempty"`
+		Message string  `json:"message"`
+		Kind    string  `json:"kind,omitempty"`
+		Fields  Fields  `json:"fields,omitempty,omitzero"`
+		Stack   []Frame `json:"stack,omitempty"`
+		Causes  Nodes   `json:"causes,omitempty"`
 	}
 )
 
@@ -150,7 +150,7 @@ func (e *definedError) Unwrap() []error {
 	return []error{e.cause}
 }
 
-func (e *definedError) UnwrapTree() ErrorNodes {
+func (e *definedError) UnwrapTree() Nodes {
 	return e.ErrorTreeBuilder(e.Unwrap())
 }
 
@@ -223,7 +223,7 @@ func (e *definedError) ErrorFormatter(err Error, s fmt.State, verb rune) {
 
 			if len(causes) > 0 {
 				formatCausesHeader(s, "", len(causes))
-				formatErrorNodes(causes, s, "  ")
+				formatNodes(causes, s, "  ")
 			}
 		case s.Flag('#'):
 			if gs, ok := err.(fmt.GoStringer); ok {
@@ -289,9 +289,9 @@ func (e *definedError) ErrorLogValuer(err Error) slog.Value {
 	return slog.GroupValue(attrs...)
 }
 
-func (e *definedError) ErrorTreeBuilder(errs []error) ErrorNodes {
+func (e *definedError) ErrorTreeBuilder(errs []error) Nodes {
 	visited := make(map[uintptr]uintptr)
-	nodes := buildErrorNodes(errs, visited)
+	nodes := buildNodes(errs, visited)
 	return nodes
 }
 
@@ -372,7 +372,7 @@ func formatCausesHeader(s io.Writer, indent string, count int) {
 	_, _ = io.WriteString(s, ")")
 }
 
-func formatErrorNodes(nodes []*ErrorNode, s io.Writer, indent string) {
+func formatNodes(nodes []*Node, s io.Writer, indent string) {
 	for i, node := range nodes {
 		_, _ = io.WriteString(s, "\n")
 		_, _ = io.WriteString(s, indent)
@@ -394,7 +394,7 @@ func formatErrorNodes(nodes []*ErrorNode, s io.Writer, indent string) {
 
 		if len(node.Causes) > 0 {
 			formatCausesHeader(s, indent+"    ", len(node.Causes))
-			formatErrorNodes(node.Causes, s, indent+"    ")
+			formatNodes(node.Causes, s, indent+"    ")
 		}
 	}
 }

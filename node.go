@@ -9,15 +9,15 @@ import (
 )
 
 type (
-	// ErrorNodes is a slice of error nodes representing an error tree structure.
-	ErrorNodes []*ErrorNode
+	// Nodes is a slice of error nodes representing an error tree structure.
+	Nodes []*Node
 
-	// ErrorNode represents a node in the cause tree with cycle detection already performed.
-	ErrorNode struct {
+	// Node represents a node in the cause tree with cycle detection already performed.
+	Node struct {
 		// Error is the error at this node.
 		Error error
 		// Causes are the nested causes of this error.
-		Causes ErrorNodes
+		Causes Nodes
 
 		// ptr is the pointer value of the error, used internally for cycle detection.
 		ptr uintptr
@@ -33,19 +33,19 @@ type (
 	}
 
 	jsonCauseData struct {
-		Message string       `json:"message"`
-		Type    string       `json:"type"`
-		Causes  []*ErrorNode `json:"causes,omitempty"`
+		Message string  `json:"message"`
+		Type    string  `json:"type"`
+		Causes  []*Node `json:"causes,omitempty"`
 	}
 )
 
 var (
-	_ json.Marshaler = (*ErrorNode)(nil)
-	_ slog.LogValuer = (*ErrorNode)(nil)
+	_ json.Marshaler = (*Node)(nil)
+	_ slog.LogValuer = (*Node)(nil)
 )
 
 // HasCycle returns true if any node in the error tree contains a cycle.
-func (ns ErrorNodes) HasCycle() bool {
+func (ns Nodes) HasCycle() bool {
 	for _, n := range ns {
 		if n.IsCyclic() {
 			return true
@@ -58,9 +58,9 @@ func (ns ErrorNodes) HasCycle() bool {
 }
 
 // Walk returns an iterator that traverses the error tree in depth-first order.
-// The iterator yields pairs of depth (int) and node (*ErrorNode) for each error in the tree.
-func (ns ErrorNodes) Walk() iter.Seq2[int, *ErrorNode] {
-	return func(yield func(int, *ErrorNode) bool) {
+// The iterator yields pairs of depth (int) and node (*Node) for each error in the tree.
+func (ns Nodes) Walk() iter.Seq2[int, *Node] {
+	return func(yield func(int, *Node) bool) {
 		for _, n := range ns {
 			if !n.walk(0, yield) {
 				return
@@ -69,7 +69,7 @@ func (ns ErrorNodes) Walk() iter.Seq2[int, *ErrorNode] {
 	}
 }
 
-func (n *ErrorNode) walk(depth int, yield func(int, *ErrorNode) bool) bool {
+func (n *Node) walk(depth int, yield func(int, *Node) bool) bool {
 	if !yield(depth, n) {
 		return false
 	}
@@ -82,7 +82,7 @@ func (n *ErrorNode) walk(depth int, yield func(int, *ErrorNode) bool) bool {
 }
 
 // IsCyclic returns true if this node is part of a cycle in the error tree.
-func (n *ErrorNode) IsCyclic() bool {
+func (n *Node) IsCyclic() bool {
 	if n.ptr == 0 {
 		return false
 	}
@@ -93,8 +93,8 @@ func (n *ErrorNode) IsCyclic() bool {
 	return n.ptr == ptr
 }
 
-// MarshalJSON implements json.Marshaler for ErrorNode.
-func (n *ErrorNode) MarshalJSON() ([]byte, error) {
+// MarshalJSON implements json.Marshaler for Node.
+func (n *Node) MarshalJSON() ([]byte, error) {
 	switch err := n.Error.(type) {
 	case Error:
 		return json.Marshal(jsonErrorData{
@@ -119,8 +119,8 @@ func (n *ErrorNode) MarshalJSON() ([]byte, error) {
 	}
 }
 
-// LogValue implements slog.LogValuer for ErrorNode.
-func (e *ErrorNode) LogValue() slog.Value {
+// LogValue implements slog.LogValuer for Node.
+func (e *Node) LogValue() slog.Value {
 	switch te := e.Error.(type) {
 	case Error:
 		return te.(slog.LogValuer).LogValue()
@@ -164,24 +164,24 @@ func slogValueToAny(v slog.Value) any {
 	}
 }
 
-func buildErrorNodes(causes []error, visited map[uintptr]uintptr) []*ErrorNode {
+func buildNodes(causes []error, visited map[uintptr]uintptr) []*Node {
 	if len(causes) == 0 {
 		return nil
 	}
 
-	nodes := make([]*ErrorNode, 0, len(causes))
+	nodes := make([]*Node, 0, len(causes))
 	for _, c := range causes {
 		if c == nil {
 			continue
 		}
-		if node, ok := buildErrorNode(c, visited); ok {
+		if node, ok := buildNode(c, visited); ok {
 			nodes = append(nodes, node)
 		}
 	}
 	return nodes
 }
 
-func buildErrorNode(err error, visited map[uintptr]uintptr) (*ErrorNode, bool) {
+func buildNode(err error, visited map[uintptr]uintptr) (*Node, bool) {
 	val := reflect.ValueOf(err)
 	if !val.IsValid() {
 		return nil, false
@@ -212,9 +212,9 @@ func buildErrorNode(err error, visited map[uintptr]uintptr) (*ErrorNode, bool) {
 		causes = unwrapper.Unwrap()
 	}
 
-	return &ErrorNode{
+	return &Node{
 		Error:   err,
-		Causes:  buildErrorNodes(causes, visited),
+		Causes:  buildNodes(causes, visited),
 		ptr:     ptr,
 		visited: visited,
 	}, true

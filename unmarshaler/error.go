@@ -38,7 +38,7 @@ type (
 		ErrorFormatter(err errdef.Error, s fmt.State, verb rune)
 		ErrorJSONMarshaler(err errdef.Error) ([]byte, error)
 		ErrorLogValuer(err errdef.Error) slog.Value
-		ErrorTreeBuilder(errs []error) errdef.ErrorNodes
+		ErrorTreeBuilder(errs []error) errdef.Nodes
 	}
 
 	causer interface {
@@ -81,7 +81,7 @@ func (e *unmarshaledError) Unwrap() []error {
 	return e.causes[:]
 }
 
-func (e *unmarshaledError) UnwrapTree() errdef.ErrorNodes {
+func (e *unmarshaledError) UnwrapTree() errdef.Nodes {
 	return e.definedError.(errorExporter).ErrorTreeBuilder(e.causes)
 }
 

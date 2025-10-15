@@ -249,7 +249,7 @@ For more advanced control, you can:
   slog.Error("...", "stack", stack)
   ```
 
-- **Log the full causes tree**: The `ErrorNode` type also implements `slog.LogValuer`.
+- **Log the full causes tree**: The `Node` type also implements `slog.LogValuer`.
 
   ```go
   nodes := err.(errdef.Error).UnwrapTree()

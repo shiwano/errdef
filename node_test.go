@@ -12,7 +12,7 @@ import (
 	"github.com/shiwano/errdef"
 )
 
-func TestErrorNodes_Walk(t *testing.T) {
+func TestNodes_Walk(t *testing.T) {
 	type walkResult struct {
 		depth int
 		msg   string
@@ -26,12 +26,12 @@ func TestErrorNodes_Walk(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		nodes errdef.ErrorNodes
+		nodes errdef.Nodes
 		want  []walkResult
 	}{
 		{
 			name: "single node",
-			nodes: errdef.ErrorNodes{
+			nodes: errdef.Nodes{
 				{Error: err1},
 			},
 			want: []walkResult{
@@ -40,10 +40,10 @@ func TestErrorNodes_Walk(t *testing.T) {
 		},
 		{
 			name: "nested nodes",
-			nodes: errdef.ErrorNodes{
+			nodes: errdef.Nodes{
 				{
 					Error: err1,
-					Causes: errdef.ErrorNodes{
+					Causes: errdef.Nodes{
 						{Error: err2},
 					},
 				},
@@ -55,7 +55,7 @@ func TestErrorNodes_Walk(t *testing.T) {
 		},
 		{
 			name: "multiple sibling nodes",
-			nodes: errdef.ErrorNodes{
+			nodes: errdef.Nodes{
 				{Error: err1},
 				{Error: err2},
 				{Error: err3},
@@ -68,13 +68,13 @@ func TestErrorNodes_Walk(t *testing.T) {
 		},
 		{
 			name: "complex multi-level tree",
-			nodes: errdef.ErrorNodes{
+			nodes: errdef.Nodes{
 				{
 					Error: err1,
-					Causes: errdef.ErrorNodes{
+					Causes: errdef.Nodes{
 						{
 							Error: err2,
-							Causes: errdef.ErrorNodes{
+							Causes: errdef.Nodes{
 								{Error: err3},
 							},
 						},
@@ -107,9 +107,9 @@ func TestErrorNodes_Walk(t *testing.T) {
 	}
 }
 
-func TestErrorNode_MarshalJSON(t *testing.T) {
+func TestNode_MarshalJSON(t *testing.T) {
 	t.Run("simple error node", func(t *testing.T) {
-		node := &errdef.ErrorNode{
+		node := &errdef.Node{
 			Error: errors.New("test error"),
 		}
 
@@ -137,9 +137,9 @@ func TestErrorNode_MarshalJSON(t *testing.T) {
 		stdErr := errors.New("standard error")
 		wrappedErr := fmt.Errorf("wrapped: %w", stdErr)
 
-		node := &errdef.ErrorNode{
+		node := &errdef.Node{
 			Error: wrappedErr,
-			Causes: []*errdef.ErrorNode{
+			Causes: []*errdef.Node{
 				{Error: stdErr},
 			},
 		}
@@ -175,12 +175,12 @@ func TestErrorNode_MarshalJSON(t *testing.T) {
 		err2 := errors.New("level 2")
 		err3 := errors.New("level 3")
 
-		node := &errdef.ErrorNode{
+		node := &errdef.Node{
 			Error: err1,
-			Causes: []*errdef.ErrorNode{
+			Causes: []*errdef.Node{
 				{
 					Error: err2,
-					Causes: []*errdef.ErrorNode{
+					Causes: []*errdef.Node{
 						{Error: err3},
 					},
 				},
@@ -265,9 +265,9 @@ func TestErrorNode_MarshalJSON(t *testing.T) {
 	})
 }
 
-func TestErrorNode_LogValue(t *testing.T) {
+func TestNode_LogValue(t *testing.T) {
 	t.Run("simple error node", func(t *testing.T) {
-		node := &errdef.ErrorNode{
+		node := &errdef.Node{
 			Error: errors.New("test error"),
 		}
 
@@ -297,9 +297,9 @@ func TestErrorNode_LogValue(t *testing.T) {
 		stdErr := errors.New("standard error")
 		wrappedErr := fmt.Errorf("wrapped: %w", stdErr)
 
-		node := &errdef.ErrorNode{
+		node := &errdef.Node{
 			Error: wrappedErr,
-			Causes: []*errdef.ErrorNode{
+			Causes: []*errdef.Node{
 				{Error: stdErr},
 			},
 		}
@@ -335,7 +335,7 @@ func TestErrorNode_LogValue(t *testing.T) {
 		def := errdef.Define("test_error", errdef.NoTrace())
 		err := def.New("test message")
 
-		node := &errdef.ErrorNode{
+		node := &errdef.Node{
 			Error: err,
 		}
 
@@ -367,12 +367,12 @@ func TestErrorNode_LogValue(t *testing.T) {
 		err2 := errors.New("level 2")
 		err3 := errors.New("level 3")
 
-		node := &errdef.ErrorNode{
+		node := &errdef.Node{
 			Error: err1,
-			Causes: []*errdef.ErrorNode{
+			Causes: []*errdef.Node{
 				{
 					Error: err2,
-					Causes: []*errdef.ErrorNode{
+					Causes: []*errdef.Node{
 						{Error: err3},
 					},
 				},
