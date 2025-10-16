@@ -31,14 +31,14 @@ type (
 		logValuer     func(err Error) slog.Value
 	}
 
-	// ErrorFactory is an interface for creating errors from a configured Definition.
+	// Factory is an interface for creating errors from a configured Definition.
 	// It provides only error creation methods, preventing misuse such as identity
 	// comparison (errors.Is) or further configuration (With/WithOptions).
 	//
-	// ErrorFactory instances are typically created by Definition.With or
+	// Factory instances are typically created by Definition.With or
 	// Definition.WithOptions methods, and are intended to be used immediately
 	// for error creation rather than stored as sentinel values.
-	ErrorFactory interface {
+	Factory interface {
 		// New creates a new error with the given message using this definition.
 		New(msg string) error
 		// Errorf creates a new error with a formatted message using this definition.
@@ -62,7 +62,7 @@ type (
 
 var (
 	_ error        = (*Definition)(nil)
-	_ ErrorFactory = (*Definition)(nil)
+	_ Factory      = (*Definition)(nil)
 	_ fieldsGetter = (*Definition)(nil)
 )
 
@@ -79,7 +79,7 @@ func (d *Definition) Error() string {
 
 // With creates a new ErrorFactory and applies options from context first (if any),
 // then the given opts. Later options override earlier ones.
-func (d *Definition) With(ctx context.Context, opts ...Option) ErrorFactory {
+func (d *Definition) With(ctx context.Context, opts ...Option) Factory {
 	ctxOpts := optionsFromContext(ctx)
 	if len(ctxOpts) == 0 && len(opts) == 0 {
 		return d
@@ -92,7 +92,7 @@ func (d *Definition) With(ctx context.Context, opts ...Option) ErrorFactory {
 
 // WithOptions creates a new ErrorFactory with the given options applied.
 // Later options override earlier ones.
-func (d *Definition) WithOptions(opts ...Option) ErrorFactory {
+func (d *Definition) WithOptions(opts ...Option) Factory {
 	if len(opts) == 0 {
 		return d
 	}
