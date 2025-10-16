@@ -21,7 +21,8 @@ type (
 	}
 
 	unmarshaledError struct {
-		definedError  errdef.Error
+		def           *errdef.Definition
+		msg           string
 		fields        map[errdef.FieldKey]errdef.FieldValue
 		unknownFields map[string]any
 		stack         stack
@@ -32,13 +33,6 @@ type (
 		message  string
 		typeName string
 		causes   []error
-	}
-
-	errorExporter interface {
-		ErrorFormatter(err errdef.Error, s fmt.State, verb rune)
-		ErrorJSONMarshaler(err errdef.Error) ([]byte, error)
-		ErrorLogValuer(err errdef.Error) slog.Value
-		ErrorTreeBuilder(errs []error) errdef.Nodes
 	}
 
 	causer interface {
@@ -59,11 +53,11 @@ var (
 )
 
 func (e *unmarshaledError) Error() string {
-	return e.definedError.Error()
+	return e.msg
 }
 
 func (e *unmarshaledError) Kind() errdef.Kind {
-	return e.definedError.Kind()
+	return e.def.Kind()
 }
 
 func (e *unmarshaledError) Fields() errdef.Fields {
@@ -82,7 +76,7 @@ func (e *unmarshaledError) Unwrap() []error {
 }
 
 func (e *unmarshaledError) UnwrapTree() errdef.Nodes {
-	return e.definedError.(errorExporter).ErrorTreeBuilder(e.causes)
+	return errdef.BuildTree(e.causes...)
 }
 
 func (e *unmarshaledError) UnknownFields() iter.Seq2[string, any] {
@@ -96,10 +90,11 @@ func (e *unmarshaledError) UnknownFields() iter.Seq2[string, any] {
 }
 
 func (e *unmarshaledError) Is(target error) bool {
-	if is, ok := e.definedError.(interface{ Is(error) bool }); ok {
-		if is.Is(target) {
-			return true
-		}
+	if e == target {
+		return true
+	}
+	if d, ok := target.(*errdef.Definition); ok {
+		return e.def.Is(d)
 	}
 	return false
 }
@@ -113,15 +108,15 @@ func (e *unmarshaledError) GoString() string {
 }
 
 func (e *unmarshaledError) Format(s fmt.State, verb rune) {
-	e.definedError.(errorExporter).ErrorFormatter(e, s, verb)
+	e.def.FormatError(e, s, verb)
 }
 
 func (e *unmarshaledError) MarshalJSON() ([]byte, error) {
-	return e.definedError.(errorExporter).ErrorJSONMarshaler(e)
+	return e.def.MarshalErrorJSON(e)
 }
 
 func (e *unmarshaledError) LogValue() slog.Value {
-	return e.definedError.(errorExporter).ErrorLogValuer(e)
+	return e.def.MakeErrorLogValue(e)
 }
 
 func (e *unmarshaledError) DebugStack() string {

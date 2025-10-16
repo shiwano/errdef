@@ -90,10 +90,6 @@ func (d *Unmarshaler[T]) unmarshal(decoded *DecodedData) (UnmarshaledError, erro
 		return nil, err
 	}
 
-	definedError := def.
-		WithOptions(errdef.NoTrace()).
-		New(decoded.Message).(errdef.Error)
-
 	fields := make(map[errdef.FieldKey]errdef.FieldValue)
 	unknownFields := make(map[string]any)
 
@@ -163,7 +159,8 @@ func (d *Unmarshaler[T]) unmarshal(decoded *DecodedData) (UnmarshaledError, erro
 	}
 
 	return &unmarshaledError{
-		definedError:  definedError,
+		def:           def,
+		msg:           decoded.Message,
 		fields:        fields,
 		unknownFields: unknownFields,
 		stack:         decoded.Stack,

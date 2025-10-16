@@ -44,6 +44,13 @@ var (
 	_ slog.LogValuer = (*Node)(nil)
 )
 
+// BuildTree builds an error tree from the given errors using this definition's context.
+func BuildTree(errs ...error) Nodes {
+	visited := make(map[uintptr]uintptr)
+	nodes := buildNodes(errs, visited)
+	return nodes
+}
+
 // HasCycle returns true if any node in the error tree contains a cycle.
 func (ns Nodes) HasCycle() bool {
 	for _, n := range ns {

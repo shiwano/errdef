@@ -4,11 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"runtime"
-	"strconv"
-	"strings"
 )
 
 type (
@@ -61,15 +58,6 @@ type (
 		Cause() error
 	}
 
-	// errorExporter defines methods for exporting error information in various formats.
-	// This interface is used internally in the unmarshaler package.
-	errorExporter interface {
-		ErrorFormatter(err Error, s fmt.State, verb rune)
-		ErrorJSONMarshaler(err Error) ([]byte, error)
-		ErrorLogValuer(err Error) slog.Value
-		ErrorTreeBuilder(errs []error) Nodes
-	}
-
 	definedError struct {
 		def    *Definition
 		msg    string
@@ -96,7 +84,6 @@ var (
 	_ slog.LogValuer = (*definedError)(nil)
 	_ stackTracer    = (*definedError)(nil)
 	_ causer         = (*definedError)(nil)
-	_ errorExporter  = (*definedError)(nil)
 	_ fieldsGetter   = (*definedError)(nil)
 )
 
@@ -147,7 +134,7 @@ func (e *definedError) Unwrap() []error {
 }
 
 func (e *definedError) UnwrapTree() Nodes {
-	return e.ErrorTreeBuilder(e.Unwrap())
+	return BuildTree(e.Unwrap()...)
 }
 
 func (e *definedError) Is(target error) bool {
@@ -193,204 +180,13 @@ func (e *definedError) GoString() string {
 }
 
 func (e *definedError) Format(s fmt.State, verb rune) {
-	e.ErrorFormatter(e, s, verb)
+	e.def.FormatError(e, s, verb)
 }
 
 func (e *definedError) MarshalJSON() ([]byte, error) {
-	return e.ErrorJSONMarshaler(e)
+	return e.def.MarshalErrorJSON(e)
 }
 
 func (e *definedError) LogValue() slog.Value {
-	return e.ErrorLogValuer(e)
-}
-
-func (e *definedError) ErrorFormatter(err Error, s fmt.State, verb rune) {
-	if e.def.formatter != nil {
-		e.def.formatter(err, s, verb)
-		return
-	}
-
-	switch verb {
-	case 'v':
-		switch {
-		case s.Flag('+'):
-			causes := err.UnwrapTree()
-			formatErrorDetails(err, s, "", len(causes) > 0)
-
-			if len(causes) > 0 {
-				formatCausesHeader(s, "", len(causes))
-				formatNodes(causes, s, "  ")
-			}
-		case s.Flag('#'):
-			if gs, ok := err.(fmt.GoStringer); ok {
-				_, _ = io.WriteString(s, gs.GoString())
-			} else {
-				_, _ = io.WriteString(s, err.Error())
-			}
-		default:
-			_, _ = io.WriteString(s, err.Error())
-		}
-	case 's':
-		_, _ = io.WriteString(s, err.Error())
-	case 'q':
-		_, _ = fmt.Fprintf(s, "%q", err.Error())
-	}
-}
-
-func (e *definedError) ErrorJSONMarshaler(err Error) ([]byte, error) {
-	if e.def.jsonMarshaler != nil {
-		return e.def.jsonMarshaler(e)
-	}
-
-	return json.Marshal(jsonErrorData{
-		Message: err.Error(),
-		Kind:    string(err.Kind()),
-		Fields:  err.Fields(),
-		Stack:   err.Stack().Frames(),
-		Causes:  err.UnwrapTree(),
-	})
-}
-
-func (e *definedError) ErrorLogValuer(err Error) slog.Value {
-	if e.def.logValuer != nil {
-		return e.def.logValuer(e)
-	}
-
-	attrs := make([]slog.Attr, 0, 5)
-
-	attrs = append(attrs, slog.String("message", err.Error()))
-
-	if err.Kind() != "" {
-		attrs = append(attrs, slog.String("kind", string(err.Kind())))
-	}
-
-	if err.Fields().Len() > 0 {
-		attrs = append(attrs, slog.Any("fields", err.Fields()))
-	}
-
-	if err.Stack().Len() > 0 {
-		if frame, ok := err.Stack().HeadFrame(); ok {
-			attrs = append(attrs, slog.Any("origin", frame))
-		}
-	}
-
-	causes := err.Unwrap()
-	if len(causes) > 0 {
-		causeMessages := make([]string, len(causes))
-		for i, c := range causes {
-			causeMessages[i] = c.Error()
-		}
-		attrs = append(attrs, slog.Any("causes", causeMessages))
-	}
-	return slog.GroupValue(attrs...)
-}
-
-func (e *definedError) ErrorTreeBuilder(errs []error) Nodes {
-	visited := make(map[uintptr]uintptr)
-	nodes := buildNodes(errs, visited)
-	return nodes
-}
-
-func formatErrorDetails(err Error, s io.Writer, indent string, hasCauses bool) {
-	_, _ = io.WriteString(s, err.Error())
-
-	hasDetails := err.Kind() != "" || err.Fields().Len() > 0 || err.Stack().Len() > 0
-	if hasDetails || hasCauses {
-		_, _ = io.WriteString(s, "\n")
-		_, _ = io.WriteString(s, indent)
-		_, _ = io.WriteString(s, "---")
-	}
-
-	if err.Kind() != "" {
-		_, _ = io.WriteString(s, "\n")
-		_, _ = io.WriteString(s, indent)
-		_, _ = io.WriteString(s, "kind: ")
-		_, _ = io.WriteString(s, string(err.Kind()))
-	}
-
-	if err.Fields().Len() > 0 {
-		_, _ = io.WriteString(s, "\n")
-		_, _ = io.WriteString(s, indent)
-		_, _ = io.WriteString(s, "fields:")
-		for k, v := range err.Fields().Sorted() {
-			_, _ = io.WriteString(s, "\n")
-			_, _ = io.WriteString(s, indent)
-			_, _ = io.WriteString(s, "  ")
-			_, _ = io.WriteString(s, k.String())
-			_, _ = io.WriteString(s, ": ")
-
-			valueStr := fmt.Sprintf("%+v", v.Value())
-			if strings.Contains(valueStr, "\n") {
-				_, _ = io.WriteString(s, "|\n")
-				for line := range strings.SplitSeq(valueStr, "\n") {
-					_, _ = io.WriteString(s, indent)
-					_, _ = io.WriteString(s, "    ")
-					_, _ = io.WriteString(s, line)
-					_, _ = io.WriteString(s, "\n")
-				}
-			} else {
-				_, _ = io.WriteString(s, valueStr)
-			}
-		}
-	}
-
-	if err.Stack().Len() > 0 {
-		_, _ = io.WriteString(s, "\n")
-		_, _ = io.WriteString(s, indent)
-		_, _ = io.WriteString(s, "stack:")
-		for _, f := range err.Stack().Frames() {
-			if f.File != "" {
-				_, _ = io.WriteString(s, "\n")
-				_, _ = io.WriteString(s, indent)
-				_, _ = io.WriteString(s, "  ")
-				_, _ = io.WriteString(s, f.Func)
-				_, _ = io.WriteString(s, "\n")
-				_, _ = io.WriteString(s, indent)
-				_, _ = io.WriteString(s, "    ")
-				_, _ = io.WriteString(s, f.File)
-				_, _ = io.WriteString(s, ":")
-				_, _ = io.WriteString(s, strconv.Itoa(f.Line))
-			}
-		}
-	}
-}
-
-func formatCausesHeader(s io.Writer, indent string, count int) {
-	_, _ = io.WriteString(s, "\n")
-	_, _ = io.WriteString(s, indent)
-	_, _ = io.WriteString(s, "causes: (")
-	if count == 1 {
-		_, _ = io.WriteString(s, "1 error")
-	} else {
-		_, _ = io.WriteString(s, strconv.Itoa(count))
-		_, _ = io.WriteString(s, " errors")
-	}
-	_, _ = io.WriteString(s, ")")
-}
-
-func formatNodes(nodes []*Node, s io.Writer, indent string) {
-	for i, node := range nodes {
-		_, _ = io.WriteString(s, "\n")
-		_, _ = io.WriteString(s, indent)
-		_, _ = io.WriteString(s, "[")
-		_, _ = io.WriteString(s, strconv.Itoa(i+1))
-		_, _ = io.WriteString(s, "] ")
-
-		if err, ok := node.Error.(Error); ok {
-			formatErrorDetails(err, s, indent+"    ", len(node.Causes) > 0)
-		} else {
-			_, _ = io.WriteString(s, node.Error.Error())
-
-			if len(node.Causes) > 0 {
-				_, _ = io.WriteString(s, "\n")
-				_, _ = io.WriteString(s, indent)
-				_, _ = io.WriteString(s, "    ---")
-			}
-		}
-
-		if len(node.Causes) > 0 {
-			formatCausesHeader(s, indent+"    ", len(node.Causes))
-			formatNodes(node.Causes, s, indent+"    ")
-		}
-	}
+	return e.def.MakeErrorLogValue(e)
 }
