@@ -8,6 +8,7 @@ import (
 type (
 	PanicError interface {
 		error
+
 		// PanicValue returns the value recovered from the panic.
 		PanicValue() any
 		// Unwrap returns the underlying error if the panic value is an error.

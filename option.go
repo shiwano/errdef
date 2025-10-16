@@ -10,7 +10,7 @@ import (
 type (
 	// Option represents a configuration option that can be applied to error definitions.
 	Option interface {
-		applyOption(d *Definition)
+		applyOption(d *definition)
 	}
 
 	// FieldConstructor creates an Option that sets a field value.
@@ -145,36 +145,36 @@ func (f FieldExtractor[T]) OrFallback(err error, fn func(err error) T) T {
 	return f.WithFallback(fn)(err)
 }
 
-func (o *field[T]) applyOption(d *Definition) {
+func (o *field[T]) applyOption(d *definition) {
 	d.fields.set(o.key, &fieldValue[T]{value: o.value})
 }
 
-func (o *noTrace) applyOption(d *Definition) {
+func (o *noTrace) applyOption(d *definition) {
 	d.noTrace = true
 }
 
-func (o *stackSkip) applyOption(d *Definition) {
+func (o *stackSkip) applyOption(d *definition) {
 	d.stackSkip += o.skip
 }
 
-func (o *stackDepth) applyOption(d *Definition) {
+func (o *stackDepth) applyOption(d *definition) {
 	d.stackDepth = o.depth
 }
 
-func (o *formatter) applyOption(d *Definition) {
+func (o *formatter) applyOption(d *definition) {
 	d.formatter = o.formatter
 }
 
-func (o *jsonMarshaler) applyOption(d *Definition) {
+func (o *jsonMarshaler) applyOption(d *definition) {
 	d.jsonMarshaler = o.marshaler
 }
 
-func (o *logValuer) applyOption(d *Definition) {
+func (o *logValuer) applyOption(d *definition) {
 	d.logValuer = o.valuer
 }
 
 func fieldKeyFromOption(opt Option) FieldKey {
-	def := &Definition{fields: newFields()}
+	def := &definition{fields: newFields()}
 	opt.applyOption(def)
 	for k := range def.fields.data {
 		return k

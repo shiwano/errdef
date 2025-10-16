@@ -73,7 +73,7 @@ func TestTryConvertFloat64(t *testing.T) {
 				t.Fatalf("failed to marshal: %v", err)
 			}
 
-			var def *errdef.Definition
+			var def errdef.Definition
 			switch tt.fieldType.(type) {
 			case int:
 				ctor, _ := errdef.DefineField[int]("test")
@@ -272,7 +272,7 @@ func TestTryConvertInt64(t *testing.T) {
 				t.Fatalf("failed to marshal: %v", err)
 			}
 
-			var def *errdef.Definition
+			var def errdef.Definition
 			switch tt.fieldType.(type) {
 			case int:
 				ctor, _ := errdef.DefineField[int]("test")

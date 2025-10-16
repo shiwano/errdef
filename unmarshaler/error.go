@@ -20,12 +20,20 @@ type (
 		UnknownFields() iter.Seq2[string, any]
 	}
 
+	// UnknownCauseError represents an error whose cause has an unknown type
+	// that cannot be unmarshaled back into a proper error definition.
+	UnknownCauseError struct {
+		msg      string
+		typeName string
+		causes   []error
+	}
+
 	causer interface {
 		Cause() error
 	}
 
 	unmarshaledError struct {
-		def           *errdef.Definition
+		def           errdef.Definition
 		msg           string
 		fields        map[errdef.FieldKey]errdef.FieldValue
 		unknownFields map[string]any
@@ -42,6 +50,8 @@ var (
 	_ json.Marshaler      = (*unmarshaledError)(nil)
 	_ slog.LogValuer      = (*unmarshaledError)(nil)
 	_ causer              = (*unmarshaledError)(nil)
+
+	_ error = (*UnknownCauseError)(nil)
 )
 
 func (e *unmarshaledError) Error() string {
@@ -68,7 +78,7 @@ func (e *unmarshaledError) Unwrap() []error {
 }
 
 func (e *unmarshaledError) UnwrapTree() errdef.Nodes {
-	return buildNodes(e.causes)
+	return e.def.(errdef.Presenter).BuildCauseTree(e)
 }
 
 func (e *unmarshaledError) UnknownFields() iter.Seq2[string, any] {
@@ -85,7 +95,7 @@ func (e *unmarshaledError) Is(target error) bool {
 	if e == target {
 		return true
 	}
-	if d, ok := target.(*errdef.Definition); ok {
+	if d, ok := target.(errdef.Definition); ok {
 		return e.def.Is(d)
 	}
 	return false
@@ -100,15 +110,15 @@ func (e *unmarshaledError) GoString() string {
 }
 
 func (e *unmarshaledError) Format(s fmt.State, verb rune) {
-	e.def.FormatError(e, s, verb)
+	e.def.(errdef.Presenter).FormatError(e, s, verb)
 }
 
 func (e *unmarshaledError) MarshalJSON() ([]byte, error) {
-	return e.def.MarshalErrorJSON(e)
+	return e.def.(errdef.Presenter).MarshalErrorJSON(e)
 }
 
 func (e *unmarshaledError) LogValue() slog.Value {
-	return e.def.MakeErrorLogValue(e)
+	return e.def.(errdef.Presenter).MakeErrorLogValue(e)
 }
 
 func (e *unmarshaledError) DebugStack() string {
@@ -131,4 +141,19 @@ func (e *unmarshaledError) Cause() error {
 		return nil
 	}
 	return e.causes[0] // return the first cause only
+}
+
+// Error implements the error interface.
+func (e *UnknownCauseError) Error() string {
+	return e.msg
+}
+
+// TypeName returns the name of the unknown cause type.
+func (e *UnknownCauseError) TypeName() string {
+	return e.typeName
+}
+
+// Unwrap returns the errors that this error wraps.
+func (e *UnknownCauseError) Unwrap() []error {
+	return e.causes[:]
 }

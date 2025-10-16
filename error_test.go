@@ -772,7 +772,7 @@ func TestError_Format(t *testing.T) {
 		result := fmt.Sprintf("%#v", err)
 		if matched, _ := regexp.MatchString(
 			`&errdef\.definedError\{`+
-				`def:\(\*errdef\.Definition\)\(0x[0-9a-f]+\), `+
+				`def:\(\*errdef\.definition\)\(0x[0-9a-f]+\), `+
 				`msg:"test message", `+
 				`cause:error\(nil\), `+
 				`stack:errdef\.stack\(nil\), `+

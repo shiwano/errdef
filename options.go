@@ -91,7 +91,7 @@ func (d Details) Key() FieldKey {
 	return detailsFieldKey
 }
 
-func (d Details) applyOption(def *Definition) {
+func (d Details) applyOption(def *definition) {
 	def.fields.set(detailsFieldKey, &fieldValue[Details]{value: maps.Clone(d)})
 }
 

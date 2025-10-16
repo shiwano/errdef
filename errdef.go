@@ -15,8 +15,8 @@ type Kind string
 // will not cause incorrect identity checks, it is strongly recommended to use
 // a unique Kind value across your application to prevent confusion in logs and
 // monitoring tools.
-func Define(kind Kind, opts ...Option) *Definition {
-	def := &Definition{
+func Define(kind Kind, opts ...Option) Definition {
+	def := &definition{
 		kind:   kind,
 		fields: newFields(),
 	}

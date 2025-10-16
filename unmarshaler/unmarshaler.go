@@ -40,7 +40,7 @@ type (
 	}
 )
 
-const errdefDefinitionTypeName = "*errdef.Definition"
+const errdefDefinitionTypeName = "*errdef.definition"
 
 var (
 	redactedStr   = errdef.Redact[any](nil).String()
@@ -217,11 +217,11 @@ func (d *Unmarshaler[T]) unmarshalCause(causeData *DecodedData) (error, error) {
 	return cause, nil
 }
 
-func (d *Unmarshaler[T]) resolveDefinitionFromMessage(msg string) (*errdef.Definition, bool) {
+func (d *Unmarshaler[T]) resolveDefinitionFromMessage(msg string) (errdef.Definition, bool) {
 	return d.resolver.ResolveKindStrict(errdef.Kind(msg))
 }
 
-func (d *Unmarshaler[T]) resolveKind(kind errdef.Kind) (*errdef.Definition, error) {
+func (d *Unmarshaler[T]) resolveKind(kind errdef.Kind) (errdef.Definition, error) {
 	if fallback, ok := d.resolver.(*resolver.FallbackResolver); ok {
 		if d.strictMode {
 			def, ok := fallback.ResolveKindStrict(kind)

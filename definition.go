@@ -18,18 +18,24 @@ type (
 	//
 	// Definition can be used as a sentinel error for identity checks with errors.Is,
 	// similar to standard errors like io.EOF. It can also be configured with additional
-	// options using With or WithOptions to create an ErrorFactory for generating errors
+	// options using With or WithOptions to create a Factory for generating errors
 	// with context-specific or request-scoped data.
-	Definition struct {
-		rootDef       *Definition
-		kind          Kind
-		fields        *fields
-		noTrace       bool
-		stackSkip     int
-		stackDepth    int
-		formatter     func(err Error, s fmt.State, verb rune)
-		jsonMarshaler func(err Error) ([]byte, error)
-		logValuer     func(err Error) slog.Value
+	Definition interface {
+		error
+		Factory
+
+		// Kind returns the kind of this error definition.
+		Kind() Kind
+		// Is reports whether this definition matches the given error.
+		Is(error) bool
+		// Fields returns the fields associated with this definition.
+		Fields() Fields
+		// With creates a new Factory and applies options from context first (if any),
+		// then the given opts. Later options override earlier ones.
+		With(context.Context, ...Option) Factory
+		// WithOptions creates a new Factory with the given options applied.
+		// Later options override earlier ones.
+		WithOptions(...Option) Factory
 	}
 
 	// Factory is an interface for creating errors from a configured Definition.
@@ -59,28 +65,56 @@ type (
 		// The resulting error implements PanicError interface to preserve the original panic value.
 		Recover(fn func() error) error
 	}
+
+	// Presenter provides error presentation methods for formatting, serialization, and logging.
+	// These methods are primarily used internally by Error implementations and are not
+	// typically called directly by application code.
+	Presenter interface {
+		// FormatError formats the error using this definition's custom formatter if set,
+		// otherwise uses the default format implementation.
+		FormatError(err Error, s fmt.State, verb rune)
+		// MarshalErrorJSON marshals the error to JSON using this definition's custom marshaler if set,
+		// otherwise uses the default JSON structure.
+		MarshalErrorJSON(err Error) ([]byte, error)
+		// MakeErrorLogValue returns a slog.Value representing the error using this definition's custom log valuer if set,
+		// otherwise uses the default log structure.
+		MakeErrorLogValue(err Error) slog.Value
+		// BuildCauseTree returns all causes as a tree structure.
+		// This method includes cycle detection: when a circular reference is detected,
+		// the node that would create the cycle is excluded, ensuring the result remains acyclic.
+		// While circular references are rare in practice, this check serves as a defensive
+		// programming measure.
+		BuildCauseTree(err Error) Nodes
+	}
+
+	definition struct {
+		rootDef       *definition
+		kind          Kind
+		fields        *fields
+		noTrace       bool
+		stackSkip     int
+		stackDepth    int
+		formatter     func(err Error, s fmt.State, verb rune)
+		jsonMarshaler func(err Error) ([]byte, error)
+		logValuer     func(err Error) slog.Value
+	}
 )
 
 var (
-	_ error        = (*Definition)(nil)
-	_ Factory      = (*Definition)(nil)
-	_ fieldsGetter = (*Definition)(nil)
+	_ Definition   = (*definition)(nil)
+	_ Presenter    = (*definition)(nil)
+	_ fieldsGetter = (*definition)(nil)
 )
 
-// Kind returns the kind of this error definition.
-func (d *Definition) Kind() Kind {
+func (d *definition) Kind() Kind {
 	return d.kind
 }
 
-// Error returns the string representation of this error definition.
-// This makes Definition implement the error interface.
-func (d *Definition) Error() string {
+func (d *definition) Error() string {
 	return string(d.kind)
 }
 
-// With creates a new ErrorFactory and applies options from context first (if any),
-// then the given opts. Later options override earlier ones.
-func (d *Definition) With(ctx context.Context, opts ...Option) Factory {
+func (d *definition) With(ctx context.Context, opts ...Option) Factory {
 	ctxOpts := optionsFromContext(ctx)
 	if len(ctxOpts) == 0 && len(opts) == 0 {
 		return d
@@ -91,9 +125,7 @@ func (d *Definition) With(ctx context.Context, opts ...Option) Factory {
 	return def
 }
 
-// WithOptions creates a new ErrorFactory with the given options applied.
-// Later options override earlier ones.
-func (d *Definition) WithOptions(opts ...Option) Factory {
+func (d *definition) WithOptions(opts ...Option) Factory {
 	if len(opts) == 0 {
 		return d
 	}
@@ -102,37 +134,29 @@ func (d *Definition) WithOptions(opts ...Option) Factory {
 	return def
 }
 
-// New creates a new error with the given message using this definition.
-func (d *Definition) New(msg string) error {
+func (d *definition) New(msg string) error {
 	return newError(d, nil, msg, false, callersSkip)
 }
 
-// Errorf creates a new error with a formatted message using this definition.
-func (d *Definition) Errorf(format string, args ...any) error {
+func (d *definition) Errorf(format string, args ...any) error {
 	return newError(d, nil, fmt.Sprintf(format, args...), false, callersSkip)
 }
 
-// Wrap wraps an existing error using this definition.
-// Returns nil if cause is nil.
-func (d *Definition) Wrap(cause error) error {
+func (d *definition) Wrap(cause error) error {
 	if cause == nil {
 		return nil
 	}
 	return newError(d, cause, cause.Error(), false, callersSkip)
 }
 
-// Wrapf wraps an existing error with a formatted message using this definition.
-// Returns nil if cause is nil.
-func (d *Definition) Wrapf(cause error, format string, args ...any) error {
+func (d *definition) Wrapf(cause error, format string, args ...any) error {
 	if cause == nil {
 		return nil
 	}
 	return newError(d, cause, fmt.Sprintf(format, args...), false, callersSkip)
 }
 
-// Join creates a new error by joining multiple errors using this definition.
-// Returns nil if all causes are nil.
-func (d *Definition) Join(causes ...error) error {
+func (d *definition) Join(causes ...error) error {
 	cause := errors.Join(causes...)
 	if cause == nil {
 		return nil
@@ -140,11 +164,7 @@ func (d *Definition) Join(causes ...error) error {
 	return newError(d, cause, cause.Error(), true, callersSkip)
 }
 
-// Recover executes the given function and recovers from any panic that occurs within it.
-// If a panic occurs, it wraps the panic as an error using this definition and returns it.
-// If no panic occurs, it returns the function's return value as is.
-// The resulting error implements PanicError interface to preserve the original panic value.
-func (d *Definition) Recover(fn func() error) error {
+func (d *definition) Recover(fn func() error) error {
 	var err error
 	func() {
 		defer func() {
@@ -158,32 +178,30 @@ func (d *Definition) Recover(fn func() error) error {
 	return err
 }
 
-// Is reports whether this definition matches the given error.
-func (d *Definition) Is(err error) bool {
-	var e *Definition
+func (d *definition) Is(err error) bool {
+	var e *definition
 	if errors.As(err, &e) {
 		return d.root() == e.root()
 	}
 	return errors.Is(err, d)
 }
 
-// Fields returns the fields associated with this definition.
-func (d *Definition) Fields() Fields {
+func (d *definition) Fields() Fields {
 	return d.fields
 }
 
-func (d *Definition) isRoot() bool {
+func (d *definition) isRoot() bool {
 	return d.rootDef == nil
 }
 
-func (d *Definition) root() *Definition {
+func (d *definition) root() *definition {
 	if d.isRoot() {
 		return d
 	}
 	return d.rootDef
 }
 
-func (d *Definition) clone() *Definition {
+func (d *definition) clone() *definition {
 	clone := *d
 	clone.fields = d.fields.clone()
 	if d.isRoot() {
@@ -192,14 +210,13 @@ func (d *Definition) clone() *Definition {
 	return &clone
 }
 
-func (d *Definition) applyOptions(opts []Option) {
+func (d *definition) applyOptions(opts []Option) {
 	for _, opt := range opts {
 		opt.applyOption(d)
 	}
 }
 
-// FormatError formats the error using this definition's custom formatter if set,
-func (d *Definition) FormatError(err Error, s fmt.State, verb rune) {
+func (d *definition) FormatError(err Error, s fmt.State, verb rune) {
 	if d.formatter != nil {
 		d.formatter(err, s, verb)
 		return
@@ -232,8 +249,7 @@ func (d *Definition) FormatError(err Error, s fmt.State, verb rune) {
 	}
 }
 
-// MarshalErrorJSON marshals the error to JSON using this definition's custom marshaler if set,
-func (d *Definition) MarshalErrorJSON(err Error) ([]byte, error) {
+func (d *definition) MarshalErrorJSON(err Error) ([]byte, error) {
 	if d.jsonMarshaler != nil {
 		return d.jsonMarshaler(err)
 	}
@@ -247,8 +263,7 @@ func (d *Definition) MarshalErrorJSON(err Error) ([]byte, error) {
 	})
 }
 
-// MakeErrorLogValue returns a slog.Value representing the error using this definition's custom log valuer if set,
-func (d *Definition) MakeErrorLogValue(err Error) slog.Value {
+func (d *definition) MakeErrorLogValue(err Error) slog.Value {
 	if d.logValuer != nil {
 		return d.logValuer(err)
 	}
@@ -276,6 +291,12 @@ func (d *Definition) MakeErrorLogValue(err Error) slog.Value {
 		attrs = append(attrs, slog.Any("causes", causeMessages))
 	}
 	return slog.GroupValue(attrs...)
+}
+
+func (d *definition) BuildCauseTree(err Error) Nodes {
+	visited := make(map[uintptr]uintptr)
+	nodes := buildNodes(err.Unwrap(), visited)
+	return nodes
 }
 
 func formatErrorDetails(err Error, s io.Writer, indent string, hasCauses bool) {

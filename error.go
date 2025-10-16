@@ -21,6 +21,7 @@ type (
 	// and UnwrapTree() for accessing the full error tree with cycle detection.
 	Error interface {
 		error
+
 		// Kind returns the type of this error.
 		Kind() Kind
 		// Fields returns the structured fields associated with this error.
@@ -59,7 +60,7 @@ type (
 	}
 
 	definedError struct {
-		def    *Definition
+		def    *definition
 		msg    string
 		cause  error
 		stack  stack
@@ -87,7 +88,7 @@ var (
 	_ fieldsGetter   = (*definedError)(nil)
 )
 
-func newError(d *Definition, cause error, msg string, joined bool, stackSkip int) error {
+func newError(d *definition, cause error, msg string, joined bool, stackSkip int) error {
 	var stack stack
 	if !d.noTrace {
 		depth := callersDepth
@@ -134,17 +135,18 @@ func (e *definedError) Unwrap() []error {
 }
 
 func (e *definedError) UnwrapTree() Nodes {
-	visited := make(map[uintptr]uintptr)
-	nodes := buildNodes(e.Unwrap(), visited)
-	return nodes
+	return e.def.BuildCauseTree(e)
 }
 
 func (e *definedError) Is(target error) bool {
 	if e == target {
 		return true
 	}
-	if d, ok := target.(*Definition); ok {
+	if d, ok := target.(*definition); ok {
 		return e.def.root() == d.root()
+	}
+	if d, ok := target.(Definition); ok {
+		return e.def.Is(d)
 	}
 	return false
 }
