@@ -128,7 +128,7 @@ func nodeToCauseProto(node *errdef.Node) (*CauseProto, error) {
 				})
 			}
 		}
-	case errdef.ErrorTypeNamer:
+	case *unmarshaler.UnknownCauseError:
 		cp.Type = e.TypeName()
 	default:
 		cp.Type = fmt.Sprintf("%T", node.Error)
