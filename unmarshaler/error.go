@@ -20,6 +20,10 @@ type (
 		UnknownFields() iter.Seq2[string, any]
 	}
 
+	causer interface {
+		Cause() error
+	}
+
 	unmarshaledError struct {
 		def           *errdef.Definition
 		msg           string
@@ -27,16 +31,6 @@ type (
 		unknownFields map[string]any
 		stack         stack
 		causes        []error
-	}
-
-	unknownCauseError struct {
-		message  string
-		typeName string
-		causes   []error
-	}
-
-	causer interface {
-		Cause() error
 	}
 )
 
@@ -48,8 +42,6 @@ var (
 	_ json.Marshaler      = (*unmarshaledError)(nil)
 	_ slog.LogValuer      = (*unmarshaledError)(nil)
 	_ causer              = (*unmarshaledError)(nil)
-
-	_ errdef.ErrorTypeNamer = (*unknownCauseError)(nil)
 )
 
 func (e *unmarshaledError) Error() string {
@@ -76,7 +68,7 @@ func (e *unmarshaledError) Unwrap() []error {
 }
 
 func (e *unmarshaledError) UnwrapTree() errdef.Nodes {
-	return errdef.BuildTree(e.causes...)
+	return buildNodes(e.causes)
 }
 
 func (e *unmarshaledError) UnknownFields() iter.Seq2[string, any] {
@@ -121,7 +113,6 @@ func (e *unmarshaledError) LogValue() slog.Value {
 
 func (e *unmarshaledError) DebugStack() string {
 	buf := bytes.NewBufferString(e.Error())
-
 	// hard-coded cause we can't get it in pure Go.
 	buf.WriteString("\n\ngoroutine 1 [running]:")
 
@@ -140,16 +131,4 @@ func (e *unmarshaledError) Cause() error {
 		return nil
 	}
 	return e.causes[0] // return the first cause only
-}
-
-func (e *unknownCauseError) Error() string {
-	return e.message
-}
-
-func (e *unknownCauseError) TypeName() string {
-	return e.typeName
-}
-
-func (e *unknownCauseError) Unwrap() []error {
-	return e.causes[:]
 }

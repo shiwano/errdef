@@ -134,7 +134,9 @@ func (e *definedError) Unwrap() []error {
 }
 
 func (e *definedError) UnwrapTree() Nodes {
-	return BuildTree(e.Unwrap()...)
+	visited := make(map[uintptr]uintptr)
+	nodes := buildNodes(e.Unwrap(), visited)
+	return nodes
 }
 
 func (e *definedError) Is(target error) bool {
@@ -149,7 +151,6 @@ func (e *definedError) Is(target error) bool {
 
 func (e *definedError) DebugStack() string {
 	buf := bytes.NewBufferString(e.Error())
-
 	// hard-coded cause we can't get it in pure Go.
 	buf.WriteString("\n\ngoroutine 1 [running]:")
 

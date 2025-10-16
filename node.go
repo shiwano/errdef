@@ -18,18 +18,10 @@ type (
 		Error error
 		// Causes are the nested causes of this error.
 		Causes Nodes
-
 		// ptr is the pointer value of the error, used internally for cycle detection.
 		ptr uintptr
 		// visited is used internally to track visited errors during tree construction.
 		visited map[uintptr]uintptr
-	}
-
-	// ErrorTypeNamer is an interface for errors that have a type name.
-	// This interface is used internally for causes created by the unmarshaler package.
-	ErrorTypeNamer interface {
-		error
-		TypeName() string
 	}
 
 	jsonCauseData struct {
@@ -44,11 +36,16 @@ var (
 	_ slog.LogValuer = (*Node)(nil)
 )
 
-// BuildTree builds an error tree from the given errors using this definition's context.
-func BuildTree(errs ...error) Nodes {
-	visited := make(map[uintptr]uintptr)
-	nodes := buildNodes(errs, visited)
-	return nodes
+// Walk returns an iterator that traverses the error tree in depth-first order.
+// The iterator yields pairs of depth (int) and node (*Node) for each error in the tree.
+func (ns Nodes) Walk() iter.Seq2[int, *Node] {
+	return func(yield func(int, *Node) bool) {
+		for _, n := range ns {
+			if !n.walk(0, yield) {
+				return
+			}
+		}
+	}
 }
 
 // HasCycle returns true if any node in the error tree contains a cycle.
@@ -62,30 +59,6 @@ func (ns Nodes) HasCycle() bool {
 		}
 	}
 	return false
-}
-
-// Walk returns an iterator that traverses the error tree in depth-first order.
-// The iterator yields pairs of depth (int) and node (*Node) for each error in the tree.
-func (ns Nodes) Walk() iter.Seq2[int, *Node] {
-	return func(yield func(int, *Node) bool) {
-		for _, n := range ns {
-			if !n.walk(0, yield) {
-				return
-			}
-		}
-	}
-}
-
-func (n *Node) walk(depth int, yield func(int, *Node) bool) bool {
-	if !yield(depth, n) {
-		return false
-	}
-	for _, cause := range n.Causes {
-		if !cause.walk(depth+1, yield) {
-			return false
-		}
-	}
-	return true
 }
 
 // IsCyclic returns true if this node is part of a cycle in the error tree.
@@ -104,16 +77,10 @@ func (n *Node) IsCyclic() bool {
 func (n *Node) MarshalJSON() ([]byte, error) {
 	switch err := n.Error.(type) {
 	case Error:
-		return json.Marshal(jsonErrorData{
-			Message: err.Error(),
-			Kind:    string(err.Kind()),
-			Fields:  err.Fields(),
-			Stack:   err.Stack().Frames(),
-			Causes:  n.Causes,
-		})
-	case ErrorTypeNamer:
+		return json.Marshal(err)
+	case interface{ TypeName() string }:
 		return json.Marshal(jsonCauseData{
-			Message: err.Error(),
+			Message: n.Error.Error(),
 			Type:    err.TypeName(),
 			Causes:  n.Causes,
 		})
@@ -128,12 +95,21 @@ func (n *Node) MarshalJSON() ([]byte, error) {
 
 // LogValue implements slog.LogValuer for Node.
 func (e *Node) LogValue() slog.Value {
-	switch te := e.Error.(type) {
+	switch err := e.Error.(type) {
 	case Error:
-		return te.(slog.LogValuer).LogValue()
-	case ErrorTypeNamer:
-		attrs := []slog.Attr{
-			slog.String("message", te.Error()),
+		attrs := make([]slog.Attr, 0, 5)
+		attrs = append(attrs, slog.String("message", err.Error()))
+
+		if err.Kind() != "" {
+			attrs = append(attrs, slog.String("kind", string(err.Kind())))
+		}
+		if err.Fields().Len() > 0 {
+			attrs = append(attrs, slog.Any("fields", err.Fields()))
+		}
+		if err.Stack().Len() > 0 {
+			if frame, ok := err.Stack().HeadFrame(); ok {
+				attrs = append(attrs, slog.Any("origin", frame))
+			}
 		}
 		if len(e.Causes) > 0 {
 			causes := make([]any, len(e.Causes))
@@ -144,9 +120,9 @@ func (e *Node) LogValue() slog.Value {
 		}
 		return slog.GroupValue(attrs...)
 	default:
-		attrs := []slog.Attr{
-			slog.String("message", e.Error.Error()),
-		}
+		attrs := make([]slog.Attr, 0, 2)
+		attrs = append(attrs, slog.String("message", err.Error()))
+
 		if len(e.Causes) > 0 {
 			causes := make([]any, len(e.Causes))
 			for i, cause := range e.Causes {
@@ -156,6 +132,18 @@ func (e *Node) LogValue() slog.Value {
 		}
 		return slog.GroupValue(attrs...)
 	}
+}
+
+func (n *Node) walk(depth int, yield func(int, *Node) bool) bool {
+	if !yield(depth, n) {
+		return false
+	}
+	for _, cause := range n.Causes {
+		if !cause.walk(depth+1, yield) {
+			return false
+		}
+	}
+	return true
 }
 
 func slogValueToAny(v slog.Value) any {
@@ -171,7 +159,7 @@ func slogValueToAny(v slog.Value) any {
 	}
 }
 
-func buildNodes(causes []error, visited map[uintptr]uintptr) []*Node {
+func buildNodes(causes []error, visited map[uintptr]uintptr) Nodes {
 	if len(causes) == 0 {
 		return nil
 	}

@@ -206,8 +206,8 @@ func (d *Unmarshaler[T]) unmarshalCause(causeData *DecodedData) (error, error) {
 			}
 		}
 
-		unknownErr := &unknownCauseError{
-			message:  msg,
+		unknownErr := &UnknownCauseError{
+			msg:      msg,
 			typeName: typeName,
 			causes:   nestedCauses,
 		}
