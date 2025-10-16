@@ -20,12 +20,6 @@ type (
 	// and Stack (call stack information), while maintaining compatibility with standard
 	// Go error handling via errors.Is and errors.As.
 	//
-	// Error implements several standard interfaces for formatting and serialization:
-	// fmt.Formatter for detailed output, json.Marshaler for JSON serialization,
-	// and slog.LogValuer for structured logging. It also integrates with external
-	// error tracking services like Sentry (via stackTracer) and Google Cloud Error
-	// Reporting (via DebugStacker), as well as legacy pkg/errors (via causer).
-	//
 	// Error chains are supported through Unwrap() for standard error unwrapping,
 	// and UnwrapTree() for accessing the full error tree with cycle detection.
 	Error interface {
@@ -39,8 +33,10 @@ type (
 		// Unwrap returns the errors that this error wraps.
 		Unwrap() []error
 		// UnwrapTree returns all causes as a tree structure.
-		// When a circular reference is detected, the node that would create the cycle
-		// is excluded, ensuring the result remains acyclic.
+		// This method includes cycle detection: when a circular reference is detected,
+		// the node that would create the cycle is excluded, ensuring the result remains acyclic.
+		// While circular references are rare in practice, this check serves as a defensive
+		// programming measure.
 		UnwrapTree() Nodes
 	}
 
