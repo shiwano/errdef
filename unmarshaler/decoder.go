@@ -73,7 +73,7 @@ type (
 		//
 		// If conversion fails at all steps, the field is stored in UnknownFields with its original
 		// type and value preserved.
-		Fields map[string]any `json:"fields,omitempty"`
+		Fields map[string]any `json:"fields,omitempty,omitzero"`
 
 		// Stack contains the stack trace where the error was created.
 		Stack []errdef.Frame `json:"stack,omitempty"`
