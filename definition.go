@@ -16,9 +16,6 @@ type (
 	// similar to standard errors like io.EOF. It can also be configured with additional
 	// options using With or WithOptions to create an ErrorFactory for generating errors
 	// with context-specific or request-scoped data.
-	//
-	// Definition implements both the error interface and ErrorFactory interface,
-	// making it suitable for both direct error creation and identity comparison.
 	Definition struct {
 		rootDef       *Definition
 		kind          Kind
