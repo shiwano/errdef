@@ -128,6 +128,7 @@ func nodeToCauseProto(node *errdef.Node) (*CauseProto, error) {
 				})
 			}
 		}
+	// This case is unnecessary unless you re-marshal errors restored by unmarshaler.
 	case *unmarshaler.UnknownCauseError:
 		cp.Type = e.TypeName()
 	default:
