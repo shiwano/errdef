@@ -139,7 +139,13 @@ func (d *definition) New(msg string) error {
 }
 
 func (d *definition) Errorf(format string, args ...any) error {
-	return newError(d, nil, fmt.Sprintf(format, args...), false, callersSkip)
+	var msg string
+	if len(args) == 0 {
+		msg = format
+	} else {
+		msg = fmt.Sprintf(format, args...)
+	}
+	return newError(d, nil, msg, false, callersSkip)
 }
 
 func (d *definition) Wrap(cause error) error {
@@ -153,8 +159,7 @@ func (d *definition) Wrapf(cause error, format string, args ...any) error {
 	if cause == nil {
 		return nil
 	}
-	msg := fmt.Sprintf(format, args...)
-	fullMsg := fmt.Sprintf("%s: %s", msg, cause.Error())
+	fullMsg := fmt.Sprintf(format+": %s", append(args, cause.Error())...)
 	return newError(d, cause, fullMsg, false, callersSkip)
 }
 

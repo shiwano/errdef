@@ -3,6 +3,7 @@ package errdef
 import (
 	"log/slog"
 	"runtime"
+	"sync"
 )
 
 type (
@@ -26,13 +27,6 @@ type (
 	stack []uintptr
 )
 
-var (
-	_ Stack          = stack{}
-	_ stackTracer    = stack{}
-	_ slog.LogValuer = stack{}
-	_ slog.LogValuer = Frame{}
-)
-
 const (
 	callersDepth = 32
 
@@ -41,10 +35,38 @@ const (
 	callersSkip = 4
 )
 
+var (
+	_ Stack          = stack{}
+	_ stackTracer    = stack{}
+	_ slog.LogValuer = stack{}
+	_ slog.LogValuer = Frame{}
+)
+
+var stackPool = sync.Pool{
+	New: func() any {
+		pcs := make([]uintptr, callersDepth)
+		return &pcs
+	},
+}
+
 func newStack(depth int, skip int) stack {
-	pcs := make([]uintptr, depth)
-	n := runtime.Callers(skip, pcs[:])
-	return pcs[:n]
+	if depth > callersDepth {
+		pcs := make([]uintptr, depth)
+		n := runtime.Callers(skip, pcs[:])
+		return pcs[:n]
+	}
+
+	pcs := stackPool.Get().(*[]uintptr)
+	defer stackPool.Put(pcs)
+
+	n := runtime.Callers(skip, (*pcs)[:depth])
+	if n == 0 {
+		return nil
+	}
+
+	result := make([]uintptr, n)
+	copy(result, (*pcs)[:n])
+	return result
 }
 
 func (s stack) Frames() []Frame {

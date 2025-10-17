@@ -230,6 +230,16 @@ func TestStackDepth(t *testing.T) {
 			t.Errorf("want 2 stack frames, got %d", len(frames))
 		}
 	})
+
+	t.Run("stack depth larger than pool size (50 > 32)", func(t *testing.T) {
+		def := errdef.Define("test", errdef.StackDepth(50))
+		err := def.New("test error")
+
+		frames := err.(errdef.Error).Stack().Frames()
+		if len(frames) == 0 {
+			t.Error("want non-empty stack frames")
+		}
+	})
 }
 
 func TestFormatter(t *testing.T) {
