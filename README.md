@@ -3,9 +3,9 @@
 ![Tag](https://img.shields.io/github/tag/shiwano/errdef.svg)
 ![Go Version](https://img.shields.io/badge/Go-%3E%3D%201.25-%23007d9c)
 [![Go Reference](https://pkg.go.dev/badge/github.com/shiwano/errdef.svg)](https://pkg.go.dev/github.com/shiwano/errdef)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/shiwano/errdef)
 ![Build Status](https://github.com/shiwano/errdef/actions/workflows/test.yml/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/shiwano/errdef)](https://goreportcard.com/report/github.com/shiwano/errdef)
-[![License](https://img.shields.io/github/license/shiwano/errdef)](./LICENSE)
 
 `errdef` splits error handling in Go into **Definitions** and **Error instances**, so you can keep errors typed, structured, and uniform.
 It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`, `fmt.Formatter`, `json.Marshaler`, and `slog.LogValuer` — while adding fields, stack traces, and flexible error composition.
