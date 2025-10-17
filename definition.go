@@ -153,7 +153,9 @@ func (d *definition) Wrapf(cause error, format string, args ...any) error {
 	if cause == nil {
 		return nil
 	}
-	return newError(d, cause, fmt.Sprintf(format, args...), false, callersSkip)
+	msg := fmt.Sprintf(format, args...)
+	fullMsg := fmt.Sprintf("%s: %s", msg, cause.Error())
+	return newError(d, cause, fullMsg, false, callersSkip)
 }
 
 func (d *definition) Join(causes ...error) error {

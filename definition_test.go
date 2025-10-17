@@ -262,7 +262,7 @@ func TestDefinition_Wrapf(t *testing.T) {
 
 		err := def.Wrapf(cause, "failed to connect to %s:%d", "localhost", 5432)
 
-		want := "failed to connect to localhost:5432"
+		want := "failed to connect to localhost:5432: connection failed"
 		if err.Error() != want {
 			t.Errorf("want message %q, got %q", want, err.Error())
 		}
@@ -288,7 +288,7 @@ func TestDefinition_Wrapf(t *testing.T) {
 
 		err := def.Wrapf(cause, "authentication failed for service")
 
-		if want, got := "authentication failed for service", err.Error(); got != want {
+		if want, got := "authentication failed for service: invalid token", err.Error(); got != want {
 			t.Errorf("want message %q, got %q", want, got)
 		}
 
