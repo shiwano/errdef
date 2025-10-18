@@ -43,11 +43,6 @@ func (r *FallbackResolver) Fallback() errdef.Definition {
 	return r.fallback
 }
 
-// Definitions implements Resolver.
-func (r *FallbackResolver) Definitions() []errdef.Definition {
-	return r.resolver.Definitions()
-}
-
 // ResolveKindStrict implements Resolver.
 func (r *FallbackResolver) ResolveKindStrict(kind errdef.Kind) (errdef.Definition, bool) {
 	return r.resolver.ResolveKindStrict(kind)

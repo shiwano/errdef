@@ -7,30 +7,6 @@ import (
 	"github.com/shiwano/errdef/resolver"
 )
 
-func TestFallbackResolver_Definitions(t *testing.T) {
-	def1 := errdef.Define("error1")
-	def2 := errdef.Define("error2")
-	def3 := errdef.Define("error3")
-
-	r := resolver.New(def1, def2)
-	fallbackResolver := r.WithFallback(def3)
-	defs := fallbackResolver.Definitions()
-
-	if len(defs) != 3 {
-		t.Fatalf("want 3 definitions, got %d", len(defs))
-	}
-
-	if defs[0] != def1 {
-		t.Errorf("want first definition to be def1, got %v", defs[0])
-	}
-	if defs[1] != def2 {
-		t.Errorf("want second definition to be def2, got %v", defs[1])
-	}
-	if defs[2] != def3 {
-		t.Errorf("want third definition to be def3, got %v", defs[2])
-	}
-}
-
 func TestFallbackResolver_ResolveKind(t *testing.T) {
 	def1 := errdef.Define("error1")
 	def2 := errdef.Define("error2")

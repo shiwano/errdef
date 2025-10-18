@@ -1,8 +1,6 @@
 package resolver
 
 import (
-	"slices"
-
 	"github.com/shiwano/errdef"
 )
 
@@ -18,16 +16,10 @@ var _ Resolver = (*StrictResolver)(nil)
 // WithFallback creates a new FallbackResolver that uses the given definition
 // as a fallback when resolution fails.
 func (r *StrictResolver) WithFallback(fallback errdef.Definition) *FallbackResolver {
-	allDefs := append(r.Definitions(), fallback)
 	return &FallbackResolver{
-		resolver: New(allDefs...),
+		resolver: r,
 		fallback: fallback,
 	}
-}
-
-// Definitions implements Resolver.
-func (r *StrictResolver) Definitions() []errdef.Definition {
-	return slices.Clone(r.defs)
 }
 
 // ResolveKindStrict implements Resolver.

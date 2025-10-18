@@ -8,8 +8,6 @@ import (
 
 // Resolver provides error definitions for resolution.
 type Resolver interface {
-	// Definitions returns all definitions managed by the resolver.
-	Definitions() []errdef.Definition
 	// ResolveKindStrict resolves a definition by its Kind.
 	// Returns the definition and true if found, nil and false otherwise.
 	ResolveKindStrict(kind errdef.Kind) (errdef.Definition, bool)
