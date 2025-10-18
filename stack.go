@@ -53,7 +53,7 @@ var stackPool = sync.Pool{
 func newStack(depth int, skip int) stack {
 	if depth > callersDepth {
 		pcs := make([]uintptr, depth)
-		n := runtime.Callers(skip, pcs[:])
+		n := runtime.Callers(skip, pcs)
 		return pcs[:n]
 	}
 
