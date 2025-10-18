@@ -422,71 +422,37 @@ func TestUnmarshaler_WithStandardSentinelErrors(t *testing.T) {
 	r := resolver.New(def)
 	u := unmarshaler.NewJSON(r, unmarshaler.WithStandardSentinelErrors())
 
-	t.Run("io.EOF", func(t *testing.T) {
-		orig := def.Wrap(io.EOF)
-		data, err := json.Marshal(orig)
-		if err != nil {
-			t.Fatalf("failed to marshal: %v", err)
-		}
+	tests := []struct {
+		err error
+	}{
+		{err: io.EOF},
+		{err: context.Canceled},
+		{err: os.ErrNotExist},
+	}
 
-		unmarshaled, err := u.Unmarshal(data)
-		if err != nil {
-			t.Fatalf("failed to unmarshal: %v", err)
-		}
+	for _, tt := range tests {
+		t.Run(tt.err.Error(), func(t *testing.T) {
+			orig := def.Wrap(tt.err)
+			data, err := json.Marshal(orig)
+			if err != nil {
+				t.Fatalf("failed to marshal: %v", err)
+			}
 
-		causes := unmarshaled.Unwrap()
-		if len(causes) != 1 {
-			t.Fatalf("want 1 cause, got %d", len(causes))
-		}
+			unmarshaled, err := u.Unmarshal(data)
+			if err != nil {
+				t.Fatalf("failed to unmarshal: %v", err)
+			}
 
-		if !errors.Is(causes[0], io.EOF) {
-			t.Errorf("want cause to be io.EOF, got %v", causes[0])
-		}
-	})
+			causes := unmarshaled.Unwrap()
+			if len(causes) != 1 {
+				t.Fatalf("want 1 cause, got %d", len(causes))
+			}
 
-	t.Run("context.Canceled", func(t *testing.T) {
-		orig := def.Wrap(context.Canceled)
-		data, err := json.Marshal(orig)
-		if err != nil {
-			t.Fatalf("failed to marshal: %v", err)
-		}
-
-		unmarshaled, err := u.Unmarshal(data)
-		if err != nil {
-			t.Fatalf("failed to unmarshal: %v", err)
-		}
-
-		causes := unmarshaled.Unwrap()
-		if len(causes) != 1 {
-			t.Fatalf("want 1 cause, got %d", len(causes))
-		}
-
-		if !errors.Is(causes[0], context.Canceled) {
-			t.Errorf("want cause to be context.Canceled, got %v", causes[0])
-		}
-	})
-
-	t.Run("os.ErrNotExist", func(t *testing.T) {
-		orig := def.Wrap(os.ErrNotExist)
-		data, err := json.Marshal(orig)
-		if err != nil {
-			t.Fatalf("failed to marshal: %v", err)
-		}
-
-		unmarshaled, err := u.Unmarshal(data)
-		if err != nil {
-			t.Fatalf("failed to unmarshal: %v", err)
-		}
-
-		causes := unmarshaled.Unwrap()
-		if len(causes) != 1 {
-			t.Fatalf("want 1 cause, got %d", len(causes))
-		}
-
-		if !errors.Is(causes[0], os.ErrNotExist) {
-			t.Errorf("want cause to be os.ErrNotExist, got %v", causes[0])
-		}
-	})
+			if !errors.Is(causes[0], tt.err) {
+				t.Errorf("want cause to be %v, got %v", tt.err, causes[0])
+			}
+		})
+	}
 }
 
 func TestUnmarshaler_SentinelErrors_Custom(t *testing.T) {
