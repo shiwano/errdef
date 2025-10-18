@@ -425,13 +425,13 @@ import (
 var (
     ErrStripeCardDeclined = errdef.Define("card_declined", errdef.HTTPStatus(400))
     ErrStripeRateLimit    = errdef.Define("rate_limit", errdef.HTTPStatus(429))
-    ErrStripeUnknown      = errdef.Define("stripe_unknown", errdef.HTTPStatus(500))
+    ErrStripeUnhandled    = errdef.Define("stripe_unhandled", errdef.HTTPStatus(500))
 
     // Order defines priority (first-wins).
     ErrStripe = resolver.New(
         ErrStripeCardDeclined,
         ErrStripeRateLimit,
-    ).WithFallback(ErrStripeUnknown) // Remove if you want strict matching.
+    ).WithFallback(ErrStripeUnhandled) // Remove if you want strict matching.
 )
 
 func handleStripeError(code, msg string) error {
