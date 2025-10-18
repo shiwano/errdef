@@ -25,7 +25,7 @@ func TestNew(t *testing.T) {
 
 		r := resolver.New(def1, def2)
 
-		result, ok := r.ResolveKindStrict("error1")
+		result, ok := r.ResolveKind("error1")
 		if !ok {
 			t.Fatal("want to resolve existing kind")
 		}

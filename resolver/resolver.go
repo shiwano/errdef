@@ -8,15 +8,15 @@ import (
 
 // Resolver provides error definitions for resolution.
 type Resolver interface {
-	// ResolveKindStrict resolves a definition by its Kind.
+	// ResolveKind resolves a definition by its Kind.
 	// Returns the definition and true if found, nil and false otherwise.
-	ResolveKindStrict(kind errdef.Kind) (errdef.Definition, bool)
-	// ResolveFieldStrict resolves a definition by matching a field value.
+	ResolveKind(kind errdef.Kind) (errdef.Definition, bool)
+	// ResolveField resolves a definition by matching a field value.
 	// Returns the first definition that has the specified field key with the exact value.
-	ResolveFieldStrict(key errdef.FieldKey, want any) (errdef.Definition, bool)
-	// ResolveFieldStrictFunc resolves a definition using a custom field evaluation function.
+	ResolveField(key errdef.FieldKey, want any) (errdef.Definition, bool)
+	// ResolveFieldFunc resolves a definition using a custom field evaluation function.
 	// Returns the first definition where the eq function returns true for the field value.
-	ResolveFieldStrictFunc(key errdef.FieldKey, eq func(v errdef.FieldValue) bool) (errdef.Definition, bool)
+	ResolveFieldFunc(key errdef.FieldKey, eq func(v errdef.FieldValue) bool) (errdef.Definition, bool)
 }
 
 // New creates a new Resolver with the given definitions.

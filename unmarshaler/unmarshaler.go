@@ -218,21 +218,21 @@ func (d *Unmarshaler[T]) unmarshalCause(causeData *DecodedData) (error, error) {
 }
 
 func (d *Unmarshaler[T]) resolveDefinitionFromMessage(msg string) (errdef.Definition, bool) {
-	return d.resolver.ResolveKindStrict(errdef.Kind(msg))
+	return d.resolver.ResolveKind(errdef.Kind(msg))
 }
 
 func (d *Unmarshaler[T]) resolveKind(kind errdef.Kind) (errdef.Definition, error) {
-	if fallback, ok := d.resolver.(*resolver.FallbackResolver); ok {
+	if defaultResolver, ok := d.resolver.(*resolver.DefaultResolver); ok {
 		if d.strictMode {
-			def, ok := fallback.ResolveKindStrict(kind)
+			def, ok := defaultResolver.ResolveKind(kind)
 			if !ok {
 				return nil, ErrUnknownKind.WithOptions(kindField(kind)).New("unknown kind")
 			}
 			return def, nil
 		}
-		return fallback.ResolveKind(kind), nil
+		return defaultResolver.ResolveKindOrDefault(kind), nil
 	}
-	def, ok := d.resolver.ResolveKindStrict(kind)
+	def, ok := d.resolver.ResolveKind(kind)
 	if !ok {
 		return nil, ErrUnknownKind.WithOptions(kindField(kind)).New("unknown kind")
 	}

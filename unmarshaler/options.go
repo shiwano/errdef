@@ -21,7 +21,7 @@ import (
 //   - Returns ErrUnknownField if it encounters a field that is not defined in
 //     the error definition or registered via WithCustomFields
 //   - Returns ErrUnknownKind if it encounters an unknown kind, even when using
-//     a FallbackResolver
+//     a DefaultResolver
 //
 // This option is useful in development and testing environments to detect
 // schema inconsistencies early, ensuring strict compatibility between error

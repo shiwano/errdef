@@ -13,24 +13,24 @@ type StrictResolver struct {
 
 var _ Resolver = (*StrictResolver)(nil)
 
-// WithFallback creates a new FallbackResolver that uses the given definition
-// as a fallback when resolution fails.
-func (r *StrictResolver) WithFallback(fallback errdef.Definition) *FallbackResolver {
-	return &FallbackResolver{
-		resolver: r,
-		fallback: fallback,
+// WithDefault creates a new DefaultResolver that uses the given definition
+// as a default when resolution fails.
+func (r *StrictResolver) WithDefault(defaultDef errdef.Definition) *DefaultResolver {
+	return &DefaultResolver{
+		resolver:   r,
+		defaultDef: defaultDef,
 	}
 }
 
-// ResolveKindStrict implements Resolver.
-func (r *StrictResolver) ResolveKindStrict(kind errdef.Kind) (errdef.Definition, bool) {
+// ResolveKind implements Resolver.
+func (r *StrictResolver) ResolveKind(kind errdef.Kind) (errdef.Definition, bool) {
 	def, ok := r.byKind[kind]
 	return def, ok
 }
 
-// ResolveFieldStrict implements Resolver.
-func (r *StrictResolver) ResolveFieldStrict(key errdef.FieldKey, want any) (errdef.Definition, bool) {
-	return r.ResolveFieldStrictFunc(key, func(v errdef.FieldValue) bool {
+// ResolveField implements Resolver.
+func (r *StrictResolver) ResolveField(key errdef.FieldKey, want any) (errdef.Definition, bool) {
+	return r.ResolveFieldFunc(key, func(v errdef.FieldValue) bool {
 		if fv, ok := want.(errdef.FieldValue); ok {
 			return v.Equal(fv.Value())
 		}
@@ -38,8 +38,8 @@ func (r *StrictResolver) ResolveFieldStrict(key errdef.FieldKey, want any) (errd
 	})
 }
 
-// ResolveFieldStrictFunc implements Resolver.
-func (r *StrictResolver) ResolveFieldStrictFunc(key errdef.FieldKey, eq func(v errdef.FieldValue) bool) (errdef.Definition, bool) {
+// ResolveFieldFunc implements Resolver.
+func (r *StrictResolver) ResolveFieldFunc(key errdef.FieldKey, eq func(v errdef.FieldValue) bool) (errdef.Definition, bool) {
 	for _, def := range r.defs {
 		v, ok := def.Fields().Get(key)
 		if !ok || !eq(v) {

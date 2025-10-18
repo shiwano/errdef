@@ -431,15 +431,15 @@ var (
     ErrStripe = resolver.New(
         ErrStripeCardDeclined,
         ErrStripeRateLimit,
-    ).WithFallback(ErrStripeUnhandled) // Remove if you want strict matching.
+    ).WithDefault(ErrStripeUnhandled) // Remove if you want strict matching.
 )
 
 func handleStripeError(code, msg string) error {
-    return ErrStripe.ResolveKind(errdef.Kind(code)).New(msg)
+    return ErrStripe.ResolveKindOrDefault(errdef.Kind(code)).New(msg)
 }
 
 func handleStripeHTTPError(statusCode int, msg string) error {
-    return ErrStripe.ResolveField(errdef.HTTPStatus.Key(), statusCode).New(msg)
+    return ErrStripe.ResolveFieldOrDefault(errdef.HTTPStatus.Key(), statusCode).New(msg)
 }
 ```
 

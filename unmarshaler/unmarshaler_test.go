@@ -1298,10 +1298,10 @@ func TestUnmarshaler_WithStrictMode(t *testing.T) {
 		}
 	})
 
-	t.Run("returns error for unknown kind with strict mode enabled and FallbackResolver", func(t *testing.T) {
+	t.Run("returns error for unknown kind with strict mode enabled and DefaultResolver", func(t *testing.T) {
 		knownDef := errdef.Define("known_error")
-		fallbackDef := errdef.Define("")
-		r := resolver.New(knownDef).WithFallback(fallbackDef)
+		defaultDef := errdef.Define("")
+		r := resolver.New(knownDef).WithDefault(defaultDef)
 		u := unmarshaler.NewJSON(r, unmarshaler.WithStrictMode())
 
 		jsonData := `{
