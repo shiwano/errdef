@@ -40,6 +40,7 @@ var (
 	_ Stack          = stack{}
 	_ stackTracer    = stack{}
 	_ slog.LogValuer = stack{}
+
 	_ slog.LogValuer = Frame{}
 )
 
