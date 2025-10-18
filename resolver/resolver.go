@@ -67,7 +67,7 @@ func New(defs ...errdef.Definition) *StrictResolver {
 
 // Definitions returns all definitions managed by the resolver.
 func (r *StrictResolver) Definitions() []errdef.Definition {
-	return r.defs[:]
+	return slices.Clone(r.defs)
 }
 
 // WithFallback creates a new FallbackResolver that uses the given definition

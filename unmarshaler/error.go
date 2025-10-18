@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"iter"
 	"log/slog"
+	"slices"
 
 	"github.com/shiwano/errdef"
 )
@@ -74,7 +75,7 @@ func (e *unmarshaledError) Stack() errdef.Stack {
 }
 
 func (e *unmarshaledError) Unwrap() []error {
-	return e.causes[:]
+	return slices.Clone(e.causes)
 }
 
 func (e *unmarshaledError) UnwrapTree() errdef.Nodes {
@@ -155,5 +156,5 @@ func (e *UnknownCauseError) TypeName() string {
 
 // Unwrap returns the errors that this error wraps.
 func (e *UnknownCauseError) Unwrap() []error {
-	return e.causes[:]
+	return slices.Clone(e.causes)
 }

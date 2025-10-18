@@ -2,6 +2,7 @@ package unmarshaler
 
 import (
 	"log/slog"
+	"slices"
 
 	"github.com/shiwano/errdef"
 )
@@ -14,7 +15,7 @@ var (
 )
 
 func (s stack) Frames() []errdef.Frame {
-	return s[:]
+	return slices.Clone(s)
 }
 
 func (s stack) HeadFrame() (errdef.Frame, bool) {

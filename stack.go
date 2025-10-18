@@ -3,6 +3,7 @@ package errdef
 import (
 	"log/slog"
 	"runtime"
+	"slices"
 	"sync"
 )
 
@@ -108,10 +109,7 @@ func (s stack) Len() int {
 }
 
 func (s stack) StackTrace() []uintptr {
-	if len(s) == 0 {
-		return nil
-	}
-	return s[:]
+	return slices.Clone(s)
 }
 
 func (s stack) LogValue() slog.Value {
