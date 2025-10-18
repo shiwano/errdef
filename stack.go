@@ -4,7 +4,6 @@ import (
 	"log/slog"
 	"runtime"
 	"slices"
-	"sync"
 )
 
 type (
@@ -44,31 +43,10 @@ var (
 	_ slog.LogValuer = Frame{}
 )
 
-var stackPool = sync.Pool{
-	New: func() any {
-		pcs := make([]uintptr, callersDepth)
-		return &pcs
-	},
-}
-
 func newStack(depth int, skip int) stack {
-	if depth > callersDepth {
-		pcs := make([]uintptr, depth)
-		n := runtime.Callers(skip, pcs)
-		return pcs[:n]
-	}
-
-	pcs := stackPool.Get().(*[]uintptr)
-	defer stackPool.Put(pcs)
-
-	n := runtime.Callers(skip, (*pcs)[:depth])
-	if n == 0 {
-		return nil
-	}
-
-	result := make([]uintptr, n)
-	copy(result, (*pcs)[:n])
-	return result
+	pcs := make([]uintptr, depth)
+	n := runtime.Callers(skip, pcs)
+	return pcs[:n]
 }
 
 func (s stack) Frames() []Frame {
