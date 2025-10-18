@@ -551,9 +551,9 @@ func main() {
 
 | Operation | stdlib  | errdef (NoTrace) | errdef (default) | errdef (dynamic field) |
 |-----------|---------|------------------|------------------|------------------------|
-| New       | ~15 ns  | ~25 ns           | ~255 ns          | ~461 ns                |
-| Wrap      | ~81 ns  | ~25 ns           | ~256 ns          | ~462 ns                |
-| Memory    | 16-56 B | ~80 B            | ~112 B           | ~672 B                 |
+| New       | ~17 ns  | ~28 ns           | ~303 ns          | ~510 ns                |
+| Wrap      | ~106 ns | ~28 ns           | ~289 ns          | ~534 ns                |
+| Memory    | 16-56 B | 80 B             | 336 B            | 896 B                  |
 
 > **Note:** Benchmarked on Apple M1 Pro, Go 1.25 (stack depth: 32)
 
@@ -567,30 +567,30 @@ GOMAXPROCS=1 go test -bench=. -benchmem -benchtime=3s ./...
 
 In practice, error handling is rarely the bottleneck. Focus on correctness first, then optimize if profiling shows that error creation is a significant cost.
 
-1. **Default is fine for most cases**: The ~255 ns overhead is negligible unless you're creating thousands of errors per second.
-2. **Disable stack traces in hot paths**: Stack trace capture takes ~230 ns per error. Use `NoTrace()` in tight loops or high-frequency code paths where errors are common:
+1. **Default is fine for most cases**: The ~303 ns overhead is negligible unless you're creating thousands of errors per second.
+2. **Disable stack traces in hot paths**: Stack trace capture takes ~275 ns per error. Use `NoTrace()` in tight loops or high-frequency code paths where errors are common:
 
    ```go
    // ✅ Hot paths (loops, frequently called functions)
    var ErrValidation = errdef.Define("validation", errdef.NoTrace())
    for _, item := range items {
        if err := validate(item); err != nil {
-           return ErrValidation.Wrap(err) // Fast: ~25 ns, ~80 B
+           return ErrValidation.Wrap(err) // Fast: ~28 ns, 80 B
        }
    }
 
    // ❌ API boundaries, critical errors (keep stack traces!)
-   var ErrDatabaseFailure = errdef.Define("db_failure") // ~255 ns, ~112 B
+   var ErrDatabaseFailure = errdef.Define("db_failure") // ~303 ns, 336 B
    ```
 
-3. **Minimize dynamic fields**: Using `With()` or `WithOptions()` adds ~200 ns base overhead plus ~50 ns per field. For hot paths where fields are constant, prefer defining errors with fields upfront:
+3. **Minimize dynamic fields**: Using `With()` or `WithOptions()` adds ~202 ns base overhead plus ~59 ns per field. For hot paths where fields are constant, prefer defining errors with fields upfront:
 
    ```go
    // ✅ Attach fields to definition upfront
    var ErrInvalidInput = errdef.Define("invalid_input", errdef.HTTPStatus(400), errdef.NoTrace())
    for _, input := range inputs {
        if !input.IsValid() {
-           return ErrInvalidInput.New("invalid") // Fast: ~25 ns, ~80 B
+           return ErrInvalidInput.New("invalid") // Fast: ~28 ns, 80 B
        }
    }
 
@@ -598,7 +598,7 @@ In practice, error handling is rarely the bottleneck. Focus on correctness first
    var ErrInvalidInput = errdef.Define("invalid_input", errdef.NoTrace())
    for _, input := range inputs {
        if !input.IsValid() {
-           return ErrInvalidInput.WithOptions(errdef.HTTPStatus(400)).New("invalid") // ~214 ns, ~640 B
+           return ErrInvalidInput.WithOptions(errdef.HTTPStatus(400)).New("invalid") // ~230 ns, 640 B
        }
    }
    ```
@@ -609,13 +609,13 @@ In practice, error handling is rarely the bottleneck. Focus on correctness first
    // ✅ Capture only the immediate origin
    var ErrDBQuery = errdef.Define("db_query", errdef.StackDepth(1))
    if err := db.Query(...); err != nil {
-       return ErrDBQuery.Wrap(err) // Fast: ~187 ns, ~88 B
+       return ErrDBQuery.Wrap(err) // Fast: ~177 ns, 88 B
    }
 
    // ❌ Keep full stack trace (default depth: 32)
    var ErrDBQuery = errdef.Define("db_query")
    if err := db.Query(...); err != nil {
-       return ErrDBQuery.Wrap(err) // ~256 ns, ~112 B
+       return ErrDBQuery.Wrap(err) // ~289 ns, 336 B
    }
    ```
 
@@ -625,16 +625,16 @@ Other operations also have measurable overhead:
 
 | Operation                      | Time        | Memory |
 |--------------------------------|-------------|--------|
-| Detailed Error Formatting      | ~1.2 µs     | 1.3 KB |
-| Structured Logging (`slog`)    | ~280 ns     | 544 B  |
-| Field Extraction               | ~153 ns     | 32 B   |
-| Resolver (kind lookup)         | ~6-8 ns     | 0 B    |
-| Resolver (field lookup)        | ~213-243 ns | 544 B  |
-| JSON Marshaling (NoTrace)      | ~864 ns     | 800 B  |
-| JSON Marshaling (simple)       | ~2.0 µs     | 1.8 KB |
-| JSON Marshaling (deep chain)   | ~249 µs     | 78 KB  |
-| JSON unmarshaling (simple)     | ~5.8 µs     | 2.7 KB |
-| JSON unmarshaling (deep chain) | ~65 µs      | 47 KB  |
+| Detailed Error Formatting      | ~1.4 µs     | 1.3 KB |
+| Structured Logging (`slog`)    | ~329 ns     | 544 B  |
+| Field Extraction               | ~154 ns     | 32 B   |
+| Resolver (kind lookup)         | ~7 ns       | 0 B    |
+| Resolver (field lookup)        | ~214-245 ns | 528 B  |
+| JSON Marshaling (NoTrace)      | ~910 ns     | 800 B  |
+| JSON Marshaling (simple)       | ~2.1 µs     | 1.8 KB |
+| JSON Marshaling (deep chain)   | ~249 µs     | 76 KB  |
+| JSON unmarshaling (simple)     | ~5.6 µs     | 2.1 KB |
+| JSON unmarshaling (deep chain) | ~56 µs      | 19 KB  |
 
 ## Library Comparison
 

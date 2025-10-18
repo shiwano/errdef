@@ -97,6 +97,16 @@ func BenchmarkErrdefWithFieldsNoTrace(b *testing.B) {
 	}
 }
 
+// errdef: Wrapping error with fields
+func BenchmarkErrdefWrapWithFields(b *testing.B) {
+	cause := errors.New("cause error")
+	b.ResetTimer()
+	b.ReportAllocs()
+	for b.Loop() {
+		_ = benchDef.WithOptions(benchField("test_value")).Wrap(cause)
+	}
+}
+
 // errdef: WithOptions with 3 fields
 func BenchmarkErrdefWithOptions3Fields(b *testing.B) {
 	b.ReportAllocs()
