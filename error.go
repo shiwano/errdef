@@ -148,6 +148,26 @@ func (e *definedError) Is(target error) bool {
 	return false
 }
 
+func (e *definedError) GoString() string {
+	type (
+		definedError_ definedError
+		definedError  definedError_
+	)
+	return fmt.Sprintf("%#v", (*definedError)(e))
+}
+
+func (e *definedError) Format(s fmt.State, verb rune) {
+	e.def.FormatError(e, s, verb)
+}
+
+func (e *definedError) MarshalJSON() ([]byte, error) {
+	return e.def.MarshalErrorJSON(e)
+}
+
+func (e *definedError) LogValue() slog.Value {
+	return e.def.MakeErrorLogValue(e)
+}
+
 func (e *definedError) DebugStack() string {
 	buf := bytes.NewBufferString(e.Error())
 	// hard-coded cause we can't get it in pure Go.
@@ -169,24 +189,4 @@ func (e *definedError) StackTrace() []uintptr {
 
 func (e *definedError) Cause() error {
 	return e.cause
-}
-
-func (e *definedError) GoString() string {
-	type (
-		definedError_ definedError
-		definedError  definedError_
-	)
-	return fmt.Sprintf("%#v", (*definedError)(e))
-}
-
-func (e *definedError) Format(s fmt.State, verb rune) {
-	e.def.FormatError(e, s, verb)
-}
-
-func (e *definedError) MarshalJSON() ([]byte, error) {
-	return e.def.MarshalErrorJSON(e)
-}
-
-func (e *definedError) LogValue() slog.Value {
-	return e.def.MakeErrorLogValue(e)
 }

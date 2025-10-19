@@ -531,84 +531,6 @@ func TestError_Is(t *testing.T) {
 	})
 }
 
-func TestError_DebugStack(t *testing.T) {
-	t.Run("debug stack format", func(t *testing.T) {
-		def := errdef.Define("test_error")
-		err := def.New("test message").(errdef.DebugStacker)
-
-		debugStack := err.DebugStack()
-
-		want := "test message\n\ngoroutine 1 [running]:\ngithub.com/shiwano/errdef_test.TestError_DebugStack.func1()"
-		if !strings.HasPrefix(debugStack, want) {
-			t.Errorf("want debug stack to start with %q, but got: %q", want, debugStack)
-		}
-	})
-
-	t.Run("no trace when disabled", func(t *testing.T) {
-		def := errdef.Define("test_error", errdef.NoTrace())
-		err := def.New("test message").(errdef.DebugStacker)
-
-		debugStack := err.DebugStack()
-		if !strings.Contains(debugStack, "test message") {
-			t.Error("want debug stack to contain error message even without trace")
-		}
-		if !strings.Contains(debugStack, "goroutine 1 [running]:") {
-			t.Error("want debug stack to contain goroutine header even without trace")
-		}
-	})
-}
-
-func TestError_StackTrace(t *testing.T) {
-	type stackTracer interface {
-		StackTrace() []uintptr
-	}
-
-	t.Run("stack exists", func(t *testing.T) {
-		def := errdef.Define("test_error")
-		err := def.New("test message").(stackTracer)
-
-		stackTrace := err.StackTrace()
-		if len(stackTrace) == 0 {
-			t.Error("want stack trace to have frames")
-		}
-	})
-
-	t.Run("no trace", func(t *testing.T) {
-		def := errdef.Define("test_error", errdef.NoTrace())
-		err := def.New("test message").(stackTracer)
-
-		stackTrace := err.StackTrace()
-		if len(stackTrace) != 0 {
-			t.Error("want no stack trace when disabled")
-		}
-	})
-}
-
-func TestError_Cause(t *testing.T) {
-	type causer interface {
-		Cause() error
-	}
-
-	t.Run("no cause", func(t *testing.T) {
-		def := errdef.Define("test_error")
-		err := def.New("test message").(causer)
-
-		if got := err.Cause(); got != nil {
-			t.Errorf("want no cause, got %v", got)
-		}
-	})
-
-	t.Run("with cause", func(t *testing.T) {
-		def := errdef.Define("test_error")
-		orig := errors.New("original error")
-		wrapped := def.Wrap(orig).(causer)
-
-		if got := wrapped.Cause(); got != orig {
-			t.Error("want cause to be original error")
-		}
-	})
-}
-
 func TestError_Format(t *testing.T) {
 	t.Run("default format", func(t *testing.T) {
 		def := errdef.Define("test_error")
@@ -1490,6 +1412,84 @@ func TestError_LogValue(t *testing.T) {
 		funcName, _ := origin["func"].(string)
 		if !strings.Contains(funcName, "TestError_LogValue") {
 			t.Errorf("want function name to contain TestError_LogValue, got %q", funcName)
+		}
+	})
+}
+
+func TestError_DebugStack(t *testing.T) {
+	t.Run("debug stack format", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		err := def.New("test message").(errdef.DebugStacker)
+
+		debugStack := err.DebugStack()
+
+		want := "test message\n\ngoroutine 1 [running]:\ngithub.com/shiwano/errdef_test.TestError_DebugStack.func1()"
+		if !strings.HasPrefix(debugStack, want) {
+			t.Errorf("want debug stack to start with %q, but got: %q", want, debugStack)
+		}
+	})
+
+	t.Run("no trace when disabled", func(t *testing.T) {
+		def := errdef.Define("test_error", errdef.NoTrace())
+		err := def.New("test message").(errdef.DebugStacker)
+
+		debugStack := err.DebugStack()
+		if !strings.Contains(debugStack, "test message") {
+			t.Error("want debug stack to contain error message even without trace")
+		}
+		if !strings.Contains(debugStack, "goroutine 1 [running]:") {
+			t.Error("want debug stack to contain goroutine header even without trace")
+		}
+	})
+}
+
+func TestError_StackTrace(t *testing.T) {
+	type stackTracer interface {
+		StackTrace() []uintptr
+	}
+
+	t.Run("stack exists", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		err := def.New("test message").(stackTracer)
+
+		stackTrace := err.StackTrace()
+		if len(stackTrace) == 0 {
+			t.Error("want stack trace to have frames")
+		}
+	})
+
+	t.Run("no trace", func(t *testing.T) {
+		def := errdef.Define("test_error", errdef.NoTrace())
+		err := def.New("test message").(stackTracer)
+
+		stackTrace := err.StackTrace()
+		if len(stackTrace) != 0 {
+			t.Error("want no stack trace when disabled")
+		}
+	})
+}
+
+func TestError_Cause(t *testing.T) {
+	type causer interface {
+		Cause() error
+	}
+
+	t.Run("no cause", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		err := def.New("test message").(causer)
+
+		if got := err.Cause(); got != nil {
+			t.Errorf("want no cause, got %v", got)
+		}
+	})
+
+	t.Run("with cause", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		orig := errors.New("original error")
+		wrapped := def.Wrap(orig).(causer)
+
+		if got := wrapped.Cause(); got != orig {
+			t.Error("want cause to be original error")
 		}
 	})
 }
