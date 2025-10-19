@@ -142,42 +142,8 @@ func TestFields_All(t *testing.T) {
 	}
 
 	fields := unmarshaled.Fields()
-	fieldCount := 0
-	for k, v := range fields.All() {
-		if k.String() == "user_id" {
-			if v.Value() != "user123" {
-				t.Errorf("want user_id %q, got %v", "user123", v.Value())
-			}
-		}
-		fieldCount++
-	}
-
-	if fieldCount != 2 {
-		t.Errorf("want 2 fields in seq, got %d", fieldCount)
-	}
-}
-
-func TestFields_Sorted(t *testing.T) {
-	userID, _ := errdef.DefineField[string]("user_id")
-	countField, _ := errdef.DefineField[int]("count")
-	def := errdef.Define("test_error", userID("user123"), countField(42))
-	r := resolver.New(def)
-	u := unmarshaler.NewJSON(r)
-
-	original := def.New("test message")
-	data, err := json.Marshal(original)
-	if err != nil {
-		t.Fatalf("failed to marshal: %v", err)
-	}
-
-	unmarshaled, err := u.Unmarshal(data)
-	if err != nil {
-		t.Fatalf("failed to unmarshal: %v", err)
-	}
-
-	fields := unmarshaled.Fields()
 	var keys []string
-	for k := range fields.Sorted() {
+	for k := range fields.All() {
 		keys = append(keys, k.String())
 	}
 

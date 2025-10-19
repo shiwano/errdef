@@ -66,7 +66,7 @@ func marshalProto(e errdef.Error) ([]byte, error) {
 
 	if e.Fields().Len() > 0 {
 		msg.Fields = make(map[string]*FieldValue)
-		for k, v := range e.Fields().Sorted() {
+		for k, v := range e.Fields().All() {
 			fv, err := anyToFieldValue(v.Value())
 			if err != nil {
 				return nil, err
@@ -110,7 +110,7 @@ func nodeToCauseProto(node *errdef.Node) (*CauseProto, error) {
 
 		if e.Fields().Len() > 0 {
 			cp.Fields = make(map[string]*FieldValue)
-			for k, v := range e.Fields().Sorted() {
+			for k, v := range e.Fields().All() {
 				fv, err := anyToFieldValue(v.Value())
 				if err != nil {
 					return nil, err

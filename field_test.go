@@ -127,7 +127,7 @@ func TestFields_Sorted(t *testing.T) {
 
 		var keys []string
 		var values []any
-		for key, value := range fields.Sorted() {
+		for key, value := range fields.All() {
 			keys = append(keys, key.String())
 			values = append(values, value.Value())
 		}
@@ -161,7 +161,7 @@ func TestFields_Sorted(t *testing.T) {
 
 		var key1 []string
 		var value1 []any
-		for key, value := range fields.Sorted() {
+		for key, value := range fields.All() {
 			key1 = append(key1, key.String())
 			value1 = append(value1, value.Value())
 		}
@@ -169,7 +169,7 @@ func TestFields_Sorted(t *testing.T) {
 		for range 10 {
 			var key2 []string
 			var value2 []any
-			for key, value := range fields.Sorted() {
+			for key, value := range fields.All() {
 				key2 = append(key2, key.String())
 				value2 = append(value2, value.Value())
 			}

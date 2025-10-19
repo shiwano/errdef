@@ -60,23 +60,6 @@ func (f *fields) FindKeys(name string) []errdef.FieldKey {
 
 func (f *fields) All() iter.Seq2[errdef.FieldKey, errdef.FieldValue] {
 	return func(yield func(key errdef.FieldKey, value errdef.FieldValue) bool) {
-		for k, v := range f.fields {
-			if !yield(k, v) {
-				return
-			}
-		}
-		for k, v := range f.unknownFields {
-			key := unmarshaledFieldKey(k)
-			val := &unmarshaledFieldValue{value: v}
-			if !yield(key, val) {
-				return
-			}
-		}
-	}
-}
-
-func (f *fields) Sorted() iter.Seq2[errdef.FieldKey, errdef.FieldValue] {
-	return func(yield func(key errdef.FieldKey, value errdef.FieldValue) bool) {
 		allKeys := make([]errdef.FieldKey, 0, len(f.fields)+len(f.unknownFields))
 		for k := range f.fields {
 			allKeys = append(allKeys, k)
@@ -113,7 +96,7 @@ func (f *fields) IsZero() bool {
 
 func (f *fields) MarshalJSON() ([]byte, error) {
 	result := make(map[string]any)
-	for k, v := range f.Sorted() {
+	for k, v := range f.All() {
 		result[k.String()] = v.Value()
 	}
 	return json.Marshal(result)
@@ -121,7 +104,7 @@ func (f *fields) MarshalJSON() ([]byte, error) {
 
 func (f *fields) LogValue() slog.Value {
 	attrs := make([]slog.Attr, 0, f.Len())
-	for k, v := range f.Sorted() {
+	for k, v := range f.All() {
 		attrs = append(attrs, slog.Any(k.String(), v.Value()))
 	}
 	return slog.GroupValue(attrs...)
