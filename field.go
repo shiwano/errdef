@@ -49,6 +49,10 @@ type (
 		Equal(other any) bool
 	}
 
+	fieldsGetter interface {
+		Fields() Fields
+	}
+
 	fields struct {
 		data      map[FieldKey]indexedFieldValue
 		lastIndex int
@@ -65,10 +69,6 @@ type (
 	indexedFieldValue struct {
 		value FieldValue
 		index int
-	}
-
-	fieldsGetter interface {
-		Fields() Fields
 	}
 )
 

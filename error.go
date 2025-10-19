@@ -85,7 +85,10 @@ var (
 	_ slog.LogValuer = (*definedError)(nil)
 	_ stackTracer    = (*definedError)(nil)
 	_ causer         = (*definedError)(nil)
+	_ kindGetter     = (*definedError)(nil)
 	_ fieldsGetter   = (*definedError)(nil)
+	_ stackGetter    = (*definedError)(nil)
+	_ treeUnwrapper  = (*definedError)(nil)
 )
 
 func newError(d *definition, cause error, msg string, joined bool, stackSkip int) error {

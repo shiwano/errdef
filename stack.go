@@ -24,6 +24,10 @@ type (
 		Line int    `json:"line"`
 	}
 
+	stackGetter interface {
+		Stack() Stack
+	}
+
 	stack []uintptr
 )
 

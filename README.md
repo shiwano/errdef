@@ -17,6 +17,7 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
 - [Getting Started](#getting-started)
 - [Features](#features)
   - [Error Constructors](#error-constructors)
+  - [Error Inspection](#error-inspection)
   - [Detailed Error Formatting](#detailed-error-formatting)
   - [JSON Marshaling](#json-marshaling)
   - [Structured Logging (`slog`)](#structured-logging-slog)
@@ -146,6 +147,28 @@ e1 := ErrNotFound.With(context.TODO(), UserID("u123")).New("user not found")
 e2 := ErrNotFound.WithOptions(UserID("u123")).New("user not found")
 ```
 
+### Error Inspection
+
+You can inspect the kind, fields, stack trace, or causes from both `errdef.Definition` and any `errdef.Error` in the error chain.
+
+```go
+if kind, ok := errdef.KindFrom(err); ok {
+    fmt.Println("kind:", kind)
+}
+
+if fields, ok := errdef.FieldsFrom(err); ok {
+    fmt.Println("fields:", fields)
+}
+
+if stack, ok := errdef.StackFrom(err); ok {
+    fmt.Println("stack:", stack)
+}
+
+if causes, ok := errdef.UnwrapTreeFrom(err); ok {
+    fmt.Println("causes:", causes)
+}
+```
+
 ### Detailed Error Formatting
 
 Using the `%+v` format specifier will print the error message, kind, fields, stack trace, and any wrapped errors.
@@ -245,15 +268,15 @@ For more advanced control, you can:
 - **Log the full stack trace**: The `Stack` type also implements `slog.LogValuer`.
 
   ```go
-  stack := err.(errdef.Error).Stack()
+  stack, _ := errdef.StackFrom(err)
   slog.Error("...", "stack", stack)
   ```
 
 - **Log the full causes tree**: The `Node` type also implements `slog.LogValuer`.
 
   ```go
-  nodes := err.(errdef.Error).UnwrapTree()
-  slog.Error("...", "causes", nodes)
+  causes, _ := errdef.UnwrapTreeFrom(err)
+  slog.Error("...", "causes", causes)
   ```
 
 ### Field Constructors

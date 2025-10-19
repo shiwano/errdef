@@ -1,9 +1,6 @@
 package errdef
 
-// Kind is a human-readable string that represents the type of an error.
-// It is primarily used for classification and identification in structured logs,
-// metrics, and API responses.
-type Kind string
+import "errors"
 
 // Define creates a new error definition with the specified kind and options.
 //
@@ -46,4 +43,72 @@ func DefineField[T any](name string) (FieldConstructor[T], FieldExtractor[T]) {
 		return fieldValueFrom[T](err, k)
 	}
 	return ctor, extr
+}
+
+// KindFrom extracts the Kind from an error.
+// It returns the Kind and true if the error implements the Kind() method.
+// Otherwise, it returns an empty Kind and false.
+func KindFrom(err error) (Kind, bool) {
+	if err == nil {
+		return "", false
+	}
+	var e kindGetter
+	if ok := errors.As(err, &e); !ok {
+		return "", false
+	}
+	return e.Kind(), true
+}
+
+// FieldsFrom extracts the Fields from an error.
+// It returns the Fields and true if the error implements the Fields() method and
+// the Fields are non-empty. Otherwise, it returns nil and false.
+func FieldsFrom(err error) (Fields, bool) {
+	if err == nil {
+		return nil, false
+	}
+	var e fieldsGetter
+	if ok := errors.As(err, &e); !ok {
+		return nil, false
+	}
+	fields := e.Fields()
+	if fields.IsZero() {
+		return nil, false
+	}
+	return fields, true
+}
+
+// StackFrom extracts the Stack from an error.
+// It returns the Stack and true if the error implements the Stack() method and
+// the Stack is non-empty. Otherwise, it returns nil and false.
+func StackFrom(err error) (Stack, bool) {
+	if err == nil {
+		return nil, false
+	}
+	var e stackGetter
+	if ok := errors.As(err, &e); !ok {
+		return nil, false
+	}
+	stack := e.Stack()
+	if stack.Len() == 0 {
+		return nil, false
+	}
+	return stack, true
+}
+
+// UnwrapTreeFrom extracts the error cause tree from an error.
+// It returns the Nodes and true if the error implements the UnwrapTree() method
+// and the returned Nodes are non-empty. Otherwise, it returns nil and false.
+func UnwrapTreeFrom(err error) (Nodes, bool) {
+	if err == nil {
+		return nil, false
+	}
+	var e treeUnwrapper
+	if ok := errors.As(err, &e); !ok {
+		return nil, false
+	}
+	causes := e.UnwrapTree()
+	if len(causes) == 0 {
+		return nil, false
+	}
+	return causes, true
 }

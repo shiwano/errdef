@@ -22,6 +22,10 @@ type (
 		IsCyclic bool
 	}
 
+	treeUnwrapper interface {
+		UnwrapTree() Nodes
+	}
+
 	jsonCauseData struct {
 		Message string  `json:"message"`
 		Type    string  `json:"type"`
