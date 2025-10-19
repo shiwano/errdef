@@ -491,6 +491,75 @@ func TestError_UnwrapTree(t *testing.T) {
 			t.Errorf("mismatch:\ngot:  %+v\nwant: %+v", got, want)
 		}
 	})
+
+	t.Run("multiple independent cycles", func(t *testing.T) {
+		// Chain 1: A -> C -> A
+		var errA, errC *circularError
+		errA = &circularError{msg: "error A"}
+		errC = &circularError{msg: "error C", cause: errA}
+		errA.cause = errC
+
+		// Chain 2: B -> D -> B
+		var errB, errD *circularError
+		errB = &circularError{msg: "error B"}
+		errD = &circularError{msg: "error D", cause: errB}
+		errB.cause = errD
+
+		def := errdef.Define("test_error", errdef.NoTrace())
+		wrapped := def.Join(errA, errB).(errdef.Error)
+
+		tree := wrapped.UnwrapTree()
+
+		data, err := json.Marshal(tree)
+		if err != nil {
+			t.Fatalf("want JSON marshaling to succeed, got error: %v", err)
+		}
+
+		var got []any
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("failed to unmarshal: %v", err)
+		}
+
+		want := []any{
+			map[string]any{
+				"message": "error A",
+				"type":    "*errdef_test.circularError",
+				"causes": []any{
+					map[string]any{
+						"message": "error C",
+						"type":    "*errdef_test.circularError",
+					},
+				},
+			},
+			map[string]any{
+				"message": "error B",
+				"type":    "*errdef_test.circularError",
+				"causes": []any{
+					map[string]any{
+						"message": "error D",
+						"type":    "*errdef_test.circularError",
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("tree structure mismatch:\ngot:  %+v\nwant: %+v", got, want)
+		}
+
+		if !tree.HasCycle() {
+			t.Error("want HasCycle() to return true")
+		}
+
+		nodeA := tree[0]
+		nodeB := tree[1]
+		if !nodeA.IsCyclic {
+			t.Error("want nodeA.IsCyclic() to return true (causes cycle A -> C -> A)")
+		}
+		if !nodeB.IsCyclic {
+			t.Error("want nodeB.IsCyclic() to return true (causes cycle B -> D -> B)")
+		}
+	})
 }
 
 func TestError_Is(t *testing.T) {

@@ -12,16 +12,14 @@ type (
 	// Nodes is a slice of error nodes representing an error tree structure.
 	Nodes []*Node
 
-	// Node represents a node in the cause tree with cycle detection already performed.
+	// Node represents a node in the cause tree.
 	Node struct {
 		// Error is the error at this node.
 		Error error
 		// Causes are the nested causes of this error.
 		Causes Nodes
-		// ptr is the pointer value of the error, used internally for cycle detection.
-		ptr uintptr
-		// visited is used internally to track visited errors during tree construction.
-		visited map[uintptr]uintptr
+		// IsCyclic indicates whether this node is part of a cycle in the tree.
+		IsCyclic bool
 	}
 
 	jsonCauseData struct {
@@ -51,7 +49,7 @@ func (ns Nodes) Walk() iter.Seq2[int, *Node] {
 // HasCycle returns true if any node in the error tree contains a cycle.
 func (ns Nodes) HasCycle() bool {
 	for _, n := range ns {
-		if n.IsCyclic() {
+		if n.IsCyclic {
 			return true
 		}
 		if n.Causes.HasCycle() {
@@ -59,18 +57,6 @@ func (ns Nodes) HasCycle() bool {
 		}
 	}
 	return false
-}
-
-// IsCyclic returns true if this node is part of a cycle in the error tree.
-func (n *Node) IsCyclic() bool {
-	if n.ptr == 0 {
-		return false
-	}
-	ptr, hasCycle := n.visited[0]
-	if !hasCycle {
-		return false
-	}
-	return n.ptr == ptr
 }
 
 // MarshalJSON implements json.Marshaler for Node.
@@ -176,26 +162,31 @@ func buildNodes(causes []error, visited map[uintptr]uintptr) Nodes {
 	return nodes
 }
 
-func buildNode(err error, visited map[uintptr]uintptr) (*Node, bool) {
+func buildNode(err error, visited map[uintptr]uintptr) (node *Node, ok bool) {
 	val := reflect.ValueOf(err)
 	if !val.IsValid() {
 		return nil, false
 	}
 
-	var ptr uintptr
 	if val.Kind() == reflect.Pointer || val.Kind() == reflect.Interface ||
 		val.Kind() == reflect.Map || val.Kind() == reflect.Slice ||
 		val.Kind() == reflect.Chan || val.Kind() == reflect.Func {
-		ptr = val.Pointer()
-		if ptr != 0 {
-			if _, ok := visited[ptr]; ok {
-				visited[0] = ptr
-				return nil, false
-			}
+		ptr := val.Pointer()
 
-			visited[ptr] = ptr
-			defer delete(visited, ptr) // Remove from visited after processing this path
+		if _, ok := visited[ptr]; ok {
+			visited[0] = ptr
+			return nil, false
 		}
+
+		visited[ptr] = ptr
+
+		defer func() {
+			if cyclePtr, hasCycle := visited[0]; hasCycle && cyclePtr == ptr {
+				node.IsCyclic = true
+				delete(visited, 0)
+			}
+			delete(visited, ptr)
+		}()
 	}
 
 	var causes []error
@@ -208,9 +199,7 @@ func buildNode(err error, visited map[uintptr]uintptr) (*Node, bool) {
 	}
 
 	return &Node{
-		Error:   err,
-		Causes:  buildNodes(causes, visited),
-		ptr:     ptr,
-		visited: visited,
+		Error:  err,
+		Causes: buildNodes(causes, visited),
 	}, true
 }
