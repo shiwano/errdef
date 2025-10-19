@@ -185,12 +185,23 @@ func (d *definition) Recover(fn func() error) error {
 	return err
 }
 
-func (d *definition) Is(err error) bool {
-	var e *definition
-	if errors.As(err, &e) {
-		return d.root() == e.root()
+func (d *definition) Is(target error) bool {
+	if d == target {
+		return true
 	}
-	return errors.Is(err, d)
+	var derr *definedError
+	if errors.As(target, &derr) {
+		if d.root() == derr.def.root() {
+			return true
+		}
+	}
+	var def *definition
+	if errors.As(target, &def) {
+		if d.root() == def.root() {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *definition) Fields() Fields {

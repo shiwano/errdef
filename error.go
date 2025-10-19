@@ -142,8 +142,8 @@ func (e *definedError) Is(target error) bool {
 	if e == target {
 		return true
 	}
-	if d, ok := target.(*definition); ok {
-		return e.def.root() == d.root()
+	if def, ok := target.(*definition); ok {
+		return e.def.root() == def.root()
 	}
 	return false
 }
