@@ -534,7 +534,7 @@ func main() {
 
 - **Structured Logging:** Implements `slog.LogValuer` for rich, structured logs out-of-the-box.
 - **Error Reporting Services:**
-  - **Sentry:** Compatible with the Sentry Go SDK by implementing the `stackTracer` interface.
+  - **Sentry:** Compatible with the Sentry Go SDK by implementing the `stackTracer` interface. See [examples/sentry](./examples/sentry/) for a complete integration example.
   - **Google Cloud Error Reporting**: Integrates directly with the service by implementing the `DebugStacker` interface.
 - **Legacy Error Handling:** Supports interoperability with `pkg/errors` by implementing the `causer` interface.
 
@@ -565,6 +565,7 @@ func main() {
 
 - **[HTTP API Server](./examples/http_api/)** - Error handling in REST APIs
 - **[Protocol Buffers](./examples/protobuf/)** - Custom serialization with protobuf
+- **[Sentry](./examples/sentry/)** - Error reporting with automatic field extraction
 
 ## Performance
 
