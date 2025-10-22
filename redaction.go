@@ -33,6 +33,12 @@ func (r Redacted[T]) Value() T {
 	return r.value
 }
 
+// IsRedacted returns true. This method allows identifying Redacted[T] values
+// via interface without knowing the type parameter T.
+func (r Redacted[T]) IsRedacted() bool {
+	return true
+}
+
 // String implements fmt.Stringer, always returning "[REDACTED]".
 func (r Redacted[T]) String() string {
 	return redactedStr
