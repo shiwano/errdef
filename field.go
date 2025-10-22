@@ -103,7 +103,7 @@ func (f *fields) FindKeys(name string) []FieldKey {
 	return keys
 }
 
-func (f fields) All() iter.Seq2[FieldKey, FieldValue] {
+func (f *fields) All() iter.Seq2[FieldKey, FieldValue] {
 	return func(yield func(key FieldKey, value FieldValue) bool) {
 		for _, k := range slices.SortedFunc(maps.Keys(f.data), func(a, b FieldKey) int {
 			return cmp.Compare(f.data[a].index, f.data[b].index)
