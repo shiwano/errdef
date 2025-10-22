@@ -286,7 +286,7 @@ func (d *definition) MarshalErrorJSON(err Error) ([]byte, error) {
 		Message: err.Error(),
 		Kind:    string(err.Kind()),
 		Fields:  err.Fields(),
-		Stack:   err.Stack().Frames(),
+		Stack:   err.Stack(),
 		Causes:  err.UnwrapTree(),
 	})
 }

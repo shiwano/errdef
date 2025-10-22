@@ -1,6 +1,7 @@
 package errdef
 
 import (
+	"encoding/json"
 	"log/slog"
 	"runtime"
 	"slices"
@@ -15,6 +16,8 @@ type (
 		HeadFrame() (Frame, bool)
 		// Len returns the number of frames in the stack trace.
 		Len() int
+		// IsZero returns true if the stack trace is empty.
+		IsZero() bool
 	}
 
 	// Frame represents a single frame in a stack trace.
@@ -42,6 +45,7 @@ const (
 var (
 	_ Stack          = stack{}
 	_ stackTracer    = stack{}
+	_ json.Marshaler = stack{}
 	_ slog.LogValuer = stack{}
 
 	_ slog.LogValuer = Frame{}
@@ -91,8 +95,16 @@ func (s stack) Len() int {
 	return len(s)
 }
 
+func (s stack) IsZero() bool {
+	return len(s) == 0
+}
+
 func (s stack) StackTrace() []uintptr {
 	return slices.Clone(s)
+}
+
+func (s stack) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.Frames())
 }
 
 func (s stack) LogValue() slog.Value {

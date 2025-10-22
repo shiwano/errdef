@@ -68,11 +68,11 @@ type (
 	}
 
 	jsonErrorData struct {
-		Message string  `json:"message"`
-		Kind    string  `json:"kind,omitempty"`
-		Fields  Fields  `json:"fields,omitempty,omitzero"`
-		Stack   []Frame `json:"stack,omitempty"`
-		Causes  Nodes   `json:"causes,omitempty"`
+		Message string `json:"message"`
+		Kind    string `json:"kind,omitempty"`
+		Fields  Fields `json:"fields,omitempty,omitzero"`
+		Stack   Stack  `json:"stack,omitempty,omitzero"`
+		Causes  Nodes  `json:"causes,omitempty"`
 	}
 )
 
