@@ -532,7 +532,10 @@ func main() {
 
 `errdef` is designed to work seamlessly with the broader Go ecosystem.
 
-- **Structured Logging:** Implements `slog.LogValuer` for rich, structured logs out-of-the-box.
+- **Structured Logging:**
+  - **slog:** Implements `slog.LogValuer` for rich, structured logs out-of-the-box.
+  - **zap:** Compatible with Uber's Zap logger via helper functions. See [examples/zap](./examples/zap/) for a complete integration example.
+  - **zerolog:** Compatible with zerolog via helper functions. See [examples/zerolog](./examples/zerolog/) for a complete integration example.
 - **Error Reporting Services:**
   - **Sentry:** Compatible with the Sentry Go SDK by implementing the `stackTracer` interface. See [examples/sentry](./examples/sentry/) for a complete integration example.
   - **Google Cloud Error Reporting**: Integrates directly with the service by implementing the `DebugStacker` interface.
@@ -566,6 +569,8 @@ func main() {
 - **[HTTP API Server](./examples/http_api/)** - Error handling in REST APIs
 - **[Protocol Buffers](./examples/protobuf/)** - Custom serialization with protobuf
 - **[Sentry](./examples/sentry/)** - Error reporting with automatic field extraction
+- **[zap](./examples/zap/)** - Structured logging integration with Zap
+- **[zerolog](./examples/zerolog/)** - Structured logging integration with zerolog
 
 ## Performance
 
