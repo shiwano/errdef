@@ -538,7 +538,7 @@ func main() {
   - **zerolog:** Compatible with `zerolog` via helper functions. See [examples/zerolog](./examples/zerolog/).
 - **Error Reporting Services:**
   - **Sentry:** Compatible with the Sentry Go SDK by implementing the `stackTracer` interface. See [examples/sentry](./examples/sentry/).
-  - **Google Cloud Error Reporting**: Integrates directly with the service by implementing the `DebugStacker` interface.
+  - **Google Cloud Error Reporting**: Compatible with Google Cloud Error Reporting by implementing the `DebugStacker` interface. See [examples/gcloud_error_reporting](./examples/gcloud_error_reporting/).
 - **Legacy Error Handling:**
   - **pkg/errors**: Supports interoperability with `pkg/errors` by implementing the `causer` interface.
 
@@ -570,8 +570,9 @@ func main() {
 - **[HTTP API Server](./examples/http_api/)** - Error handling in REST APIs
 - **[Protocol Buffers](./examples/protobuf/)** - Custom serialization with protobuf
 - **[Sentry](./examples/sentry/)** - Error reporting with automatic field extraction
-- **[zap](./examples/zap/)** - Structured logging integration with Zap
-- **[zerolog](./examples/zerolog/)** - Structured logging integration with zerolog
+- **[Google Cloud Error Reporting](./examples/gcloud_error_reporting/)** - Integration with Google Cloud Error Reporting
+- **[zap](./examples/zap/)** - Structured logging integration with `zap`
+- **[zerolog](./examples/zerolog/)** - Structured logging integration with `zerolog`
 
 ## Performance
 
