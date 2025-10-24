@@ -23,13 +23,11 @@ var (
 	Count, _  = errdef.DefineField[int]("count")
 )
 
-type errorTestCase struct {
+var tests = []struct {
 	name string
 	err  error
 	want map[string]any
-}
-
-var errorTestCases = []errorTestCase{
+}{
 	{
 		name: "basic error with fields",
 		err:  ErrNotFound.WithOptions(UserID("u123")).New("user not found"),
@@ -100,7 +98,7 @@ var errorTestCases = []errorTestCase{
 }
 
 func TestErrorInline(t *testing.T) {
-	for _, tt := range errorTestCases {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			core, recorded := observer.New(zapcore.InfoLevel)
 			logger := zap.New(core)
@@ -111,20 +109,20 @@ func TestErrorInline(t *testing.T) {
 			}
 
 			entry := recorded.All()[0]
-			fields := entry.ContextMap()
+			got := entry.ContextMap()
 
 			want := tt.want
 			if _, hasOrigin := want["origin"]; hasOrigin {
-				want["origin"] = fields["origin"]
+				want["origin"] = got["origin"]
 			}
 
-			if !reflect.DeepEqual(fields, want) {
-				t.Errorf("fields mismatch\ngot:  %#v\nwant: %#v", fields, want)
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("fields mismatch\ngot:  %#v\nwant: %#v", got, want)
 			}
 
 			if _, hasOrigin := tt.want["origin"]; hasOrigin {
-				if origin, ok := fields["origin"].(map[string]any); !ok {
-					t.Errorf("want origin to be a map, got %T", fields["origin"])
+				if origin, ok := got["origin"].(map[string]any); !ok {
+					t.Errorf("want origin to be a map, got %T", got["origin"])
 				} else {
 					if v, ok := origin["func"].(string); !ok || !strings.Contains(v, "init") {
 						t.Errorf("want origin.func to contain 'init', got %v", origin["func"])
@@ -142,7 +140,7 @@ func TestErrorInline(t *testing.T) {
 }
 
 func TestError(t *testing.T) {
-	for _, tt := range errorTestCases {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			core, recorded := observer.New(zapcore.InfoLevel)
 			logger := zap.New(core)
@@ -153,11 +151,11 @@ func TestError(t *testing.T) {
 			}
 
 			entry := recorded.All()[0]
-			fields := entry.ContextMap()
+			got := entry.ContextMap()
 
-			errorObj, ok := fields["error"].(map[string]any)
+			errorObj, ok := got["error"].(map[string]any)
 			if !ok {
-				t.Fatalf("want error to be a nested object, got %T", fields["error"])
+				t.Fatalf("want error to be a nested object, got %T", got["error"])
 			}
 
 			want := tt.want
