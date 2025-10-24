@@ -35,7 +35,7 @@ func main() {
 		panic(err)
 	}
 
-	var protoMsg ErrorProto
+	var protoMsg Error
 	if err := proto.Unmarshal(protoBytes, &protoMsg); err != nil {
 		panic(err)
 	}
@@ -59,7 +59,7 @@ func main() {
 }
 
 func marshalProto(e errdef.Error) ([]byte, error) {
-	msg := &ErrorProto{
+	msg := &Error{
 		Message: e.Error(),
 		Kind:    string(e.Kind()),
 	}
@@ -87,9 +87,9 @@ func marshalProto(e errdef.Error) ([]byte, error) {
 
 	causes := e.UnwrapTree()
 	if len(causes) > 0 {
-		msg.Causes = make([]*CauseProto, len(causes))
+		msg.Causes = make([]*Cause, len(causes))
 		for i, node := range causes {
-			causeProto, err := nodeToCauseProto(node)
+			causeProto, err := nodeToCause(node)
 			if err != nil {
 				return nil, err
 			}
@@ -99,8 +99,8 @@ func marshalProto(e errdef.Error) ([]byte, error) {
 	return proto.Marshal(msg)
 }
 
-func nodeToCauseProto(node *errdef.Node) (*CauseProto, error) {
-	cp := &CauseProto{
+func nodeToCause(node *errdef.Node) (*Cause, error) {
+	cp := &Cause{
 		Message: node.Error.Error(),
 	}
 
@@ -136,9 +136,9 @@ func nodeToCauseProto(node *errdef.Node) (*CauseProto, error) {
 	}
 
 	if len(node.Causes) > 0 {
-		cp.Causes = make([]*CauseProto, len(node.Causes))
+		cp.Causes = make([]*Cause, len(node.Causes))
 		for i, cause := range node.Causes {
-			causeProto, err := nodeToCauseProto(cause)
+			causeProto, err := nodeToCause(cause)
 			if err != nil {
 				return nil, err
 			}
@@ -148,7 +148,7 @@ func nodeToCauseProto(node *errdef.Node) (*CauseProto, error) {
 	return cp, nil
 }
 
-func protoDecoder(msg *ErrorProto) (*unmarshaler.DecodedData, error) {
+func protoDecoder(msg *Error) (*unmarshaler.DecodedData, error) {
 	d := &unmarshaler.DecodedData{
 		Message: msg.Message,
 		Kind:    errdef.Kind(msg.Kind),
@@ -179,7 +179,7 @@ func protoDecoder(msg *ErrorProto) (*unmarshaler.DecodedData, error) {
 	if len(msg.Causes) > 0 {
 		d.Causes = make([]*unmarshaler.DecodedData, len(msg.Causes))
 		for i, cause := range msg.Causes {
-			causeData, err := causeProtoToDecodedData(cause)
+			causeData, err := causeToDecodedData(cause)
 			if err != nil {
 				return nil, err
 			}
@@ -189,7 +189,7 @@ func protoDecoder(msg *ErrorProto) (*unmarshaler.DecodedData, error) {
 	return d, nil
 }
 
-func causeProtoToDecodedData(cp *CauseProto) (*unmarshaler.DecodedData, error) {
+func causeToDecodedData(cp *Cause) (*unmarshaler.DecodedData, error) {
 	d := &unmarshaler.DecodedData{
 		Message: cp.Message,
 		Kind:    errdef.Kind(cp.Kind),
@@ -221,7 +221,7 @@ func causeProtoToDecodedData(cp *CauseProto) (*unmarshaler.DecodedData, error) {
 	if len(cp.Causes) > 0 {
 		d.Causes = make([]*unmarshaler.DecodedData, len(cp.Causes))
 		for i, cause := range cp.Causes {
-			causeData, err := causeProtoToDecodedData(cause)
+			causeData, err := causeToDecodedData(cause)
 			if err != nil {
 				return nil, err
 			}

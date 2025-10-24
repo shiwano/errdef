@@ -7,7 +7,7 @@ This example demonstrates how to implement a custom decoder for Protocol Buffers
 The unmarshaler accepts a custom decoder function to convert your serialized format into `DecodedData`:
 
 ```go
-func protoDecoder(msg *ErrorProto) (*unmarshaler.DecodedData, error) {
+func protoDecoder(msg *Error) (*unmarshaler.DecodedData, error) {
   d := &unmarshaler.DecodedData{
     Message: msg.Message,
     Kind:    errdef.Kind(msg.Kind),
@@ -38,7 +38,7 @@ func protoDecoder(msg *ErrorProto) (*unmarshaler.DecodedData, error) {
   if len(msg.Causes) > 0 {
     d.Causes = make([]*unmarshaler.DecodedData, len(msg.Causes))
     for i, cause := range msg.Causes {
-      causeData, err := causeProtoToDecodedData(cause)
+      causeData, err := causeToDecodedData(cause)
       if err != nil {
         return nil, err
       }
@@ -61,7 +61,7 @@ u := unmarshaler.New(r, protoDecoder,
 restored, err := u.Unmarshal(&protoMsg)
 ```
 
-> **Note:** See [main.go](./main.go) for the complete implementation including `fieldValueToAny` and `causeProtoToMap` helper functions.
+> **Note:** See [main.go](./main.go) for the complete implementation including `fieldValueToAny` and `causeToDecodedData` helper functions.
 
 ## Running the Example
 

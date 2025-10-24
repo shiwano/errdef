@@ -22,7 +22,7 @@ func TestMarshalUnmarshalRoundTrip(t *testing.T) {
 		t.Fatalf("failed to marshal: %v", err)
 	}
 
-	var protoMsg ErrorProto
+	var protoMsg Error
 	if err := proto.Unmarshal(protoBytes, &protoMsg); err != nil {
 		t.Fatalf("failed to unmarshal proto: %v", err)
 	}

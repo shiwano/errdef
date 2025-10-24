@@ -21,32 +21,32 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// ErrorProto represents a serialized error in Protocol Buffers format.
-type ErrorProto struct {
+// Error represents a serialized error in Protocol Buffers format.
+type Error struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
 	Fields        map[string]*FieldValue `protobuf:"bytes,3,rep,name=fields,proto3" json:"fields,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Stack         []*StackFrame          `protobuf:"bytes,4,rep,name=stack,proto3" json:"stack,omitempty"`
-	Causes        []*CauseProto          `protobuf:"bytes,5,rep,name=causes,proto3" json:"causes,omitempty"`
+	Causes        []*Cause               `protobuf:"bytes,5,rep,name=causes,proto3" json:"causes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ErrorProto) Reset() {
-	*x = ErrorProto{}
+func (x *Error) Reset() {
+	*x = Error{}
 	mi := &file_error_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ErrorProto) String() string {
+func (x *Error) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ErrorProto) ProtoMessage() {}
+func (*Error) ProtoMessage() {}
 
-func (x *ErrorProto) ProtoReflect() protoreflect.Message {
+func (x *Error) ProtoReflect() protoreflect.Message {
 	mi := &file_error_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -58,40 +58,40 @@ func (x *ErrorProto) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ErrorProto.ProtoReflect.Descriptor instead.
-func (*ErrorProto) Descriptor() ([]byte, []int) {
+// Deprecated: Use Error.ProtoReflect.Descriptor instead.
+func (*Error) Descriptor() ([]byte, []int) {
 	return file_error_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *ErrorProto) GetMessage() string {
+func (x *Error) GetMessage() string {
 	if x != nil {
 		return x.Message
 	}
 	return ""
 }
 
-func (x *ErrorProto) GetKind() string {
+func (x *Error) GetKind() string {
 	if x != nil {
 		return x.Kind
 	}
 	return ""
 }
 
-func (x *ErrorProto) GetFields() map[string]*FieldValue {
+func (x *Error) GetFields() map[string]*FieldValue {
 	if x != nil {
 		return x.Fields
 	}
 	return nil
 }
 
-func (x *ErrorProto) GetStack() []*StackFrame {
+func (x *Error) GetStack() []*StackFrame {
 	if x != nil {
 		return x.Stack
 	}
 	return nil
 }
 
-func (x *ErrorProto) GetCauses() []*CauseProto {
+func (x *Error) GetCauses() []*Cause {
 	if x != nil {
 		return x.Causes
 	}
@@ -290,33 +290,33 @@ func (x *StackFrame) GetLine() int32 {
 	return 0
 }
 
-// CauseProto represents a wrapped error cause.
-type CauseProto struct {
+// Cause represents a wrapped error cause.
+type Cause struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
 	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
 	Fields        map[string]*FieldValue `protobuf:"bytes,4,rep,name=fields,proto3" json:"fields,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Stack         []*StackFrame          `protobuf:"bytes,5,rep,name=stack,proto3" json:"stack,omitempty"`
-	Causes        []*CauseProto          `protobuf:"bytes,6,rep,name=causes,proto3" json:"causes,omitempty"`
+	Causes        []*Cause               `protobuf:"bytes,6,rep,name=causes,proto3" json:"causes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CauseProto) Reset() {
-	*x = CauseProto{}
+func (x *Cause) Reset() {
+	*x = Cause{}
 	mi := &file_error_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CauseProto) String() string {
+func (x *Cause) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CauseProto) ProtoMessage() {}
+func (*Cause) ProtoMessage() {}
 
-func (x *CauseProto) ProtoReflect() protoreflect.Message {
+func (x *Cause) ProtoReflect() protoreflect.Message {
 	mi := &file_error_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -328,47 +328,47 @@ func (x *CauseProto) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CauseProto.ProtoReflect.Descriptor instead.
-func (*CauseProto) Descriptor() ([]byte, []int) {
+// Deprecated: Use Cause.ProtoReflect.Descriptor instead.
+func (*Cause) Descriptor() ([]byte, []int) {
 	return file_error_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *CauseProto) GetMessage() string {
+func (x *Cause) GetMessage() string {
 	if x != nil {
 		return x.Message
 	}
 	return ""
 }
 
-func (x *CauseProto) GetKind() string {
+func (x *Cause) GetKind() string {
 	if x != nil {
 		return x.Kind
 	}
 	return ""
 }
 
-func (x *CauseProto) GetType() string {
+func (x *Cause) GetType() string {
 	if x != nil {
 		return x.Type
 	}
 	return ""
 }
 
-func (x *CauseProto) GetFields() map[string]*FieldValue {
+func (x *Cause) GetFields() map[string]*FieldValue {
 	if x != nil {
 		return x.Fields
 	}
 	return nil
 }
 
-func (x *CauseProto) GetStack() []*StackFrame {
+func (x *Cause) GetStack() []*StackFrame {
 	if x != nil {
 		return x.Stack
 	}
 	return nil
 }
 
-func (x *CauseProto) GetCauses() []*CauseProto {
+func (x *Cause) GetCauses() []*Cause {
 	if x != nil {
 		return x.Causes
 	}
@@ -379,14 +379,13 @@ var File_error_proto protoreflect.FileDescriptor
 
 const file_error_proto_rawDesc = "" +
 	"\n" +
-	"\verror.proto\x12\x06errdef\"\x97\x02\n" +
-	"\n" +
-	"ErrorProto\x12\x18\n" +
+	"\verror.proto\x12\x06errdef\"\x88\x02\n" +
+	"\x05Error\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x12\n" +
-	"\x04kind\x18\x02 \x01(\tR\x04kind\x126\n" +
-	"\x06fields\x18\x03 \x03(\v2\x1e.errdef.ErrorProto.FieldsEntryR\x06fields\x12(\n" +
-	"\x05stack\x18\x04 \x03(\v2\x12.errdef.StackFrameR\x05stack\x12*\n" +
-	"\x06causes\x18\x05 \x03(\v2\x12.errdef.CauseProtoR\x06causes\x1aM\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x121\n" +
+	"\x06fields\x18\x03 \x03(\v2\x19.errdef.Error.FieldsEntryR\x06fields\x12(\n" +
+	"\x05stack\x18\x04 \x03(\v2\x12.errdef.StackFrameR\x05stack\x12%\n" +
+	"\x06causes\x18\x05 \x03(\v2\r.errdef.CauseR\x06causes\x1aM\n" +
 	"\vFieldsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12(\n" +
 	"\x05value\x18\x02 \x01(\v2\x12.errdef.FieldValueR\x05value:\x028\x01\"\xc2\x01\n" +
@@ -404,15 +403,14 @@ const file_error_proto_rawDesc = "" +
 	"StackFrame\x12\x12\n" +
 	"\x04func\x18\x01 \x01(\tR\x04func\x12\x12\n" +
 	"\x04file\x18\x02 \x01(\tR\x04file\x12\x12\n" +
-	"\x04line\x18\x03 \x01(\x05R\x04line\"\xab\x02\n" +
-	"\n" +
-	"CauseProto\x12\x18\n" +
+	"\x04line\x18\x03 \x01(\x05R\x04line\"\x9c\x02\n" +
+	"\x05Cause\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x12\n" +
-	"\x04type\x18\x03 \x01(\tR\x04type\x126\n" +
-	"\x06fields\x18\x04 \x03(\v2\x1e.errdef.CauseProto.FieldsEntryR\x06fields\x12(\n" +
-	"\x05stack\x18\x05 \x03(\v2\x12.errdef.StackFrameR\x05stack\x12*\n" +
-	"\x06causes\x18\x06 \x03(\v2\x12.errdef.CauseProtoR\x06causes\x1aM\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x121\n" +
+	"\x06fields\x18\x04 \x03(\v2\x19.errdef.Cause.FieldsEntryR\x06fields\x12(\n" +
+	"\x05stack\x18\x05 \x03(\v2\x12.errdef.StackFrameR\x05stack\x12%\n" +
+	"\x06causes\x18\x06 \x03(\v2\r.errdef.CauseR\x06causes\x1aM\n" +
 	"\vFieldsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12(\n" +
 	"\x05value\x18\x02 \x01(\v2\x12.errdef.FieldValueR\x05value:\x028\x01B2Z0github.com/shiwano/errdef/examples/protobuf;mainb\x06proto3"
@@ -431,22 +429,22 @@ func file_error_proto_rawDescGZIP() []byte {
 
 var file_error_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_error_proto_goTypes = []any{
-	(*ErrorProto)(nil), // 0: errdef.ErrorProto
+	(*Error)(nil),      // 0: errdef.Error
 	(*FieldValue)(nil), // 1: errdef.FieldValue
 	(*StackFrame)(nil), // 2: errdef.StackFrame
-	(*CauseProto)(nil), // 3: errdef.CauseProto
-	nil,                // 4: errdef.ErrorProto.FieldsEntry
-	nil,                // 5: errdef.CauseProto.FieldsEntry
+	(*Cause)(nil),      // 3: errdef.Cause
+	nil,                // 4: errdef.Error.FieldsEntry
+	nil,                // 5: errdef.Cause.FieldsEntry
 }
 var file_error_proto_depIdxs = []int32{
-	4, // 0: errdef.ErrorProto.fields:type_name -> errdef.ErrorProto.FieldsEntry
-	2, // 1: errdef.ErrorProto.stack:type_name -> errdef.StackFrame
-	3, // 2: errdef.ErrorProto.causes:type_name -> errdef.CauseProto
-	5, // 3: errdef.CauseProto.fields:type_name -> errdef.CauseProto.FieldsEntry
-	2, // 4: errdef.CauseProto.stack:type_name -> errdef.StackFrame
-	3, // 5: errdef.CauseProto.causes:type_name -> errdef.CauseProto
-	1, // 6: errdef.ErrorProto.FieldsEntry.value:type_name -> errdef.FieldValue
-	1, // 7: errdef.CauseProto.FieldsEntry.value:type_name -> errdef.FieldValue
+	4, // 0: errdef.Error.fields:type_name -> errdef.Error.FieldsEntry
+	2, // 1: errdef.Error.stack:type_name -> errdef.StackFrame
+	3, // 2: errdef.Error.causes:type_name -> errdef.Cause
+	5, // 3: errdef.Cause.fields:type_name -> errdef.Cause.FieldsEntry
+	2, // 4: errdef.Cause.stack:type_name -> errdef.StackFrame
+	3, // 5: errdef.Cause.causes:type_name -> errdef.Cause
+	1, // 6: errdef.Error.FieldsEntry.value:type_name -> errdef.FieldValue
+	1, // 7: errdef.Cause.FieldsEntry.value:type_name -> errdef.FieldValue
 	8, // [8:8] is the sub-list for method output_type
 	8, // [8:8] is the sub-list for method input_type
 	8, // [8:8] is the sub-list for extension type_name

@@ -4,13 +4,13 @@ package errdef;
 
 option go_package = "github.com/shiwano/errdef/examples/protobuf;main";
 
-// ErrorProto represents a serialized error in Protocol Buffers format.
-message ErrorProto {
+// Error represents a serialized error in Protocol Buffers format.
+message Error {
   string message = 1;
   string kind = 2;
   map<string, FieldValue> fields = 3;
   repeated StackFrame stack = 4;
-  repeated CauseProto causes = 5;
+  repeated Cause causes = 5;
 }
 
 // FieldValue represents a field value that can be of various types.
@@ -31,12 +31,12 @@ message StackFrame {
   int32 line = 3;
 }
 
-// CauseProto represents a wrapped error cause.
-message CauseProto {
+// Cause represents a wrapped error cause.
+message Cause {
   string message = 1;
   string kind = 2;
   string type = 3;
   map<string, FieldValue> fields = 4;
   repeated StackFrame stack = 5;
-  repeated CauseProto causes = 6;
+  repeated Cause causes = 6;
 }
