@@ -534,12 +534,13 @@ func main() {
 
 - **Structured Logging:**
   - **slog:** Implements `slog.LogValuer` for rich, structured logs out-of-the-box.
-  - **zap:** Compatible with Uber's Zap logger via helper functions. See [examples/zap](./examples/zap/) for a complete integration example.
-  - **zerolog:** Compatible with zerolog via helper functions. See [examples/zerolog](./examples/zerolog/) for a complete integration example.
+  - **zap:** Compatible with `zap` via helper functions. See [examples/zap](./examples/zap/).
+  - **zerolog:** Compatible with `zerolog` via helper functions. See [examples/zerolog](./examples/zerolog/).
 - **Error Reporting Services:**
-  - **Sentry:** Compatible with the Sentry Go SDK by implementing the `stackTracer` interface. See [examples/sentry](./examples/sentry/) for a complete integration example.
+  - **Sentry:** Compatible with the Sentry Go SDK by implementing the `stackTracer` interface. See [examples/sentry](./examples/sentry/).
   - **Google Cloud Error Reporting**: Integrates directly with the service by implementing the `DebugStacker` interface.
-- **Legacy Error Handling:** Supports interoperability with `pkg/errors` by implementing the `causer` interface.
+- **Legacy Error Handling:**
+  - **pkg/errors**: Supports interoperability with `pkg/errors` by implementing the `causer` interface.
 
 ### Built-in Options
 
