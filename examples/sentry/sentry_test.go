@@ -3,6 +3,7 @@ package sentry_test
 import (
 	"context"
 	"log"
+	"reflect"
 	"testing"
 	"time"
 
@@ -21,6 +22,71 @@ var (
 
 func TestCaptureError(t *testing.T) {
 	ctx := context.Background()
+
+	t.Run("success", func(t *testing.T) {
+		transport := &mockTransport{}
+		client, err := sentrygo.NewClient(sentrygo.ClientOptions{
+			Transport: transport,
+		})
+		if err != nil {
+			t.Fatalf("failed to create Sentry client: %v", err)
+		}
+		hub := sentrygo.NewHub(client, sentrygo.NewScope())
+
+		// Create nested errors (3 levels)
+		level0Err := ErrDatabase.With(ctx, UserID("u456")).New("connection failed")
+		level1Err := ErrNotFound.Wrapf(level0Err, "user lookup failed")
+		level2Err := ErrDatabase.Wrapf(level1Err, "query failed")
+
+		// Capture error with custom hub
+		testCtx := sentrygo.SetHubOnContext(ctx, hub)
+		captured := sentry.CaptureError(testCtx, level2Err)
+
+		if !captured {
+			t.Fatal("expected CaptureError to return true")
+		}
+
+		if len(transport.events) == 0 {
+			t.Fatal("expected at least one event to be sent to Sentry")
+		}
+
+		event := transport.events[0]
+		errorContextRaw := event.Contexts["error"]
+		errorContext := map[string]any(errorContextRaw)
+		causes := errorContext["causes"].([]map[string]any)
+		level1Causes := causes[0]["causes"].([]map[string]any)
+
+		want := map[string]any{
+			"fields": map[string]any{
+				"http_status": 500,
+			},
+			"causes": []map[string]any{
+				{
+					"message": "user lookup failed: connection failed",
+					"kind":    "not_found",
+					"fields": map[string]any{
+						"http_status": 404,
+					},
+					"origin": causes[0]["origin"],
+					"causes": []map[string]any{
+						{
+							"message": "connection failed",
+							"kind":    "database",
+							"fields": map[string]any{
+								"user_id":     "u456",
+								"http_status": 500,
+							},
+							"origin": level1Causes[0]["origin"],
+						},
+					},
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(errorContext, want) {
+			t.Errorf("error context mismatch:\ngot:  %#v\nwant: %#v", errorContext, want)
+		}
+	})
 
 	t.Run("unreportable error returns false", func(t *testing.T) {
 		def := errdef.Define("unreportable_error", errdef.Unreportable())
@@ -109,3 +175,11 @@ func ExampleCaptureError() {
 	err := ErrNotFound.With(ctx, UserID("user123")).New("user not found")
 	sentry.CaptureError(ctx, err)
 }
+
+type mockTransport struct{ events []*sentrygo.Event }
+
+func (t *mockTransport) SendEvent(event *sentrygo.Event)           { t.events = append(t.events, event) }
+func (t *mockTransport) Flush(timeout time.Duration) bool          { return true }
+func (t *mockTransport) FlushWithContext(ctx context.Context) bool { return true }
+func (t *mockTransport) Configure(options sentrygo.ClientOptions)  {}
+func (t *mockTransport) Close()                                    {}
