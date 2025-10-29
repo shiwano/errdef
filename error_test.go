@@ -1513,13 +1513,9 @@ func TestError_DebugStack(t *testing.T) {
 }
 
 func TestError_StackTrace(t *testing.T) {
-	type stackTracer interface {
-		StackTrace() []uintptr
-	}
-
 	t.Run("stack exists", func(t *testing.T) {
 		def := errdef.Define("test_error")
-		err := def.New("test message").(stackTracer)
+		err := def.New("test message").(errdef.StackTracer)
 
 		stackTrace := err.StackTrace()
 		if len(stackTrace) == 0 {
@@ -1529,7 +1525,7 @@ func TestError_StackTrace(t *testing.T) {
 
 	t.Run("no trace", func(t *testing.T) {
 		def := errdef.Define("test_error", errdef.NoTrace())
-		err := def.New("test message").(stackTracer)
+		err := def.New("test message").(errdef.StackTracer)
 
 		stackTrace := err.StackTrace()
 		if len(stackTrace) != 0 {

@@ -38,6 +38,13 @@ type (
 		UnwrapTree() Nodes
 	}
 
+	// StackTracer provides access to the low-level stack trace representation as program counters.
+	// This interface is intended for specialized use cases such as error reporting tools,
+	// tracing systems, or custom stack trace processing.
+	StackTracer interface {
+		StackTrace() []uintptr
+	}
+
 	// DebugStacker returns a string that resembles the output of debug.Stack().
 	// This is useful for integrating with Google Cloud Error Reporting.
 	// See: https://cloud.google.com/error-reporting/reference/rest/v1beta1/projects.events/report#ReportedErrorEvent
@@ -45,12 +52,6 @@ type (
 	// NOTE: The goroutine ID and state may differ from the actual one.
 	DebugStacker interface {
 		DebugStack() string
-	}
-
-	// stackTracer is used by Sentry SDK to extract stack traces from errors.
-	// See: https://github.com/getsentry/sentry-go/blob/54a69e05ea609d3fc32fb1393770258dde6796c1/stacktrace.go#L84-L87
-	stackTracer interface {
-		StackTrace() []uintptr
 	}
 
 	// causer is used by pkg/errors to extract the cause of an error.
@@ -78,12 +79,12 @@ type (
 
 var (
 	_ Error          = (*definedError)(nil)
+	_ StackTracer    = (*definedError)(nil)
 	_ DebugStacker   = (*definedError)(nil)
 	_ fmt.GoStringer = (*definedError)(nil)
 	_ fmt.Formatter  = (*definedError)(nil)
 	_ json.Marshaler = (*definedError)(nil)
 	_ slog.LogValuer = (*definedError)(nil)
-	_ stackTracer    = (*definedError)(nil)
 	_ causer         = (*definedError)(nil)
 	_ kindGetter     = (*definedError)(nil)
 	_ fieldsGetter   = (*definedError)(nil)
@@ -171,6 +172,10 @@ func (e *definedError) LogValue() slog.Value {
 	return e.def.MakeErrorLogValue(e)
 }
 
+func (e *definedError) StackTrace() []uintptr {
+	return e.stack.StackTrace()
+}
+
 func (e *definedError) DebugStack() string {
 	buf := bytes.NewBufferString(e.Error())
 	// hard-coded cause we can't get it in pure Go.
@@ -184,10 +189,6 @@ func (e *definedError) DebugStack() string {
 		}
 	}
 	return buf.String()
-}
-
-func (e *definedError) StackTrace() []uintptr {
-	return e.stack.StackTrace()
 }
 
 func (e *definedError) Cause() error {

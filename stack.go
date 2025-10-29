@@ -44,7 +44,7 @@ const (
 
 var (
 	_ Stack          = stack{}
-	_ stackTracer    = stack{}
+	_ StackTracer    = stack{}
 	_ json.Marshaler = stack{}
 	_ slog.LogValuer = stack{}
 

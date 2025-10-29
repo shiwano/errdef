@@ -537,7 +537,7 @@ func main() {
   - **zap:** Compatible with `zap` via helper functions. See [examples/zap](./examples/zap/).
   - **zerolog:** Compatible with `zerolog` via helper functions. See [examples/zerolog](./examples/zerolog/).
 - **Error Reporting Services:**
-  - **Sentry:** Compatible with the Sentry Go SDK by implementing the `stackTracer` interface. See [examples/sentry](./examples/sentry/).
+  - **Sentry:** Compatible with the Sentry Go SDK by implementing the `StackTracer` interface. See [examples/sentry](./examples/sentry/).
   - **Google Cloud Error Reporting**: Compatible with Google Cloud Error Reporting by implementing the `DebugStacker` interface. See [examples/gcloud_error_reporting](./examples/gcloud_error_reporting/).
 - **Legacy Error Handling:**
   - **pkg/errors**: Supports interoperability with `pkg/errors` by implementing the `causer` interface.
