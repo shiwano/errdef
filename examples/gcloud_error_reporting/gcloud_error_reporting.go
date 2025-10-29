@@ -189,4 +189,3 @@ func buildHTTPRequest(e errdef.Error) (slog.Attr, bool) {
 	}
 	return slog.Attr{}, false
 }
-
