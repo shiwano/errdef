@@ -45,7 +45,7 @@ func main() {
   "time": "2024-01-01T00:00:00Z",
   "level": "ERROR",
   "msg": "failed to find user",
-  "stack_trace": "main.main\n  /path/to/main.go:24\nruntime.main\n  /usr/local/go/src/runtime/proc.go:250",
+  "stack_trace": "user not found\n\ngoroutine 1 [running]:\nmain.main()\n\t/path/to/main.go:24 +0x...\nruntime.main()\n\t/usr/local/go/src/runtime/proc.go:250 +0x...",
   "context": {
     "reportLocation": {
       "filePath": "/path/to/main.go",
@@ -62,11 +62,6 @@ func main() {
     "fields": {
       "http_status": 404,
       "user_id": "u123"
-    },
-    "origin": {
-      "func": "main.main",
-      "file": "/path/to/main.go",
-      "line": 24
     }
   }
 }
@@ -83,13 +78,16 @@ Google Cloud Error Reporting automatically detects errors in log entries when th
 This implementation provides **`stack_trace`**, which takes the highest priority for error detection.
 
 The `gcerr.Error()` function formats `errdef` errors with:
-- **`error` field**: The structured error object from `errdef.Error` (includes message, kind, fields, origin, and causes)
+- **`error.message` field**: The error message
+- **`error.kind` field**: Error kind for classification (if present)
+- **`error.fields` field**: Custom fields excluding gcerr-specific fields (if present)
+- **`error.causes` field**: Array of cause error messages (if present)
 - **`stack_trace` field**: Stack trace in Google Cloud format
 - **`context.reportLocation` field**: Error origin location (filePath, lineNumber, functionName)
 - **`context.httpRequest` field**: HTTP request context (if `gcerr.HTTPRequest()` is used)
 - **`context.user` field**: User identifier (if `gcerr.User()` is used)
 
-The `reportLocation` helps Error Reporting to display the exact location where the error occurred in the UI and enables proper error grouping.
+The `reportLocation` helps Error Reporting to display the exact location where the error occurred in the UI and enables proper error grouping. Note that gcerr-specific fields like `gcerr.http_request` and `gcerr.user` are excluded from `error.fields` as they are already included in the `context` section.
 
 ## HTTP Request, User Context, and Wrapped Errors
 
@@ -142,7 +140,7 @@ func main() {
   "time": "2024-01-01T00:00:00Z",
   "level": "ERROR",
   "msg": "request failed",
-  "stack_trace": "main.main.func1\n  /path/to/main.go:115\nnet/http.HandlerFunc.ServeHTTP\n  /usr/local/go/src/net/http/server.go:2136",
+  "stack_trace": "sql: no rows in result set\n\ngoroutine 1 [running]:\nmain.main.func1()\n\t/path/to/main.go:115 +0x...\nnet/http.HandlerFunc.ServeHTTP()\n\t/usr/local/go/src/net/http/server.go:2136 +0x...",
   "context": {
     "reportLocation": {
       "filePath": "/path/to/main.go",
@@ -164,20 +162,7 @@ func main() {
     "kind": "not_found",
     "fields": {
       "http_status": 404,
-      "user_id": "u123",
-      "gcerr.http_request": {
-        "Method": "GET",
-        "URL": "/users/u123",
-        "UserAgent": "Mozilla/5.0",
-        "Referrer": "https://example.com",
-        "RemoteIP": "192.168.1.1:12345"
-      },
-      "gcerr.user": "u123"
-    },
-    "origin": {
-      "func": "main.main.func1",
-      "file": "/path/to/main.go",
-      "line": 115
+      "user_id": "u123"
     },
     "causes": ["sql: no rows in result set"]
   }
@@ -185,10 +170,11 @@ func main() {
 ```
 
 This comprehensive example demonstrates:
-- **HTTP Request Context**: Method, URL, user agent, referrer, and remote IP are automatically extracted from `*http.Request` and placed in both the `error.fields` (for structured access) and `context.httpRequest` (for Google Cloud Error Reporting)
-- **User Context**: User identifier is placed in both `error.fields.gcerr.user` and `context.user`
+- **HTTP Request Context**: Method, URL, user agent, referrer, and remote IP are automatically extracted from `*http.Request` and placed in `context.httpRequest` (for Google Cloud Error Reporting)
+- **User Context**: User identifier is placed in `context.user`
 - **Error Wrapping**: The original database error (`sql.ErrNoRows`) is preserved in the `error.causes` field
 - **Error Grouping**: Error Reporting groups errors by stack trace, endpoint, status code, and error kind
+- **Field Filtering**: gcerr-specific fields (`gcerr.http_request`, `gcerr.user`) are automatically excluded from `error.fields` to avoid duplication with the `context` section
 
 ## Sensitive Data
 

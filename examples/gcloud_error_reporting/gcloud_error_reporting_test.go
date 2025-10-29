@@ -45,7 +45,6 @@ func TestError(t *testing.T) {
 						"user_id":     "u123",
 						"http_status": float64(404),
 					},
-					"origin": nil,
 				},
 				"stack_trace": "",
 				"context": map[string]any{
@@ -70,16 +69,7 @@ func TestError(t *testing.T) {
 					"fields": map[string]any{
 						"user_id":     "u123",
 						"http_status": float64(404),
-						"gcerr.http_request": map[string]any{
-							"Method":    "GET",
-							"URL":       "https://example.com/users/u123",
-							"UserAgent": "Mozilla/5.0",
-							"Referrer":  "https://example.com",
-							"RemoteIP":  "192.168.1.1:12345",
-						},
-						"gcerr.user": "u123",
 					},
-					"origin": nil,
 				},
 				"stack_trace": "",
 				"context": map[string]any{
@@ -106,7 +96,6 @@ func TestError(t *testing.T) {
 					"fields": map[string]any{
 						"http_status": float64(404),
 					},
-					"origin": nil,
 					"causes": []any{"connection failed"},
 				},
 				"stack_trace": "",
@@ -133,7 +122,6 @@ func TestError(t *testing.T) {
 						"email":       "[REDACTED]",
 						"http_status": float64(404),
 					},
-					"origin": nil,
 				},
 				"stack_trace": "",
 				"context": map[string]any{
@@ -189,13 +177,6 @@ func TestError(t *testing.T) {
 				if _, ok := context["reportLocation"]; ok {
 					if resultContext, ok := got["context"].(map[string]any); ok {
 						context["reportLocation"] = resultContext["reportLocation"]
-					}
-				}
-			}
-			if errorData, ok := want["error"].(map[string]any); ok {
-				if _, ok := errorData["origin"]; ok {
-					if resultError, ok := got["error"].(map[string]any); ok {
-						errorData["origin"] = resultError["origin"]
 					}
 				}
 			}
