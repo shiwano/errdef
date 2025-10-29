@@ -38,18 +38,21 @@ func TestError(t *testing.T) {
 			name: "basic error with fields",
 			err:  ErrNotFound.WithOptions(UserID("u123")).New("user not found"),
 			want: map[string]any{
-				"message":     "user not found",
+				"error": map[string]any{
+					"message": "user not found",
+					"kind":    "not_found",
+					"fields": map[string]any{
+						"user_id":     "u123",
+						"http_status": float64(404),
+					},
+					"origin": nil,
+				},
 				"stack_trace": "",
 				"context": map[string]any{
 					"reportLocation": nil,
 					"httpRequest": map[string]any{
 						"responseStatusCode": float64(404),
 					},
-				},
-				"kind": "not_found",
-				"fields": map[string]any{
-					"user_id":     "u123",
-					"http_status": float64(404),
 				},
 			},
 		},
@@ -61,7 +64,23 @@ func TestError(t *testing.T) {
 				gcerr.User("u123"),
 			).New("user not found"),
 			want: map[string]any{
-				"message":     "user not found",
+				"error": map[string]any{
+					"message": "user not found",
+					"kind":    "not_found",
+					"fields": map[string]any{
+						"user_id":     "u123",
+						"http_status": float64(404),
+						"gcerr.http_request": map[string]any{
+							"Method":    "GET",
+							"URL":       "https://example.com/users/u123",
+							"UserAgent": "Mozilla/5.0",
+							"Referrer":  "https://example.com",
+							"RemoteIP":  "192.168.1.1:12345",
+						},
+						"gcerr.user": "u123",
+					},
+					"origin": nil,
+				},
 				"stack_trace": "",
 				"context": map[string]any{
 					"reportLocation": nil,
@@ -75,29 +94,27 @@ func TestError(t *testing.T) {
 					},
 					"user": "u123",
 				},
-				"kind": "not_found",
-				"fields": map[string]any{
-					"user_id":     "u123",
-					"http_status": float64(404),
-				},
 			},
 		},
 		{
 			name: "wrapped error",
 			err:  ErrNotFound.Wrapf(ErrDatabase.New("connection failed"), "user lookup failed"),
 			want: map[string]any{
-				"message":     "user lookup failed: connection failed",
+				"error": map[string]any{
+					"message": "user lookup failed: connection failed",
+					"kind":    "not_found",
+					"fields": map[string]any{
+						"http_status": float64(404),
+					},
+					"origin": nil,
+					"causes": []any{"connection failed"},
+				},
 				"stack_trace": "",
 				"context": map[string]any{
 					"reportLocation": nil,
 					"httpRequest": map[string]any{
 						"responseStatusCode": float64(404),
 					},
-				},
-				"kind":   "not_found",
-				"causes": []any{"connection failed"},
-				"fields": map[string]any{
-					"http_status": float64(404),
 				},
 			},
 		},
@@ -108,19 +125,22 @@ func TestError(t *testing.T) {
 				Email(errdef.Redact("user@example.com")),
 			).New("user not found"),
 			want: map[string]any{
-				"message":     "user not found",
+				"error": map[string]any{
+					"message": "user not found",
+					"kind":    "not_found",
+					"fields": map[string]any{
+						"user_id":     "u123",
+						"email":       "[REDACTED]",
+						"http_status": float64(404),
+					},
+					"origin": nil,
+				},
 				"stack_trace": "",
 				"context": map[string]any{
 					"reportLocation": nil,
 					"httpRequest": map[string]any{
 						"responseStatusCode": float64(404),
 					},
-				},
-				"kind": "not_found",
-				"fields": map[string]any{
-					"user_id":     "u123",
-					"email":       "[REDACTED]",
-					"http_status": float64(404),
 				},
 			},
 		},
@@ -136,8 +156,10 @@ func TestError(t *testing.T) {
 			name: "error with NoTrace option",
 			err:  errdef.Define("no_trace", errdef.NoTrace()).New("error without stack trace"),
 			want: map[string]any{
-				"message": "error without stack trace",
-				"kind":    "no_trace",
+				"error": map[string]any{
+					"message": "error without stack trace",
+					"kind":    "no_trace",
+				},
 			},
 		},
 	}
@@ -167,6 +189,13 @@ func TestError(t *testing.T) {
 				if _, ok := context["reportLocation"]; ok {
 					if resultContext, ok := got["context"].(map[string]any); ok {
 						context["reportLocation"] = resultContext["reportLocation"]
+					}
+				}
+			}
+			if errorData, ok := want["error"].(map[string]any); ok {
+				if _, ok := errorData["origin"]; ok {
+					if resultError, ok := got["error"].(map[string]any); ok {
+						errorData["origin"] = resultError["origin"]
 					}
 				}
 			}

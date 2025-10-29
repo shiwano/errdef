@@ -42,14 +42,18 @@ var (
 // can automatically recognize and group errors.
 //
 // The error is formatted with the following fields:
-//   - message: The error message
+//   - error: The errdef.Error as a structured object (using slog.LogValuer)
 //   - stack_trace: Stack trace in string format (if present)
 //   - context.reportLocation: Error origin location (if stack trace is present)
-//   - context.httpRequest: HTTP request context (if HTTPRequestField is present)
-//   - context.user: User identifier (if UserField is present)
-//   - kind: Error kind (if present)
-//   - fields: Custom fields (if present, excluding gcer_http_request and gcer_user)
-//   - causes: Array of cause error messages (if present)
+//   - context.httpRequest: HTTP request context (if HTTPRequest is present)
+//   - context.user: User identifier (if User is present)
+//
+// The error object includes message, kind, fields, origin, and causes.
+// Google Cloud Error Reporting requires at least one of message, stack_trace,
+// or exception fields. This implementation provides stack_trace which takes
+// the highest priority for error detection.
+//
+// See https://cloud.google.com/error-reporting/docs/formatting-error-messages
 //
 // When used with slog.JSONHandler, the output will be automatically
 // recognized by Google Cloud Error Reporting when running on:
@@ -67,7 +71,7 @@ func Error(err error) slog.Attr {
 	}
 
 	attrs := []any{
-		slog.String("message", e.Error()),
+		slog.Any("error", e),
 	}
 
 	if stackTrace, ok := buildStackTrace(err, e); ok {
@@ -76,18 +80,6 @@ func Error(err error) slog.Attr {
 
 	if context, ok := buildContext(e); ok {
 		attrs = append(attrs, context)
-	}
-
-	if e.Kind() != "" {
-		attrs = append(attrs, slog.String("kind", string(e.Kind())))
-	}
-
-	if fields, ok := buildFields(e); ok {
-		attrs = append(attrs, fields)
-	}
-
-	if causes, ok := buildCauses(e); ok {
-		attrs = append(attrs, causes)
 	}
 
 	return slog.Group("", attrs...)
@@ -159,35 +151,3 @@ func buildHTTPRequest(e errdef.Error) (slog.Attr, bool) {
 	return slog.Attr{}, false
 }
 
-func buildFields(e errdef.Error) (slog.Attr, bool) {
-	if e.Fields().Len() == 0 {
-		return slog.Attr{}, false
-	}
-
-	attrs := make([]any, 0, e.Fields().Len())
-	for k, v := range e.Fields().All() {
-		// Skip gcer-specific fields as they're already in context
-		if k.String() == "gcerr.http_request" || k.String() == "gcerr.user" {
-			continue
-		}
-		attrs = append(attrs, slog.Any(k.String(), v.Value()))
-	}
-
-	if len(attrs) > 0 {
-		return slog.Group("fields", attrs...), true
-	}
-	return slog.Attr{}, false
-}
-
-func buildCauses(e errdef.Error) (slog.Attr, bool) {
-	causes := e.Unwrap()
-	if len(causes) == 0 {
-		return slog.Attr{}, false
-	}
-
-	causeMessages := make([]string, len(causes))
-	for i, cause := range causes {
-		causeMessages[i] = cause.Error()
-	}
-	return slog.Any("causes", causeMessages), true
-}
