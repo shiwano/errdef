@@ -362,6 +362,59 @@ func TestNode_LogValue(t *testing.T) {
 		}
 	})
 
+	t.Run("with Error type and stack", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		err := def.New("test message")
+
+		node := &errdef.Node{
+			Error: err,
+		}
+
+		value := node.LogValue()
+
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, nil))
+		logger.Info("test", slog.Any("node", value))
+
+		var result map[string]any
+		if jsonErr := json.Unmarshal(buf.Bytes(), &result); jsonErr != nil {
+			t.Fatalf("failed to unmarshal JSON: %v", jsonErr)
+		}
+
+		nodeData := result["node"].(map[string]any)
+
+		frames := err.(errdef.Error).Stack().Frames()
+		if len(frames) == 0 {
+			t.Fatal("want non-empty frames")
+		}
+
+		want := map[string]any{
+			"message": "test message",
+			"kind":    "test_error",
+			"stack": []any{
+				map[string]any{
+					"func": frames[0].Func,
+					"file": frames[0].File,
+					"line": float64(frames[0].Line),
+				},
+				map[string]any{
+					"func": frames[1].Func,
+					"file": frames[1].File,
+					"line": float64(frames[1].Line),
+				},
+				map[string]any{
+					"func": frames[2].Func,
+					"file": frames[2].File,
+					"line": float64(frames[2].Line),
+				},
+			},
+		}
+
+		if !reflect.DeepEqual(nodeData, want) {
+			t.Errorf("want node %+v, got %+v", want, nodeData)
+		}
+	})
+
 	t.Run("nested error nodes", func(t *testing.T) {
 		err1 := errors.New("level 1")
 		err2 := errors.New("level 2")

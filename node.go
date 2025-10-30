@@ -97,9 +97,7 @@ func (e *Node) LogValue() slog.Value {
 			attrs = append(attrs, slog.Any("fields", err.Fields()))
 		}
 		if err.Stack().Len() > 0 {
-			if frame, ok := err.Stack().HeadFrame(); ok {
-				attrs = append(attrs, slog.Any("origin", frame))
-			}
+			attrs = append(attrs, slog.Any("stack", err.Stack()))
 		}
 		if len(e.Causes) > 0 {
 			causes := make([]any, len(e.Causes))

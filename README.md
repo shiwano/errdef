@@ -263,7 +263,7 @@ slog.Error("failed to find user", "error", err)
 
 > **Note:** If multiple fields have the same name, the last one in insertion order will be used in the log output.
 
-For more advanced control, you can:
+By default, the `slog` output keeps stack traces and causes concise (showing only the error origin and a simple causes array) to avoid excessive verbosity, especially when using `Debug`, `Info`, or `Warn` levels. If you need more detailed information, such as full stack traces or the complete causes tree, you can use the following methods:
 
 - **Log the full stack trace**: The `Stack` type also implements `slog.LogValuer`.
 
