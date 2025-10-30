@@ -45,7 +45,7 @@ var (
 //   - error.message: The error message
 //   - error.kind: Error kind (if present)
 //   - error.fields: Custom fields excluding gcerr.* fields (if present)
-//   - error.causes: Array of cause error messages (if present)
+//   - error.causes: Array of nested cause objects with message, kind, fields, stack, and causes (if present)
 //   - stack_trace: Stack trace in string format (if present)
 //   - context.reportLocation: Error origin location (if stack trace is present)
 //   - context.httpRequest: HTTP request context (if HTTPRequest is present)
@@ -88,13 +88,8 @@ func Error(err error) slog.Attr {
 		}
 	}
 
-	causes := e.Unwrap()
-	if len(causes) > 0 {
-		causeMessages := make([]string, len(causes))
-		for i, c := range causes {
-			causeMessages[i] = c.Error()
-		}
-		errorAttrs = append(errorAttrs, slog.Any("causes", causeMessages))
+	if causes := buildCauses(err); len(causes) > 0 {
+		errorAttrs = append(errorAttrs, slog.Any("causes", causes))
 	}
 
 	attrs := []any{
@@ -188,4 +183,79 @@ func buildHTTPRequest(e errdef.Error) (slog.Attr, bool) {
 		return slog.Group("httpRequest", attrs...), true
 	}
 	return slog.Attr{}, false
+}
+
+func buildCauses(err error) []map[string]any {
+	nodes, ok := errdef.UnwrapTreeFrom(err)
+	if !ok {
+		return nil
+	}
+	return buildCausesFromNodes(nodes)
+}
+
+func buildCausesFromNodes(nodes errdef.Nodes) []map[string]any {
+	if len(nodes) == 0 {
+		return nil
+	}
+
+	causes := make([]map[string]any, 0, len(nodes))
+	for _, node := range nodes {
+		if node.IsCyclic {
+			continue
+		}
+		causes = append(causes, buildCauseData(node))
+	}
+
+	if len(causes) == 0 {
+		return nil
+	}
+	return causes
+}
+
+func buildCauseData(node *errdef.Node) map[string]any {
+	data := map[string]any{
+		"message": node.Error.Error(),
+	}
+
+	e, ok := node.Error.(errdef.Error)
+	if !ok {
+		if len(node.Causes) > 0 {
+			if nestedCauses := buildCausesFromNodes(node.Causes); len(nestedCauses) > 0 {
+				data["causes"] = nestedCauses
+			}
+		}
+		return data
+	}
+
+	if kind := e.Kind(); kind != "" {
+		data["kind"] = string(kind)
+	}
+
+	if fields := e.Fields(); fields.Len() > 0 {
+		fieldsData := filterGCloudFields(fields)
+		if len(fieldsData) > 0 {
+			data["fields"] = fieldsData
+		}
+	}
+
+	if stack := e.Stack(); stack.Len() > 0 {
+		frames := stack.Frames()
+		stackData := make([]map[string]any, len(frames))
+		for i, frame := range frames {
+			stackData[i] = map[string]any{
+				"func": frame.Func,
+				"file": frame.File,
+				"line": frame.Line,
+			}
+		}
+		data["stack"] = stackData
+	}
+
+	if len(node.Causes) > 0 {
+		if nestedCauses := buildCausesFromNodes(node.Causes); len(nestedCauses) > 0 {
+			data["causes"] = nestedCauses
+		}
+	}
+
+	return data
 }

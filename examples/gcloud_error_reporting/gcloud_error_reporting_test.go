@@ -96,7 +96,16 @@ func TestError(t *testing.T) {
 					"fields": map[string]any{
 						"http_status": float64(404),
 					},
-					"causes": []any{"connection failed"},
+					"causes": []any{
+						map[string]any{
+							"message": "connection failed",
+							"kind":    "database",
+							"fields": map[string]any{
+								"http_status": float64(500),
+							},
+							"stack": nil,
+						},
+					},
 				},
 				"stack_trace": "",
 				"context": map[string]any{
@@ -180,6 +189,15 @@ func TestError(t *testing.T) {
 					}
 				}
 			}
+			if errorData, ok := want["error"].(map[string]any); ok {
+				if causes, ok := errorData["causes"].([]any); ok {
+					if gotError, ok := got["error"].(map[string]any); ok {
+						if gotCauses, ok := gotError["causes"].([]any); ok {
+							normalizeCausesStack(causes, gotCauses)
+						}
+					}
+				}
+			}
 
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("result mismatch\ngot:  %#v\nwant: %#v", got, want)
@@ -207,5 +225,29 @@ func TestError(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func normalizeCausesStack(wantCauses, gotCauses []any) {
+	if len(wantCauses) != len(gotCauses) {
+		return
+	}
+
+	for i := range wantCauses {
+		wantCause, ok1 := wantCauses[i].(map[string]any)
+		gotCause, ok2 := gotCauses[i].(map[string]any)
+		if !ok1 || !ok2 {
+			continue
+		}
+
+		if _, ok := wantCause["stack"]; ok {
+			wantCause["stack"] = gotCause["stack"]
+		}
+
+		if wantNestedCauses, ok1 := wantCause["causes"].([]any); ok1 {
+			if gotNestedCauses, ok2 := gotCause["causes"].([]any); ok2 {
+				normalizeCausesStack(wantNestedCauses, gotNestedCauses)
+			}
+		}
 	}
 }
