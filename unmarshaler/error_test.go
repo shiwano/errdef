@@ -829,7 +829,6 @@ func TestUnmarshaledError_LogValue(t *testing.T) {
 		"fields": map[string]any{
 			"user_id": "user123",
 		},
-		"causes": []any{"inner message"},
 		"origin": errorData["origin"],
 	}
 

@@ -1351,7 +1351,6 @@ func TestError_LogValue(t *testing.T) {
 		want := map[string]any{
 			"message": "original error",
 			"kind":    "test_error",
-			"causes":  []any{"original error"},
 		}
 
 		if !reflect.DeepEqual(errorData, want) {
@@ -1465,7 +1464,6 @@ func TestError_LogValue(t *testing.T) {
 					"line": origin["line"],
 					"func": origin["func"],
 				},
-				"causes": []any{"connection failed"},
 			},
 		}
 

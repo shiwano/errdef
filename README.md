@@ -253,30 +253,27 @@ slog.Error("failed to find user", "error", err)
       "file": "/path/to/your/project/main.go",
       "line": 23,
       "func": "main.findUser"
-    },
-    "causes": [
-      "record not found"
-    ]
+    }
   }
 }
 ```
 
 > **Note:** If multiple fields have the same name, the last one in insertion order will be used in the log output.
 
-By default, the `slog` output keeps stack traces and causes concise (showing only the error origin and a simple causes array) to avoid excessive verbosity, especially when using `Debug`, `Info`, or `Warn` levels. If you need more detailed information, such as full stack traces or the complete causes tree, you can use the following methods:
+By default, the `slog` output keeps stack traces concise (showing only the error origin) and omits the causes tree to avoid excessive verbosity. If you need more detailed information, such as full stack traces or the complete causes tree, you can use the following methods:
 
 - **Log the full stack trace**: The `Stack` type also implements `slog.LogValuer`.
 
   ```go
   stack, _ := errdef.StackFrom(err)
-  slog.Error("...", "stack", stack)
+  slog.Error("failed to find user", "stack", stack)
   ```
 
 - **Log the full causes tree**: The `Node` type also implements `slog.LogValuer`.
 
   ```go
   causes, _ := errdef.UnwrapTreeFrom(err)
-  slog.Error("...", "causes", causes)
+  slog.Error("failed to find user", "causes", causes)
   ```
 
 ### Field Constructors

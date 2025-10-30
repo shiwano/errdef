@@ -68,7 +68,6 @@ var errorTestCases = []errorTestCase{
 		want: map[string]any{
 			"message": "user lookup failed: connection failed",
 			"kind":    "not_found",
-			"causes":  []any{"connection failed"},
 			"fields": map[string]any{
 				"http_status": float64(404),
 			},

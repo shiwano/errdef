@@ -18,7 +18,6 @@ type errorMarshaler struct {
 //   - kind: The error kind (if present)
 //   - fields: Custom fields (if present)
 //   - origin: The origin stack frame (if present) with func, file, and line
-//   - causes: Array of cause error messages (if present)
 //
 // For top-level field expansion, use ErrorInline instead.
 //
@@ -44,7 +43,6 @@ func Error(err error) zapcore.Field {
 //   - kind: The error kind (if present)
 //   - fields: Custom fields (if present)
 //   - origin: The origin stack frame (if present) with func, file, and line
-//   - causes: Array of cause error messages (if present)
 //
 // This is useful when you want errdef's rich error information to be directly
 // accessible at the top level of the log entry.
@@ -80,11 +78,6 @@ func (m *errorMarshaler) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 		}
 	}
 
-	causes := m.err.Unwrap()
-	if len(causes) > 0 {
-		_ = enc.AddArray("causes", causesMarshaler{causes: causes})
-	}
-
 	return nil
 }
 
@@ -107,16 +100,5 @@ func (m frameMarshaler) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("func", m.frame.Func)
 	enc.AddString("file", m.frame.File)
 	enc.AddInt("line", m.frame.Line)
-	return nil
-}
-
-type causesMarshaler struct {
-	causes []error
-}
-
-func (m causesMarshaler) MarshalLogArray(enc zapcore.ArrayEncoder) error {
-	for _, cause := range m.causes {
-		enc.AppendString(cause.Error())
-	}
 	return nil
 }

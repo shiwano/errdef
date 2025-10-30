@@ -21,7 +21,6 @@ type stdErrorMarshaler struct {
 //   - kind: The error kind (if present)
 //   - fields: Custom fields (if present)
 //   - origin: The origin stack frame (if present) with func, file, and line
-//   - causes: Array of cause error messages (if present)
 //
 // Example with Object() (nested under "error" key):
 //
@@ -55,11 +54,6 @@ func (m *errorMarshaler) MarshalZerologObject(e *zerolog.Event) {
 			e.Object("origin", frameMarshaler{frame: frame})
 		}
 	}
-
-	causes := m.err.Unwrap()
-	if len(causes) > 0 {
-		e.Array("causes", causesMarshaler{causes: causes})
-	}
 }
 
 type fieldsMarshaler struct {
@@ -80,16 +74,6 @@ func (m frameMarshaler) MarshalZerologObject(e *zerolog.Event) {
 	e.Str("func", m.frame.Func)
 	e.Str("file", m.frame.File)
 	e.Int("line", m.frame.Line)
-}
-
-type causesMarshaler struct {
-	causes []error
-}
-
-func (m causesMarshaler) MarshalZerologArray(a *zerolog.Array) {
-	for _, cause := range m.causes {
-		a.Str(cause.Error())
-	}
 }
 
 func (m *stdErrorMarshaler) MarshalZerologObject(e *zerolog.Event) {

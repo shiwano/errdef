@@ -64,7 +64,6 @@ var tests = []struct {
 		want: map[string]any{
 			"message": "user lookup failed: connection failed",
 			"kind":    "not_found",
-			"causes":  []any{"connection failed"},
 			"fields": map[string]any{
 				"http_status": 404,
 			},

@@ -310,14 +310,6 @@ func (d *definition) MakeErrorLogValue(err Error) slog.Value {
 			attrs = append(attrs, slog.Any("origin", frame))
 		}
 	}
-	causes := err.Unwrap()
-	if len(causes) > 0 {
-		causeMessages := make([]string, len(causes))
-		for i, c := range causes {
-			causeMessages[i] = c.Error()
-		}
-		attrs = append(attrs, slog.Any("causes", causeMessages))
-	}
 	return slog.GroupValue(attrs...)
 }
 
