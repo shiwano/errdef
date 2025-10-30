@@ -67,7 +67,7 @@ func TestCaptureError(t *testing.T) {
 					"fields": map[string]any{
 						"http_status": 404,
 					},
-					"origin": causes[0]["origin"],
+					"stack": causes[0]["stack"],
 					"causes": []map[string]any{
 						{
 							"message": "connection failed",
@@ -76,7 +76,7 @@ func TestCaptureError(t *testing.T) {
 								"user_id":     "u456",
 								"http_status": 500,
 							},
-							"origin": level1Causes[0]["origin"],
+							"stack": level1Causes[0]["stack"],
 						},
 					},
 				},

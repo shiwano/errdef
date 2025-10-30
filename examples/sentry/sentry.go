@@ -140,13 +140,16 @@ func buildCauseData(node *errdef.Node, depth int) map[string]any {
 	}
 
 	if stack := e.Stack(); stack.Len() > 0 {
-		if frame, ok := stack.HeadFrame(); ok {
-			data["origin"] = map[string]any{
+		frames := stack.Frames()
+		stackData := make([]map[string]any, len(frames))
+		for i, frame := range frames {
+			stackData[i] = map[string]any{
 				"func": frame.Func,
 				"file": frame.File,
 				"line": frame.Line,
 			}
 		}
+		data["stack"] = stackData
 	}
 
 	if len(node.Causes) > 0 {
