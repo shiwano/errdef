@@ -81,7 +81,7 @@ The `gcerr.Error()` function formats `errdef` errors with:
 - **`error.message` field**: The error message
 - **`error.kind` field**: Error kind for classification (if present)
 - **`error.fields` field**: Custom fields excluding gcerr-specific fields (if present)
-- **`error.causes` field**: Array of cause error messages (if present)
+- **`error.causes` field**: Array of nested cause objects with message, kind, fields, stack, and causes (if present)
 - **`stack_trace` field**: Stack trace in Google Cloud format
 - **`context.reportLocation` field**: Error origin location (filePath, lineNumber, functionName)
 - **`context.httpRequest` field**: HTTP request context (if `gcerr.HTTPRequest()` is used)
@@ -164,7 +164,11 @@ func main() {
       "http_status": 404,
       "user_id": "u123"
     },
-    "causes": ["sql: no rows in result set"]
+    "causes": [
+      {
+        "message": "sql: no rows in result set"
+      }
+    ]
   }
 }
 ```
@@ -172,7 +176,7 @@ func main() {
 This comprehensive example demonstrates:
 - **HTTP Request Context**: Method, URL, user agent, referrer, and remote IP are automatically extracted from `*http.Request` and placed in `context.httpRequest` (for Google Cloud Error Reporting)
 - **User Context**: User identifier is placed in `context.user`
-- **Error Wrapping**: The original database error (`sql.ErrNoRows`) is preserved in the `error.causes` field
+- **Error Wrapping**: The original database error (`sql.ErrNoRows`) is preserved in the `error.causes` field as a nested object with full details
 - **Error Grouping**: Error Reporting groups errors by stack trace, endpoint, status code, and error kind
 - **Field Filtering**: gcerr-specific fields (`gcerr.http_request`, `gcerr.user`) are automatically excluded from `error.fields` to avoid duplication with the `context` section
 
