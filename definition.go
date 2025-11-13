@@ -97,15 +97,17 @@ type (
 	}
 
 	definition struct {
-		rootDef       *definition
-		kind          Kind
-		fields        *fields
-		noTrace       bool
-		stackSkip     int
-		stackDepth    int
-		formatter     func(err Error, s fmt.State, verb rune)
-		jsonMarshaler func(err Error) ([]byte, error)
-		logValuer     func(err Error) slog.Value
+		rootDef          *definition
+		kind             Kind
+		fields           *fields
+		noTrace          bool
+		stackSkip        int
+		stackDepth       int
+		stackSourceLines int
+		stackSourceDepth int
+		formatter        func(err Error, s fmt.State, verb rune)
+		jsonMarshaler    func(err Error) ([]byte, error)
+		logValuer        func(err Error) slog.Value
 	}
 )
 
@@ -366,7 +368,8 @@ func formatErrorDetails(err Error, s io.Writer, indent string, hasCauses bool) {
 		_, _ = io.WriteString(s, "\n")
 		_, _ = io.WriteString(s, indent)
 		_, _ = io.WriteString(s, "stack:")
-		for _, f := range err.Stack().Frames() {
+
+		for f, source := range err.Stack().FramesAndSource() {
 			if f.File != "" {
 				_, _ = io.WriteString(s, "\n")
 				_, _ = io.WriteString(s, indent)
@@ -378,6 +381,13 @@ func formatErrorDetails(err Error, s io.Writer, indent string, hasCauses bool) {
 				_, _ = io.WriteString(s, f.File)
 				_, _ = io.WriteString(s, ":")
 				_, _ = io.WriteString(s, strconv.Itoa(f.Line))
+
+				if source != "" {
+					for line := range strings.SplitSeq(source, "\n") {
+						_, _ = io.WriteString(s, "\n")
+						_, _ = fmt.Fprintf(s, "%s%s", indent+"    ", line)
+					}
+				}
 			}
 		}
 	}

@@ -68,6 +68,22 @@ func StackDepth(depth int) Option {
 	return &stackDepth{depth: depth}
 }
 
+// StackSource enables source code display for stack traces.
+// It shows around lines before and after each stack frame in %+v output.
+// The depth parameter controls how many frames to show source for:
+//   - depth > 0: show source for the first depth frames
+//   - depth == -1: show source for all frames
+//   - depth == 0: no source display (no-op)
+func StackSource(around, depth int) Option {
+	if around < 0 {
+		around = 0
+	}
+	if depth == 0 {
+		return &noopOption{}
+	}
+	return &stackSource{around: around, depth: depth}
+}
+
 // Formatter overrides the default `fmt.Formatter` behavior.
 func Formatter(f func(err Error, s fmt.State, verb rune)) Option {
 	return &formatter{formatter: f}

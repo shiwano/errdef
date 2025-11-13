@@ -2,6 +2,7 @@ package unmarshaler
 
 import (
 	"encoding/json"
+	"iter"
 	"log/slog"
 	"slices"
 
@@ -33,6 +34,16 @@ func (s stack) Len() int {
 
 func (s stack) IsZero() bool {
 	return len(s) == 0
+}
+
+func (s stack) FramesAndSource() iter.Seq2[errdef.Frame, string] {
+	return func(yield func(errdef.Frame, string) bool) {
+		for _, frame := range s {
+			if !yield(frame, "") {
+				return
+			}
+		}
+	}
 }
 
 func (s stack) MarshalJSON() ([]byte, error) {

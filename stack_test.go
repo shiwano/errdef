@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -66,6 +67,60 @@ func TestStack_HeadFrame(t *testing.T) {
 		emptyFrame := errdef.Frame{}
 		if frame != emptyFrame {
 			t.Errorf("want zero-value frame for empty stack, got %+v", frame)
+		}
+	})
+}
+
+func TestStack_FramesAndSource(t *testing.T) {
+	t.Run("basic formatting", func(t *testing.T) {
+		def := errdef.Define("test_error", errdef.StackSource(2, 1))
+		err := def.New("test error")
+		stack := err.(errdef.Error).Stack()
+
+		var firstSource string
+		for _, source := range stack.FramesAndSource() {
+			firstSource = source
+			break
+		}
+
+		if matched, _ := regexp.MatchString(
+			`  \d+: .*\n`+
+				`  \d+: \t\tdef := errdef\.Define\("test_error", errdef\.StackSource\(2, 1\)\)\n`+
+				`> \d+: \t\terr := def\.New\("test error"\)\n`+
+				`  \d+: \t\tstack := err\.\(errdef\.Error\)\.Stack\(\)\n`+
+				`  \d+: `,
+			firstSource,
+		); !matched {
+			t.Errorf("want format to match pattern, got: %q", firstSource)
+		}
+	})
+
+	t.Run("without StackSource option", func(t *testing.T) {
+		def := errdef.Define("test_error")
+		err := def.New("test error")
+		stack := err.(errdef.Error).Stack()
+
+		for _, source := range stack.FramesAndSource() {
+			if source != "" {
+				t.Error("want empty output when StackSource not set")
+			}
+		}
+	})
+
+	t.Run("depth", func(t *testing.T) {
+		def := errdef.Define("test_error", errdef.StackSource(2, 2))
+		err := def.New("test error")
+		stack := err.(errdef.Error).Stack()
+
+		nonEmptySourceCount := 0
+		for _, source := range stack.FramesAndSource() {
+			if source != "" {
+				nonEmptySourceCount++
+			}
+		}
+
+		if nonEmptySourceCount > 2 {
+			t.Errorf("want at most 2 frames with source, got %d", nonEmptySourceCount)
 		}
 	})
 }

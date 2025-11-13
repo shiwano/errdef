@@ -64,7 +64,7 @@ type (
 		def    *definition
 		msg    string
 		cause  error
-		stack  stack
+		stack  *stack
 		joined bool
 	}
 
@@ -93,13 +93,13 @@ var (
 )
 
 func newError(d *definition, cause error, msg string, joined bool, stackSkip int) error {
-	var stack stack
+	var stack *stack
 	if !d.noTrace {
 		depth := callersDepth
 		if d.stackDepth > 0 {
 			depth = d.stackDepth
 		}
-		stack = newStack(depth, d.stackSkip+stackSkip)
+		stack = newStack(depth, d.stackSkip+stackSkip, d.stackSourceLines, d.stackSourceDepth)
 	}
 	return &definedError{
 		def:    d,

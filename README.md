@@ -19,6 +19,7 @@ It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`,
   - [Error Constructors](#error-constructors)
   - [Error Inspection](#error-inspection)
   - [Detailed Error Formatting](#detailed-error-formatting)
+  - [Source Code Snippets](#source-code-snippets)
   - [JSON Marshaling](#json-marshaling)
   - [Structured Logging (`slog`)](#structured-logging-slog)
   - [Field Constructors](#field-constructors)
@@ -200,6 +201,54 @@ causes: (1 error)
       stack:
         ...
 ```
+
+### Source Code Snippets
+
+You can enhance stack traces with source code snippets using the `StackSource(around, depth)` option. This displays `around` lines before and after each stack frame, with `depth` controlling how many frames to show:
+
+- `depth > 0`: Show source for the first `depth` frames
+- `depth == -1`: Show source for all frames
+- `depth == 0`: No source display (no-op)
+
+```go
+var ErrNotFound = errdef.Define(
+    "not_found",
+    errdef.HTTPStatus(404),
+    errdef.StackSource(3, 1), // Show 3 lines around the first frame
+)
+
+err := findUser(ctx, "u-123")
+fmt.Printf("%+v\n", err)
+```
+
+**Example Output:**
+
+```
+user not found
+---
+kind: not_found
+fields:
+  http_status: 404
+  user_id: u-123
+stack:
+  main.findUser
+    /path/to/your/project/main.go:23
+      20: var ErrNotFound = errdef.Define("not_found", errdef.HTTPStatus(404))
+      21:
+      22: func findUser(ctx context.Context, id string) error {
+    > 23:     return ErrNotFound.With(ctx, UserID(id)).New("user not found")
+      24: }
+      25:
+      26: func main() {
+  main.main
+    /path/to/your/project/main.go:35
+  runtime.main
+    /usr/local/go/src/runtime/proc.go:250
+causes: (1 error)
+  [1] record not found
+```
+
+> **Note:** Source code is read from disk at runtime only when printing errors with `%+v` format. If source files are unavailable (e.g., in production binaries without deployed source files), it shows only the stack trace. The implementation is designed to minimize overhead.
 
 ### JSON Marshaling
 
@@ -541,26 +590,27 @@ func main() {
 
 ### Built-in Options
 
-| Option                      | Description                                              | Extractor        |
-|:----------------------------|:---------------------------------------------------------|:-----------------|
-| `HTTPStatus(int)`           | Attaches an HTTP status code.                            | `HTTPStatusFrom` |
-| `LogLevel(slog.Level)`      | Attaches a log level of type `slog.Level`.               | `LogLevelFrom`   |
-| `TraceID(string)`           | Attaches a trace or request ID.                          | `TraceIDFrom`    |
-| `Domain(string)`            | Labels the error with a service or subsystem name.       | `DomainFrom`     |
-| `UserHint(string)`          | Provides a safe, user-facing hint message.               | `UserHintFrom`   |
-| `Public()`                  | Marks the error as safe to expose externally.            | `IsPublic`       |
-| `Retryable()`               | Marks the operation as retryable.                        | `IsRetryable`    |
-| `RetryAfter(time.Duration)` | Recommends a delay to wait before retrying.              | `RetryAfterFrom` |
-| `Unreportable()`            | Prevents the error from being sent to error tracking.    | `IsUnreportable` |
-| `ExitCode(int)`             | Sets the exit code for a CLI application.                | `ExitCodeFrom`   |
-| `HelpURL(string)`           | Provides a URL for documentation or help guides.         | `HelpURLFrom`    |
-| `Details{}`                 | Attaches free-form diagnostic details to an error.       | `DetailsFrom`    |
-| `NoTrace()`                 | Disables stack trace collection for the error.           | -                |
-| `StackSkip(int)`            | Skips a specified number of frames during stack capture. | -                |
-| `StackDepth(int)`           | Sets the depth of the stack capture (default: 32).       | -                |
-| `Formatter(f)`              | Overrides the default `fmt.Formatter` behavior.          | -                |
-| `JSONMarshaler(f)`          | Overrides the default `json.Marshaler` behavior.         | -                |
-| `LogValuer(f)`              | Overrides the default `slog.LogValuer` behavior.         | -                |
+| Option                       | Description                                              | Extractor        |
+|:-----------------------------|:---------------------------------------------------------|:-----------------|
+| `HTTPStatus(int)`            | Attaches an HTTP status code.                            | `HTTPStatusFrom` |
+| `LogLevel(slog.Level)`       | Attaches a log level of type `slog.Level`.               | `LogLevelFrom`   |
+| `TraceID(string)`            | Attaches a trace or request ID.                          | `TraceIDFrom`    |
+| `Domain(string)`             | Labels the error with a service or subsystem name.       | `DomainFrom`     |
+| `UserHint(string)`           | Provides a safe, user-facing hint message.               | `UserHintFrom`   |
+| `Public()`                   | Marks the error as safe to expose externally.            | `IsPublic`       |
+| `Retryable()`                | Marks the operation as retryable.                        | `IsRetryable`    |
+| `RetryAfter(time.Duration)`  | Recommends a delay to wait before retrying.              | `RetryAfterFrom` |
+| `Unreportable()`             | Prevents the error from being sent to error tracking.    | `IsUnreportable` |
+| `ExitCode(int)`              | Sets the exit code for a CLI application.                | `ExitCodeFrom`   |
+| `HelpURL(string)`            | Provides a URL for documentation or help guides.         | `HelpURLFrom`    |
+| `Details{}`                  | Attaches free-form diagnostic details to an error.       | `DetailsFrom`    |
+| `NoTrace()`                  | Disables stack trace collection for the error.           | -                |
+| `StackSkip(int)`             | Skips a specified number of frames during stack capture. | -                |
+| `StackDepth(int)`            | Sets the depth of the stack capture (default: 32).       | -                |
+| `StackSource(around, depth)` | Shows source code around stack frames in `%+v` output.   | -                |
+| `Formatter(f)`               | Overrides the default `fmt.Formatter` behavior.          | -                |
+| `JSONMarshaler(f)`           | Overrides the default `json.Marshaler` behavior.         | -                |
+| `LogValuer(f)`               | Overrides the default `slog.LogValuer` behavior.         | -                |
 
 ## Examples
 

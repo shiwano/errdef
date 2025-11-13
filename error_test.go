@@ -766,7 +766,7 @@ func TestError_Format(t *testing.T) {
 				`def:\(\*errdef\.definition\)\(0x[0-9a-f]+\), `+
 				`msg:"test message", `+
 				`cause:error\(nil\), `+
-				`stack:errdef\.stack\(nil\), `+
+				`stack:\(\*errdef\.stack\)\(nil\), `+
 				`joined:false`+
 				`\}`,
 			result,
@@ -786,6 +786,43 @@ func TestError_Format(t *testing.T) {
 		result := fmt.Sprintf("%s", err)
 		if result != "CUSTOM: test message" {
 			t.Errorf("want %q, got %q", "CUSTOM: test message", result)
+		}
+	})
+
+	t.Run("verbose format with source code", func(t *testing.T) {
+		def := errdef.Define("test_error", errdef.StackSource(2, 1))
+		err := def.New("test message")
+
+		result := fmt.Sprintf("%+v", err)
+
+		if matched, _ := regexp.MatchString(
+			`      \d+: \tt\.Run\("verbose format with source code", func\(t \*testing\.T\) \{\n`+
+				`      \d+: \t\tdef := errdef\.Define\("test_error", errdef\.StackSource\(2, 1\)\)\n`+
+				`    > \d+: \t\terr := def\.New\("test message"\)\n`+
+				`      \d+: \n`+
+				`      \d+: \t\tresult := fmt\.Sprintf\("%\+v", err\)`,
+			result,
+		); !matched {
+			t.Errorf("want format to match pattern, got: %q", result)
+		}
+	})
+
+	t.Run("verbose format with source code and cause", func(t *testing.T) {
+		def := errdef.Define("test_error", errdef.StackSource(2, 1))
+		cause := errors.New("original error")
+		wrapped := def.Wrap(cause)
+
+		result := fmt.Sprintf("%+v", wrapped)
+
+		if matched, _ := regexp.MatchString(
+			`      \d+: \t\tdef := errdef\.Define\("test_error", errdef\.StackSource\(2, 1\)\)\n`+
+				`      \d+: \t\tcause := errors\.New\("original error"\)\n`+
+				`    > \d+: \t\twrapped := def\.Wrap\(cause\)\n`+
+				`      \d+: \n`+
+				`      \d+: \t\tresult := fmt\.Sprintf\("%\+v", wrapped\)`,
+			result,
+		); !matched {
+			t.Errorf("want format to match pattern, got: %q", result)
 		}
 	})
 }

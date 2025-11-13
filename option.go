@@ -30,6 +30,8 @@ type (
 		value T
 	}
 
+	noopOption struct{}
+
 	noTrace struct{}
 
 	stackSkip struct {
@@ -38,6 +40,11 @@ type (
 
 	stackDepth struct {
 		depth int
+	}
+
+	stackSource struct {
+		around int
+		depth  int
 	}
 
 	formatter struct {
@@ -149,6 +156,8 @@ func (o *field[T]) applyOption(d *definition) {
 	d.fields.set(o.key, &fieldValue[T]{value: o.value})
 }
 
+func (o *noopOption) applyOption(d *definition) {}
+
 func (o *noTrace) applyOption(d *definition) {
 	d.noTrace = true
 }
@@ -159,6 +168,11 @@ func (o *stackSkip) applyOption(d *definition) {
 
 func (o *stackDepth) applyOption(d *definition) {
 	d.stackDepth = o.depth
+}
+
+func (o *stackSource) applyOption(d *definition) {
+	d.stackSourceLines = o.around
+	d.stackSourceDepth = o.depth
 }
 
 func (o *formatter) applyOption(d *definition) {
