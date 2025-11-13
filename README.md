@@ -204,19 +204,10 @@ causes: (1 error)
 
 ### Source Code Snippets
 
-You can enhance stack traces with source code snippets using the `StackSource(around, depth)` option. This displays `around` lines before and after each stack frame, with `depth` controlling how many frames to show:
-
-- `depth > 0`: Show source for the first `depth` frames
-- `depth == -1`: Show source for all frames
-- `depth == 0`: No source display (no-op)
+You can enhance stack traces with source code snippets using the `StackSource(around, depth)` option. This displays `around` lines before and after each stack frame, with `depth` controlling how many frames to show (use `-1` for all frames).
 
 ```go
-var ErrNotFound = errdef.Define(
-    "not_found",
-    errdef.HTTPStatus(404),
-    errdef.StackSource(3, 1), // Show 3 lines around the first frame
-)
-
+var ErrNotFound = errdef.Define("not_found", errdef.StackSource(3, 1)) // Show 3 lines around the first frame
 err := findUser(ctx, "u-123")
 fmt.Printf("%+v\n", err)
 ```
