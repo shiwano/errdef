@@ -224,7 +224,7 @@ fields:
 stack:
   main.findUser
     /path/to/your/project/main.go:23
-      20: var ErrNotFound = errdef.Define("not_found", errdef.HTTPStatus(404))
+      20: var ErrNotFound = errdef.Define("not_found", errdef.StackSource(3, 1))
       21:
       22: func findUser(ctx context.Context, id string) error {
     > 23:     return ErrNotFound.With(ctx, UserID(id)).New("user not found")
