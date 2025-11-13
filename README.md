@@ -207,7 +207,7 @@ causes: (1 error)
 You can enhance stack traces with source code snippets using the `StackSource(around, depth)` option. This displays `around` lines before and after each stack frame, with `depth` controlling how many frames to show (use `-1` for all frames).
 
 ```go
-var ErrNotFound = errdef.Define("not_found", errdef.StackSource(3, 1)) // Show 3 lines around the first frame
+var ErrNotFound = errdef.Define("not_found", errdef.StackSource(3, 1))
 err := findUser(ctx, "u-123")
 fmt.Printf("%+v\n", err)
 ```
