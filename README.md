@@ -7,7 +7,7 @@
 ![Build Status](https://github.com/shiwano/errdef/actions/workflows/test.yml/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/shiwano/errdef)](https://goreportcard.com/report/github.com/shiwano/errdef)
 
-`errdef` splits error handling in Go into **Definitions** and **Error instances**, so you can keep errors typed, structured, and uniform.
+`errdef` separates Go errors into **Definitions** and **Error instances**, making them typed, structured, and uniform.
 It integrates cleanly with the standard ecosystem — `errors.Is` / `errors.As`, `fmt.Formatter`, `json.Marshaler`, and `slog.LogValuer` — while adding fields, stack traces, and flexible error composition.
 
 > **Status:** The core API is stable, but minor breaking changes may occur before v1.0.0.
