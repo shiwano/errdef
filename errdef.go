@@ -52,7 +52,7 @@ func KindFrom(err error) (Kind, bool) {
 	if err == nil {
 		return "", false
 	}
-	var e kindGetter
+	var e Error
 	if ok := errors.As(err, &e); !ok {
 		return "", false
 	}
@@ -66,7 +66,7 @@ func FieldsFrom(err error) (Fields, bool) {
 	if err == nil {
 		return nil, false
 	}
-	var e fieldsGetter
+	var e Error
 	if ok := errors.As(err, &e); !ok {
 		return nil, false
 	}
@@ -84,7 +84,7 @@ func StackFrom(err error) (Stack, bool) {
 	if err == nil {
 		return nil, false
 	}
-	var e stackGetter
+	var e Error
 	if ok := errors.As(err, &e); !ok {
 		return nil, false
 	}
@@ -102,7 +102,7 @@ func UnwrapTreeFrom(err error) (Nodes, bool) {
 	if err == nil {
 		return nil, false
 	}
-	var e treeUnwrapper
+	var e Error
 	if ok := errors.As(err, &e); !ok {
 		return nil, false
 	}

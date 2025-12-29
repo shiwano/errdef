@@ -38,10 +38,6 @@ type (
 		Line int    `json:"line"`
 	}
 
-	stackGetter interface {
-		Stack() Stack
-	}
-
 	stack struct {
 		pcs         []uintptr
 		sourceLines int

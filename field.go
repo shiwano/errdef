@@ -47,10 +47,6 @@ type (
 		Equal(other any) bool
 	}
 
-	fieldsGetter interface {
-		Fields() Fields
-	}
-
 	fields struct {
 		data      map[FieldKey]indexedFieldValue
 		lastIndex int
@@ -240,7 +236,7 @@ func (v *fieldValue[T]) Equal(other any) bool {
 }
 
 func fieldValueFrom[T any](err error, key FieldKey) (T, bool) {
-	var e fieldsGetter
+	var e Error
 	if errors.As(err, &e) {
 		if fv, ok := e.Fields().Get(key); ok {
 			v := fv.Value()

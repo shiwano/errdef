@@ -92,10 +92,6 @@ type (
 		BuildCauseTree(err Error) Nodes
 	}
 
-	kindGetter interface {
-		Kind() Kind
-	}
-
 	definition struct {
 		rootDef          *definition
 		kind             Kind
@@ -112,10 +108,9 @@ type (
 )
 
 var (
-	_ Definition   = (*definition)(nil)
-	_ Presenter    = (*definition)(nil)
-	_ kindGetter   = (*definition)(nil)
-	_ fieldsGetter = (*definition)(nil)
+	_ Definition = (*definition)(nil)
+	_ Presenter  = (*definition)(nil)
+	_ Error      = (*definition)(nil)
 )
 
 func (d *definition) Kind() Kind {
@@ -218,6 +213,18 @@ func (d *definition) Is(target error) bool {
 
 func (d *definition) Fields() Fields {
 	return d.fields
+}
+
+func (d *definition) Stack() Stack {
+	return (*stack)(nil)
+}
+
+func (d *definition) Unwrap() []error {
+	return nil
+}
+
+func (d *definition) UnwrapTree() Nodes {
+	return nil
 }
 
 func (d *definition) isRoot() bool {

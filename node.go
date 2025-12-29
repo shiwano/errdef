@@ -22,10 +22,6 @@ type (
 		IsCyclic bool
 	}
 
-	treeUnwrapper interface {
-		UnwrapTree() Nodes
-	}
-
 	jsonCauseData struct {
 		Message string  `json:"message"`
 		Type    string  `json:"type"`
@@ -66,6 +62,12 @@ func (ns Nodes) HasCycle() bool {
 // MarshalJSON implements json.Marshaler for Node.
 func (n *Node) MarshalJSON() ([]byte, error) {
 	switch err := n.Error.(type) {
+	case Definition:
+		return json.Marshal(jsonCauseData{
+			Message: err.Error(),
+			Type:    fmt.Sprintf("%T", err),
+			Causes:  n.Causes,
+		})
 	case Error:
 		return json.Marshal(err)
 	case interface{ TypeName() string }:
