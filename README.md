@@ -204,7 +204,7 @@ causes: (1 error)
 
 ### Source Code Snippets
 
-You can enhance stack traces with source code snippets using the `StackSource(around, depth)` option. This displays `around` lines before and after each stack frame, with `depth` controlling how many frames to show (use `-1` for all frames).
+You can enhance stack traces with source code snippets using the `StackSource(around, depth)` option. This displays `around` lines before and after each stack frame, with `depth` controlling how many frames to show (use `-1` for all frames, `0` to disable with zero overhead).
 
 ```go
 var ErrNotFound = errdef.Define("not_found", errdef.StackSource(3, 1))
